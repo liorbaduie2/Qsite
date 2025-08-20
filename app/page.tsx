@@ -18,13 +18,13 @@ export default function MessagesPage() {
     // Optional: real-time updates
     const subscription = supabase
       .channel('messages')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        payload => {
-          fetchMessages();
-        }
-      )
+.on(
+  'postgres_changes',
+  { event: '*', schema: 'public', table: 'messages' },
+  payload => {
+    fetchMessages();
+  }
+)
       .subscribe();
 
     return () => {
@@ -41,7 +41,8 @@ export default function MessagesPage() {
   // Add a new message
   async function handleSubmit() {
     if (!newMessage) return;
-    const { data, error } = await supabase.from('messages').insert([{ content: newMessage }]);
+const { error } = await supabase.from('messages').insert([{ content: newMessage }]);
+
     if (error) console.error(error);
     else setNewMessage(''); // Clear input
     fetchMessages();
