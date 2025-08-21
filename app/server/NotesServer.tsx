@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies as nextCookies } from "next/headers";
 import NotesClient from "../components/NotesClient";
 
 export default async function NotesServer() {
-  const cookieStore = cookies();
+  const cookieStore = nextCookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,6 +11,7 @@ export default async function NotesServer() {
     {
       cookies: {
         getAll: () => {
+          // Map cookies to the format expected by Supabase
           return cookieStore.getAll().map(({ name, value }) => ({ name, value }));
         },
         setAll: (cookiesToSet) => {
