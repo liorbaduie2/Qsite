@@ -3,7 +3,7 @@ import { cookies as nextCookies } from "next/headers";
 import NotesClient from "../components/NotesClient";
 
 export default async function NotesServer() {
-  const cookieStore = nextCookies();
+  const cookieStore = await nextCookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
