@@ -5,14 +5,13 @@ import NotesClient from "../components/NotesClient";
 export default async function NotesServer() {
   const cookieStore = nextCookies();
 
-  // Convert ReadonlyRequestCookies to Supabase expected format
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll: () => {
-          // Map all cookies to {name, value} format
+          // Map cookies to the format expected by Supabase
           return cookieStore.getAll().map((cookie) => ({
             name: cookie.name,
             value: cookie.value,
