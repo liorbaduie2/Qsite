@@ -108,38 +108,39 @@ const ForumHomepage = () => {
             </button>
           </div>
         </div>
-
-        {/* Drawer */}
-        <div
-          className={`absolute top-full right-0 bg-white/90 backdrop-blur-xl shadow-2xl rounded-bl-3xl border-l border-b border-gray-200/30 transition-all duration-500 z-50 ${
-            isDrawerOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
-          }`}
-        >
-          <nav className="p-8 w-72">
-            <ul className="space-y-2">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.label}>
-                    <a
-                      href={item.href}
-                      className="flex items-center gap-4 p-4 rounded-xl hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
-                    >
-                      <Icon size={22} className="group-hover:scale-110 transition-transform" />
-                      <span className="font-medium text-lg">{item.label}</span>
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </div>
       </header>
+
+      {/* Drawer */}
+      <div
+        className={`fixed top-0 right-0 h-full bg-white/90 backdrop-blur-xl shadow-2xl rounded-bl-3xl border-l border-gray-200/30 transition-all duration-500 z-[99999] ${
+          isDrawerOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
+        }`}
+        style={{ width: "18rem" }}
+      >
+        <nav className="p-8 w-full h-full overflow-y-auto">
+          <ul className="space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.label}>
+                  <a
+                    href={item.href}
+                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
+                  >
+                    <Icon size={22} className="group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-lg">{item.label}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </div>
 
       {/* Overlay for drawer */}
       {isDrawerOpen && (
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] transition-opacity duration-300"
           onClick={() => setIsDrawerOpen(false)}
         />
       )}
