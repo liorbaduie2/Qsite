@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus } from 'lucide-react';
 
