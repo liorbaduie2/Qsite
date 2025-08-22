@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import type { User, AuthResponse, AuthError } from '@supabase/supabase-js';
+import type { User, AuthResponse } from '@supabase/supabase-js';
 
 interface Profile {
   id: string;
