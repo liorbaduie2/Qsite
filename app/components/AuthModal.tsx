@@ -51,7 +51,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
     try {
       if (mode === 'login') {
-        await signIn(email, password);
+        const result = await signIn(email, password);
+        if ('error' in result && result.error) {
+          throw result.error;
+        }
         setSuccess('התחברת בהצלחה!');
         setTimeout(() => handleClose(), 1500);
       } else {
@@ -62,12 +65,19 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           throw new Error('שם המשתמש חייב להכיל לפחות 3 תווים');
         }
         
-        await signUp(email, password, username, fullName);
+        const result = await signUp(email, password, username, fullName);
+        if ('error' in result && result.error) {
+          throw result.error;
+        }
         setSuccess('הרשמה בוצעה בהצלחה! בדוק את המייל שלך לאימות.');
         setTimeout(() => handleClose(), 3000);
       }
-    } catch (err: any) {
-      setError(err.message || 'אירעה שגיאה');
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('אירעה שגיאה');
+      }
     } finally {
       setLoading(false);
     }

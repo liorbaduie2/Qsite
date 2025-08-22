@@ -82,17 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [supabase.auth, fetchProfile]);
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
+    const result = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
-    return data;
+    return result;
   };
 
-  const signUp = async (email: string, password: string, username: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, username: string, fullName?: string): Promise<AuthResponse> => {
     // First check if username is available
     const { data: existingProfile } = await supabase
       .from('profiles')
@@ -101,10 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (existingProfile) {
-      throw new Error('שם המשתמש כבר קיים');
+      return {
+        data: { user: null, session: null },
+        error: new Error('שם המשתמש כבר קיים')
+      };
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const result = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -115,16 +117,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    if (error) throw error;
-    return data;
+    return result;
   };
 
-  const signOut = async () => {
+  const signOut = async (): Promise<void> => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Partial<Profile>): Promise<void> => {
     if (!user) throw new Error('User not authenticated');
 
     const { error } = await supabase
