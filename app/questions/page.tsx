@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, Search, Filter, TrendingUp, Clock, Eye, MessageCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, Search, Filter, Eye, MessageCircle, ArrowUp, ArrowDown } from 'lucide-react';
 
 const QuestionsPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
