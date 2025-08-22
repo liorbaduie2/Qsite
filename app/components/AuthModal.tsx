@@ -52,8 +52,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     try {
       if (mode === 'login') {
         const result = await signIn(email, password);
-        if ('error' in result && result.error) {
-          throw result.error;
+        if (result.error) {
+          throw new Error(result.error.message);
         }
         setSuccess('התחברת בהצלחה!');
         setTimeout(() => handleClose(), 1500);
@@ -66,8 +66,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         }
         
         const result = await signUp(email, password, username, fullName);
-        if ('error' in result && result.error) {
-          throw result.error;
+        if (result.error) {
+          throw new Error(result.error.message);
         }
         setSuccess('הרשמה בוצעה בהצלחה! בדוק את המייל שלך לאימות.');
         setTimeout(() => handleClose(), 3000);
