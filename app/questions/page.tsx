@@ -5,6 +5,7 @@ import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, Search
 
 const QuestionsPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [filterTag, setFilterTag] = useState('all');
@@ -158,16 +159,94 @@ const QuestionsPage = () => {
                 </h1>
               </div>
             </div>
-            <button 
-              className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
-              style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-                boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
-              }}
-            >
-              <Plus size={18} />
-              שאל שאלה חדשה
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className={`p-3 rounded-xl transition-all duration-300 hover:scale-105 ${
+                  isSearchOpen 
+                    ? 'text-white shadow-lg' 
+                    : 'text-gray-600 bg-gray-100/60 hover:bg-gray-200/60'
+                }`}
+                style={isSearchOpen ? {
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                  boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
+                } : {}}
+              >
+                <Search size={20} />
+              </button>
+              <button 
+                className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                  boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
+                }}
+              >
+                <Plus size={18} />
+                שאל שאלה חדשה
+              </button>
+            </div>
+          </div>
+
+          {/* Search Bar - Slides down when search is open */}
+          <div 
+            className={`overflow-hidden transition-all duration-300 ${
+              isSearchOpen ? 'max-h-40 pb-4' : 'max-h-0'
+            }`}
+          >
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-gray-200/30">
+              <div className="flex flex-col gap-4">
+                {/* Search Input */}
+                <div className="relative w-full">
+                  <Search size={20} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="חפש שאלות..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pr-12 pl-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/70 backdrop-blur-sm"
+                    autoFocus={isSearchOpen}
+                  />
+                </div>
+
+                {/* Tags and Sort on same line */}
+                <div className="flex items-center justify-between gap-4">
+                  {/* Tags Filter */}
+                  <div className="flex flex-wrap gap-2 flex-1">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setFilterTag(tag === 'הכל' ? 'הכל' : tag)}
+                        className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 whitespace-nowrap ${
+                          filterTag === tag
+                            ? 'text-white shadow-lg'
+                            : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                        }`}
+                        style={filterTag === tag ? {
+                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
+                        } : {}}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sort */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Filter size={18} className="text-gray-500" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm whitespace-nowrap"
+                    >
+                      <option value="newest">הכי חדש</option>
+                      <option value="votes">הכי מדורג</option>
+                      <option value="views">הכי נצפה</option>
+                      <option value="replies">הכי נענה</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -214,58 +293,6 @@ const QuestionsPage = () => {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-5 py-8">
         
-        {/* Search and Filter Bar */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200/30 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            {/* Search */}
-            <div className="relative flex-1 w-full">
-              <Search size={20} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="חפש שאלות..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-12 pl-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/70 backdrop-blur-sm"
-              />
-            </div>
-
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <Filter size={18} className="text-gray-500" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm"
-              >
-                <option value="newest">הכי חדש</option>
-                <option value="votes">הכי מדורג</option>
-                <option value="views">הכי נצפה</option>
-                <option value="replies">הכי נענה</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Tags Filter */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setFilterTag(tag === 'הכל' ? 'הכל' : tag)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 ${
-                  filterTag === tag
-                    ? 'text-white shadow-lg'
-                    : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
-                }`}
-                style={filterTag === tag ? {
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
-                } : {}}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Questions List */}
         <div className="space-y-6">
           {sortedQuestions.map((question, index) => (
@@ -374,18 +401,6 @@ const QuestionsPage = () => {
           </div>
         )}
       </main>
-
-      {/* Floating Action Button */}
-      <button 
-        className="fixed bottom-8 left-1/2 transform -translate-x-1/2 w-16 h-16 rounded-full text-white shadow-2xl transition-all duration-300 hover:scale-115 z-50 flex items-center justify-center text-2xl"
-        style={{
-          background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-          boxShadow: '0 20px 40px rgba(99, 102, 241, 0.4)',
-          animation: 'pulse 2s infinite'
-        }}
-      >
-        <Plus size={28} />
-      </button>
 
       <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap');
