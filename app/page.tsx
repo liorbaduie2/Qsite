@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus } from 'lucide-react';
+import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User } from 'lucide-react';
+import { useAuth } from '../components/AuthProvider';
+import AuthModal from '../components/AuthModal';
 
 const ForumHomepage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  
+  const { user, profile, loading, signOut } = useAuth();
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -49,6 +55,39 @@ const ForumHomepage = () => {
       image: 'https://picsum.photos/900/400?random=3'
     }
   ];
+
+  const handleAuthAction = (mode: 'login' | 'register') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const handleNewQuestion = () => {
+    if (!user) {
+      handleAuthAction('login');
+      return;
+    }
+    // Handle new question creation
+    console.log('Create new question');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" dir="rtl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="text-gray-600 font-medium">טוען...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -96,16 +135,69 @@ const ForumHomepage = () => {
                 פורום הקהילה
               </h1>
             </div>
-            <button 
-              className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
-              style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-                boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
-              }}
-            >
-              <Plus size={18} />
-              שאל שאלה חדשה
-            </button>
+
+            {/* Auth Section */}
+            <div className="flex items-center gap-3">
+              {user ? (
+                <>
+                  {/* User Menu */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100/60">
+                      <img 
+                        src={profile?.avatar_url || `https://i.pravatar.cc/32?seed=${profile?.username}`}
+                        alt="פרופיל"
+                        className="w-8 h-8 rounded-full border-2 border-indigo-200"
+                      />
+                      <div className="text-sm">
+                        <div className="font-semibold text-indigo-600">
+                          {profile?.username || 'משתמש'}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300 hover:scale-105 text-gray-600"
+                      title="התנתק"
+                    >
+                      <LogOut size={20} />
+                    </button>
+                  </div>
+                  
+                  <button 
+                    onClick={handleNewQuestion}
+                    className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
+                    style={{
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                      boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
+                    }}
+                  >
+                    <Plus size={18} />
+                    שאל שאלה חדשה
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleAuthAction('login')}
+                    className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                  >
+                    <LogIn size={18} />
+                    התחבר
+                  </button>
+                  <button 
+                    onClick={() => handleAuthAction('register')}
+                    className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
+                    style={{
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                      boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
+                    }}
+                  >
+                    <User size={18} />
+                    הירשם
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -118,6 +210,29 @@ const ForumHomepage = () => {
         style={{ width: "18rem" }}
       >
         <nav className="p-8 w-full h-full overflow-y-auto">
+          {/* User Info in Drawer */}
+          {user && profile && (
+            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={profile.avatar_url || `https://i.pravatar.cc/40?seed=${profile.username}`}
+                  alt="פרופיל"
+                  className="w-10 h-10 rounded-full border-2 border-indigo-200"
+                />
+                <div>
+                  <div className="font-semibold text-indigo-600">
+                    {profile.username}
+                  </div>
+                  {profile.full_name && (
+                    <div className="text-sm text-gray-600">
+                      {profile.full_name}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -143,6 +258,71 @@ const ForumHomepage = () => {
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] transition-opacity duration-300"
           onClick={() => setIsDrawerOpen(false)}
         />
+      )}
+
+      {/* Welcome Message for logged in users */}
+      {user && profile && (
+        <div className="max-w-5xl mx-auto px-5 pt-6">
+          <div 
+            className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-gray-200/30 mb-6"
+            style={{
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05))'
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">👋</div>
+              <div>
+                <h2 className="font-bold text-lg text-gray-800">
+                  שלום {profile.username}!
+                </h2>
+                <p className="text-gray-600">
+                  ברוכים הבאים חזרה לפורום הקהילה
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Call to Action for non-logged users */}
+      {!user && (
+        <div className="max-w-5xl mx-auto px-5 pt-6">
+          <div 
+            className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200/30 mb-6 text-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05))'
+            }}
+          >
+            <h2 className="text-2xl font-bold mb-3" style={{
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              הצטרף לקהילה שלנו!
+            </h2>
+            <p className="text-gray-600 mb-4">
+              שאל שאלות, שתף ידע וקבל עזרה מקהילת המפתחים הישראלית
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => handleAuthAction('register')}
+                className="px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
+                }}
+              >
+                הירשם עכשיו
+              </button>
+              <button
+                onClick={() => handleAuthAction('login')}
+                className="px-6 py-3 rounded-xl border border-indigo-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-all duration-300 hover:scale-105"
+              >
+                כבר יש לי חשבון
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Main Content */}
@@ -243,13 +423,19 @@ const ForumHomepage = () => {
                       borderColor: 'rgba(99, 102, 241, 0.2)'
                     }}
                   >
-                    <button className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50">
+                    <button 
+                      className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50"
+                      onClick={() => !user && handleAuthAction('login')}
+                    >
                       ▲
                     </button>
                     <span className="font-bold text-indigo-600 min-w-5 text-center">
                       {question.votes}
                     </span>
-                    <button className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50">
+                    <button 
+                      className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50"
+                      onClick={() => !user && handleAuthAction('login')}
+                    >
                       ▼
                     </button>
                   </div>
@@ -262,6 +448,7 @@ const ForumHomepage = () => {
 
       {/* Floating Action Button */}
       <button 
+        onClick={handleNewQuestion}
         className="fixed bottom-8 left-1/2 transform -translate-x-1/2 w-16 h-16 rounded-full text-white shadow-2xl transition-all duration-300 hover:scale-115 z-50 flex items-center justify-center text-2xl"
         style={{
           background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
@@ -271,6 +458,13 @@ const ForumHomepage = () => {
       >
         <Plus size={28} />
       </button>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
 
       <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap');
