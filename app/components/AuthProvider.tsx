@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import type { User, AuthResponse } from '@supabase/supabase-js';
+import type { User, AuthResponse, AuthError } from '@supabase/supabase-js';
 
 interface Profile {
   id: string;
@@ -100,9 +100,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (existingProfile) {
+      const authError: AuthError = {
+        message: 'שם המשתמש כבר קיים',
+        name: 'AuthError',
+        code: 'username_exists',
+        status: 400,
+        __isAuthError: true
+      };
+      
       return {
         data: { user: null, session: null },
-        error: new Error('שם המשתמש כבר קיים')
+        error: authError
       };
     }
 
