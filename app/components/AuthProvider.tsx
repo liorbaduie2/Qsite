@@ -92,28 +92,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, username: string, fullName?: string): Promise<AuthResponse> => {
-    // First check if username is available
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('username', username)
-      .single();
-
-    if (existingProfile) {
-      const authError: AuthError = {
-        message: 'שם המשתמש כבר קיים',
-        name: 'AuthError',
-        code: 'username_exists',
-        status: 400,
-        __isAuthError: true
-      };
-      
-      return {
-        data: { user: null, session: null },
-        error: authError
-      };
-    }
-
     const result = await supabase.auth.signUp({
       email,
       password,
