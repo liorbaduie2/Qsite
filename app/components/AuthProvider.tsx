@@ -31,17 +31,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      },
+    }
   );
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  // Fixed fetchProfile function that ALWAYS resolves and returns success status
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
     try {
       console.log('Fetching profile for user:', userId);
@@ -55,18 +63,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('Profile fetch error:', error);
         
-        // If profile doesn't exist, create it
         if (error.code === 'PGRST116') {
           console.log('Profile not found, creating new profile...');
           
           try {
-            const { data: userData } = await supabase.auth.getUser();
+            // Get fresh user data
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
             
-            if (userData.user && userData.user.id === userId) {
+            if (currentUser && currentUser.id === userId) {
               const newProfile = {
                 id: userId,
-                username: userData.user.email?.split('@')[0] || `user_${userId.slice(0, 8)}`,
-                full_name: userData.user.user_metadata?.full_name || '',
+                username: currentUser.email?.split('@')[0] || `user_${userId.slice(0, 8)}`,
+                full_name: currentUser.user_metadata?.full_name || '',
               };
 
               console.log('Creating profile with data:', newProfile);
@@ -80,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (createError) {
                 console.error('Error creating profile:', createError);
                 setError('Failed to create user profile');
-                return false; // Return false but don't throw
+                return false;
               }
 
               console.log('Profile created successfully:', createdProfile);
@@ -97,7 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return false;
           }
         } else {
-          // Other database errors
           setError('Failed to load user profile');
           return false;
         }
@@ -116,54 +123,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // Get initial session
-    const getInitialSession = async () => {
+    const initializeAuth = async () => {
       try {
-        console.log('Getting initial session...');
+        console.log('Initializing auth...');
+        
+        // Wait a bit for auth to settle
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Session error:', error);
           setError('Failed to get session');
+        } else {
+          console.log('Initial session found:', session?.user?.id || 'No session');
+          
           if (isMounted) {
-            setLoading(false);
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+              console.log('User found, fetching profile...');
+              const profileSuccess = await fetchProfile(session.user.id);
+              console.log('Profile fetch completed with result:', profileSuccess);
+            }
           }
-          return;
         }
-
-        console.log('Initial session:', session?.user?.id || 'No session');
-
+        
         if (isMounted) {
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            console.log('User found, attempting to fetch profile...');
-            const profileSuccess = await fetchProfile(session.user.id);
-            console.log('Profile fetch completed with result:', profileSuccess);
-          }
-          
-          // CRITICAL: Always set loading to false, regardless of profile fetch result
-          console.log('Setting loading to false');
+          setInitialized(true);
           setLoading(false);
+          console.log('Auth initialization complete');
         }
       } catch (error) {
-        console.error('Unexpected error getting session:', error);
+        console.error('Error during auth initialization:', error);
         if (isMounted) {
-          setError('An unexpected error occurred');
+          setError('Failed to initialize authentication');
+          setInitialized(true);
           setLoading(false);
         }
       }
     };
 
-    getInitialSession();
+    initializeAuth();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id || 'No user');
         
-        if (!isMounted) return;
+        if (!isMounted || !initialized) return;
 
         try {
           setUser(session?.user ?? null);
@@ -177,9 +184,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(null);
           }
           
-          // CRITICAL: Always set loading to false
-          console.log('Setting loading to false after auth change');
-          setLoading(false);
+          // Only set loading to false if we were loading
+          if (loading) {
+            console.log('Setting loading to false after auth change');
+            setLoading(false);
+          }
         } catch (error) {
           console.error('Error handling auth state change:', error);
           setError('Authentication error occurred');
@@ -193,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase.auth, fetchProfile]);
+  }, [supabase.auth, fetchProfile, initialized, loading]);
 
   const signIn = async (email: string, password: string): Promise<AuthResponse> => {
     try {
@@ -210,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.error) {
         console.error('Sign in error:', result.error);
         setError(result.error.message);
+        setLoading(false);
       } else {
         console.log('Sign in successful');
       }
@@ -218,9 +228,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Unexpected sign in error:', error);
       setError('An unexpected error occurred during sign in');
+      setLoading(false);
       throw error;
-    } finally {
-      // Don't set loading to false here - let the auth state change handle it
     }
   };
 
@@ -245,6 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.error) {
         console.error('Sign up error:', result.error);
         setError(result.error.message);
+        setLoading(false);
       } else {
         console.log('Sign up successful');
       }
@@ -253,9 +263,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Unexpected sign up error:', error);
       setError('An unexpected error occurred during sign up');
+      setLoading(false);
       throw error;
-    } finally {
-      // Don't set loading to false here - let the auth state change handle it
     }
   };
 
@@ -294,7 +303,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
-      // Refresh profile
       const profileSuccess = await fetchProfile(user.id);
       if (!profileSuccess) {
         console.warn('Profile refresh failed after update');
