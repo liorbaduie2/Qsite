@@ -1,65 +1,33 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import type { User, AuthResponse } from '@supabase/supabase-js';
 
-interface Profile {
-  id: string;
-  username: string;
-  full_name?: string;
-  avatar_url?: string;
-  bio?: string;
-}
+export function ProfileTestComponent() {
+  const [result, setResult] = useState<string>('Testing...');
 
-interface AuthContextType {
-  user: User | null;
-  profile: Profile | null;
-  loading: boolean;
-  error: string | null;
-  signIn: (email: string, password: string) => Promise<AuthResponse>;
-  signUp: (email: string, password: string, username: string, fullName?: string) => Promise<AuthResponse>;
-  signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<void>;
-  clearError: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Profile fetch error:', error);
+  useEffect(() => {
+    const testProfile = async () => {
+      try {
+        const userId = '867c83cf-ecc0-4e1d-8d0e-0652915dabee';
         
-        // If profile doesn't exist, create it
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found, creating new profile...');
+        // First check if profile exists
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (fetchError && fetchError.code === 'PGRST116') {
+          // Profile doesn't exist, let's create it
           const { data: userData } = await supabase.auth.getUser();
           
-          if (userData.user) {
+          if (userData.user && userData.user.id === userId) {
             const newProfile = {
               id: userId,
               username: userData.user.email?.split('@')[0] || `user_${userId.slice(0, 8)}`,
@@ -73,227 +41,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single();
 
             if (createError) {
-              console.error('Error creating profile:', createError);
-              setError('Failed to create user profile');
-              return;
+              setResult(`❌ Failed to create profile: ${createError.message}`);
+            } else {
+              setResult(`✅ Profile created successfully: ${JSON.stringify(createdProfile, null, 2)}`);
             }
-
-            console.log('Profile created successfully:', createdProfile);
-            setProfile(createdProfile);
-            return;
+          } else {
+            setResult('❌ User not authenticated or ID mismatch');
           }
-        }
-        
-        setError('Failed to load user profile');
-        return;
-      }
-
-      console.log('Profile fetched successfully:', data);
-      setProfile(data);
-    } catch (error) {
-      console.error('Unexpected error fetching profile:', error);
-      setError('An unexpected error occurred while loading profile');
-    }
-  }, [supabase]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        console.log('Getting initial session...');
-        
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Session error:', error);
-          setError('Failed to get session');
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        console.log('Initial session:', session?.user?.id || 'No session');
-
-        if (isMounted) {
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          }
-          
-          setLoading(false);
+        } else if (fetchError) {
+          setResult(`❌ Database error: ${fetchError.message}`);
+        } else {
+          setResult(`✅ Profile already exists: ${JSON.stringify(existingProfile, null, 2)}`);
         }
       } catch (error) {
-        console.error('Unexpected error getting session:', error);
-        if (isMounted) {
-          setError('An unexpected error occurred');
-          setLoading(false);
-        }
+        setResult(`❌ Unexpected error: ${error}`);
       }
     };
 
-    getInitialSession();
+    testProfile();
+  }, []);
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id || 'No user');
-        
-        if (!isMounted) return;
-
-        try {
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          } else {
-            setProfile(null);
-          }
-          
-          setLoading(false);
-        } catch (error) {
-          console.error('Error handling auth state change:', error);
-          setError('Authentication error occurred');
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase.auth, fetchProfile]);
-
-  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
-    try {
-      setError(null);
-      setLoading(true);
-      
-      console.log('Attempting sign in...');
-      
-      const result = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (result.error) {
-        console.error('Sign in error:', result.error);
-        setError(result.error.message);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Unexpected sign in error:', error);
-      setError('An unexpected error occurred during sign in');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signUp = async (email: string, password: string, username: string, fullName?: string): Promise<AuthResponse> => {
-    try {
-      setError(null);
-      setLoading(true);
-      
-      console.log('Attempting sign up...');
-      
-      const result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (result.error) {
-        console.error('Sign up error:', result.error);
-        setError(result.error.message);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Unexpected sign up error:', error);
-      setError('An unexpected error occurred during sign up');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = async (): Promise<void> => {
-    try {
-      setError(null);
-      console.log('Signing out...');
-      
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Sign out error:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error signing out:', error);
-      setError('Failed to sign out');
-      throw error;
-    }
-  };
-
-  const updateProfile = async (updates: Partial<Profile>): Promise<void> => {
-    if (!user) throw new Error('User not authenticated');
-
-    try {
-      setError(null);
-      console.log('Updating profile...', updates);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Profile update error:', error);
-        throw error;
-      }
-      
-      // Refresh profile
-      await fetchProfile(user.id);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setError('Failed to update profile');
-      throw error;
-    }
-  };
-
-  const value = {
-    user,
-    profile,
-    loading,
-    error,
-    signIn,
-    signUp,
-    signOut,
-    updateProfile,
-    clearError,
-  };
+  // Don't show in production
+  if (process.env.NODE_ENV === 'production') return null;
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      background: 'rgba(0,0,0,0.9)',
+      color: 'white',
+      padding: '20px',
+      maxWidth: '500px',
+      fontSize: '12px',
+      zIndex: 9999,
+      borderRadius: '0 10px 0 0',
+      maxHeight: '300px',
+      overflow: 'auto'
+    }}>
+      <h4>🧪 Profile Test Results</h4>
+      <pre style={{ whiteSpace: 'pre-wrap', fontSize: '11px' }}>{result}</pre>
+    </div>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }
