@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import AuthModal from './components/AuthModal';
+import { ProfileTestComponent } from './components/ProfileTestComponent';
 
 const ForumHomepage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
