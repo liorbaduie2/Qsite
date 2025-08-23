@@ -5,15 +5,26 @@ import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn,
 import { useAuth } from './components/AuthProvider';
 import AuthModal from './components/AuthModal';
 
-// Only import ProfileTestComponent in development
-let ProfileTestComponent: React.ComponentType | null = null;
-if (process.env.NODE_ENV === 'development') {
-  try {
-    const module = require('./components/ProfileTestComponent');
-    ProfileTestComponent = module.ProfileTestComponent;
-  } catch (error) {
-    console.warn('ProfileTestComponent not available:', error);
-  }
+// Development-only ProfileTestComponent
+function ProfileTestComponent() {
+  // Only show in development
+  if (process.env.NODE_ENV === 'production') return null;
+  
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      background: 'rgba(0,0,0,0.9)',
+      color: 'white',
+      padding: '10px',
+      fontSize: '12px',
+      zIndex: 9999,
+      borderRadius: '0 5px 0 0'
+    }}>
+      🧪 Dev Debug Mode
+    </div>
+  );
 }
 
 export default function ForumHomepage() {
@@ -233,7 +244,7 @@ export default function ForumHomepage() {
             { label: 'תשובות', value: '5,678', color: 'purple' },
             { label: 'משתמשים', value: '892', color: 'pink' },
             { label: 'נושאים', value: '156', color: 'blue' }
-          ].map((stat, index) => (
+          ].map((stat) => (
             <div
               key={stat.label}
               className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
@@ -310,8 +321,8 @@ export default function ForumHomepage() {
         </div>
       </main>
 
-      {/* Only render ProfileTestComponent in development */}
-      {ProfileTestComponent && <ProfileTestComponent />}
+      {/* Development Debug Component */}
+      <ProfileTestComponent />
 
       {/* Auth Modal */}
       <AuthModal 
