@@ -4,9 +4,19 @@ import React, { useState } from 'react';
 import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import AuthModal from './components/AuthModal';
-import { ProfileTestComponent } from './components/ProfileTestComponent';
 
-const ForumHomepage = () => {
+// Only import ProfileTestComponent in development
+let ProfileTestComponent: React.ComponentType | null = null;
+if (process.env.NODE_ENV === 'development') {
+  try {
+    const module = require('./components/ProfileTestComponent');
+    ProfileTestComponent = module.ProfileTestComponent;
+  } catch (error) {
+    console.warn('ProfileTestComponent not available:', error);
+  }
+}
+
+export default function ForumHomepage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
@@ -15,7 +25,7 @@ const ForumHomepage = () => {
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
-    { label: 'סטטוסים', icon: Users, href: '/status' },
+    { label: 'סטטוסי', icon: Users, href: '/status' },
     { label: 'דיונים', icon: MessageSquare, href: '/discussions' },
     { label: 'שאלות', icon: HelpCircle, href: '/questions' },
     { label: 'סיפורים', icon: BookOpen, href: '/stories' },
@@ -25,12 +35,12 @@ const ForumHomepage = () => {
     {
       id: 1,
       title: 'למה בעצם נשים מתקשות בחיים הרבה יותר מגברים?',
-      author: 'נועה24242',
+      author: 'נועד24242',
       replies: 12,
       votes: 8,
       views: 156,
       time: 'לפני 1 דקה',
-      tags: ['הבדלים', 'למה', 'משיכה מינית', 'העולם'],
+      tags: ['הבדלים', 'למד', 'משיכה מינית', 'העולם'],
       image: 'https://picsum.photos/900/400?random=1'
     },
     {
@@ -122,343 +132,186 @@ const ForumHomepage = () => {
                 onClick={() => setIsDrawerOpen(!isDrawerOpen)}
                 className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300 hover:scale-105"
               >
-                {isDrawerOpen ? <X size={24} /> : <Menu size={24} />}
+                {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-              <h1 
-                className="text-2xl font-bold"
-                style={{
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}
-              >
-                פורום הקהילה
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Q&A פלטפורמה
               </h1>
             </div>
 
-            {/* Auth Section */}
             <div className="flex items-center gap-3">
               {user ? (
                 <>
-                  {/* User Menu */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100/60">
-                      <img 
-                        src={profile?.avatar_url || `https://i.pravatar.cc/32?seed=${profile?.username}`}
-                        alt="פרופיל"
-                        className="w-8 h-8 rounded-full border-2 border-indigo-200"
-                      />
-                      <div className="text-sm">
-                        <div className="font-semibold text-indigo-600">
-                          {profile?.username || 'משתמש'}
-                        </div>
-                      </div>
+                  <button
+                    onClick={handleNewQuestion}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    <Plus size={16} />
+                    שאלה חדשה
+                  </button>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg shadow-lg">
+                    <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {profile?.username?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
+                    <span className="font-medium text-sm">{profile?.username || user.email}</span>
                     <button
                       onClick={handleSignOut}
-                      className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300 hover:scale-105 text-gray-600"
-                      title="התנתק"
+                      className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
                     >
-                      <LogOut size={20} />
+                      <LogOut size={16} className="text-red-600" />
                     </button>
                   </div>
-                  
-                  <button 
-                    onClick={handleNewQuestion}
-                    className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
-                    style={{
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-                      boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
-                    }}
-                  >
-                    <Plus size={18} />
-                    שאל שאלה חדשה
-                  </button>
                 </>
               ) : (
-                <>
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleAuthAction('login')}
-                    className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
                   >
-                    <LogIn size={18} />
-                    התחבר
+                    <LogIn size={16} />
+                    התחברות
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleAuthAction('register')}
-                    className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
-                    style={{
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-                      boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
-                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
-                    <User size={18} />
-                    הירשם
+                    <User size={16} />
+                    הרשמה
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Drawer */}
-      <div
-        className={`fixed top-0 right-0 h-full bg-white/90 backdrop-blur-xl shadow-2xl rounded-bl-3xl border-l border-gray-200/30 transition-all duration-500 z-[99999] ${
-          isDrawerOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
-        }`}
-        style={{ width: "18rem" }}
-      >
-        <nav className="p-8 w-full h-full overflow-y-auto">
-          {/* User Info in Drawer */}
-          {user && profile && (
-            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={profile.avatar_url || `https://i.pravatar.cc/40?seed=${profile.username}`}
-                  alt="פרופיל"
-                  className="w-10 h-10 rounded-full border-2 border-indigo-200"
-                />
-                <div>
-                  <div className="font-semibold text-indigo-600">
-                    {profile.username}
-                  </div>
-                  {profile.full_name && (
-                    <div className="text-sm text-gray-600">
-                      {profile.full_name}
-                    </div>
-                  )}
-                </div>
-              </div>
+      {/* Side Drawer */}
+      <div className={`fixed inset-0 z-40 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className="absolute inset-0 bg-black/30" onClick={() => setIsDrawerOpen(false)} />
+        <div className={`absolute right-0 top-0 h-full w-72 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-bold text-gray-800">תפריט ניווט</h2>
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
             </div>
-          )}
-
-          <ul className="space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.label}>
-                  <a
-                    href={item.href}
-                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
-                  >
-                    <Icon size={22} className="group-hover:scale-110 transition-transform" />
-                    <span className="font-medium text-lg">{item.label}</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+            <nav className="space-y-2">
+              {menuItems.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all duration-300 group"
+                >
+                  <item.icon size={20} className="group-hover:scale-110 transition-transform" />
+                  <span className="font-medium">{item.label}</span>
+                </a>
+              ))}
+            </nav>
+          </div>
+        </div>
       </div>
 
-      {/* Overlay for drawer */}
-      {isDrawerOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] transition-opacity duration-300"
-          onClick={() => setIsDrawerOpen(false)}
-        />
-      )}
-
-      {/* Welcome Message for logged in users */}
-      {user && profile && (
-        <div className="max-w-5xl mx-auto px-5 pt-6">
-          <div 
-            className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-gray-200/30 mb-6"
-            style={{
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05))'
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">👋</div>
-              <div>
-                <h2 className="font-bold text-lg text-gray-800">
-                  שלום {profile.username}!
-                </h2>
-                <p className="text-gray-600">
-                  ברוכים הבאים חזרה לפורום הקהילה
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Call to Action for non-logged users */}
-      {!user && (
-        <div className="max-w-5xl mx-auto px-5 pt-6">
-          <div 
-            className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200/30 mb-6 text-center"
-            style={{
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05))'
-            }}
-          >
-            <h2 className="text-2xl font-bold mb-3" style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              הצטרף לקהילה שלנו!
-            </h2>
-            <p className="text-gray-600 mb-4">
-              שאל שאלות, שתף ידע וקבל עזרה מקהילת המפתחים הישראלית
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => handleAuthAction('register')}
-                className="px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
-                }}
-              >
-                הירשם עכשיו
-              </button>
-              <button
-                onClick={() => handleAuthAction('login')}
-                className="px-6 py-3 rounded-xl border border-indigo-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-all duration-300 hover:scale-105"
-              >
-                כבר יש לי חשבון
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-5 py-10">
-        
-        {/* Questions Feed */}
-        <div className="space-y-8">
-          {sampleQuestions.map((question, index) => (
-            <article 
-              key={question.id} 
-              className="bg-white/80 backdrop-blur-xl rounded-3xl overflow-hidden shadow-xl border border-gray-200/30 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 group relative"
-              style={{
-                animationDelay: `${index * 0.1}s`,
-                animation: 'slideInUp 0.6s ease-out forwards'
-              }}
+      <main className="max-w-5xl mx-auto px-5 py-8">
+        <div className="mb-8 text-center">
+          <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
+            ברוכים הבאים לפלטפורמת השאלות והתשובות
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            מקום בו תוכלו לשאול שאלות, לקבל תשובות מקצועיות ולחלוק את הידע שלכם עם הקהילה
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {[
+            { label: 'שאלות', value: '1,234', color: 'indigo' },
+            { label: 'תשובות', value: '5,678', color: 'purple' },
+            { label: 'משתמשים', value: '892', color: 'pink' },
+            { label: 'נושאים', value: '156', color: 'blue' }
+          ].map((stat, index) => (
+            <div
+              key={stat.label}
+              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
             >
-              {/* Gradient Border Effect */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)' }}
-              />
-
-              {/* Question Image */}
-              <div 
-                className="h-80 bg-cover bg-center relative overflow-hidden"
-                style={{ 
-                  backgroundImage: `url(${question.image})`,
-                }}
-              >
-                <div 
-                  className="absolute inset-0"
-                  style={{
-                    background: 'linear-gradient(45deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))',
-                    mixBlendMode: 'overlay'
-                  }}
-                />
-                <div 
-                  className="absolute inset-0"
-                  style={{
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.1))'
-                  }}
-                />
-                <div className="absolute bottom-9 right-6 left-5 text-white">
-                  <h2 
-                    className="text-3xl font-bold mb-0 leading-tight"
-                    style={{ textShadow: '0 4px 12px rgba(0,0,0,0.6)' }}
-                  >
-                    {question.title}
-                  </h2>
-                </div>
+              <div className={`text-3xl font-bold bg-gradient-to-r from-${stat.color}-600 to-${stat.color}-800 bg-clip-text text-transparent mb-2`}>
+                {stat.value}
               </div>
+              <div className="text-gray-600 font-medium">{stat.label}</div>
+            </div>
+          ))}
+        </div>
 
-              {/* Question Body */}
-              <div className="p-6">
-                {/* Tags */}
-                <div className="flex flex-wrap gap-3 mb-4">
-                  {question.tags.map((tag, tagIndex) => (
-                    <span
-                      key={tagIndex}
-                      className="px-4 py-2 text-sm font-semibold text-white rounded-full transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden"
-                      style={{
-                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Meta Row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img 
-                      className="w-10 h-10 rounded-full border-2 border-indigo-200 transition-all duration-300 hover:scale-110 hover:border-indigo-400"
-                      src={`https://i.pravatar.cc/40?img=${question.id}`}
-                      alt="אווטר משתמש"
-                    />
-                    <div>
-                      <div 
-                        className="font-bold text-lg relative group-hover:after:w-full"
-                        style={{
-                          color: '#4f46e5',
-                        }}
-                      >
-                        {question.author}
-                      </div>
-                      <div className="text-sm text-gray-500 font-medium">
-                        {question.time}
-                      </div>
+        {/* Questions List */}
+        <div className="space-y-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">שאלות אחרונות</h3>
+          
+          {sampleQuestions.map((question) => (
+            <div
+              key={question.id}
+              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-white/20"
+            >
+              <div className="flex gap-6">
+                <div className="flex-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <h4 className="text-xl font-semibold text-gray-800 hover:text-indigo-600 transition-colors cursor-pointer leading-tight">
+                      {question.title}
+                    </h4>
+                    <div className="text-sm text-gray-500 whitespace-nowrap mr-4">
+                      {question.time}
                     </div>
                   </div>
-
-                  {/* Votes */}
-                  <div 
-                    className="flex items-center gap-2 px-3 py-2 rounded-full border transition-all duration-300 hover:scale-105"
-                    style={{
-                      background: 'rgba(99, 102, 241, 0.1)',
-                      borderColor: 'rgba(99, 102, 241, 0.2)'
-                    }}
-                  >
-                    <button 
-                      className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50"
-                      onClick={() => !user && handleAuthAction('login')}
-                    >
-                      ▲
-                    </button>
-                    <span className="font-bold text-indigo-600 min-w-5 text-center">
-                      {question.votes}
+                  
+                  <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
+                    <span className="flex items-center gap-1">
+                      <User size={14} />
+                      {question.author}
                     </span>
-                    <button 
-                      className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50"
-                      onClick={() => !user && handleAuthAction('login')}
-                    >
-                      ▼
-                    </button>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare size={14} />
+                      {question.replies} תגובות
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-green-600">↑</span>
+                      {question.votes} קולות
+                    </span>
+                    <span>{question.views} צפיות</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {question.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-lg text-sm font-medium hover:from-indigo-200 hover:to-purple-200 transition-all cursor-pointer"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
+
+                {question.image && (
+                  <div className="w-32 h-24 rounded-xl overflow-hidden shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={question.image}
+                      alt="Question preview"
+                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                )}
               </div>
-            </article>
+            </div>
           ))}
         </div>
       </main>
 
-      {/* Floating Action Button */}
-      <button 
-        onClick={handleNewQuestion}
-        className="fixed bottom-8 left-1/2 transform -translate-x-1/2 w-16 h-16 rounded-full text-white shadow-2xl transition-all duration-300 hover:scale-115 z-50 flex items-center justify-center text-2xl"
-        style={{
-          background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-          boxShadow: '0 20px 40px rgba(99, 102, 241, 0.4)',
-          animation: 'pulse 2s infinite'
-        }}
-      >
-        <Plus size={28} />
-      </button>
+      {/* Only render ProfileTestComponent in development */}
+      {ProfileTestComponent && <ProfileTestComponent />}
 
       {/* Auth Modal */}
       <AuthModal 
@@ -467,34 +320,23 @@ const ForumHomepage = () => {
         initialMode={authModalMode}
       />
 
-      <style jsx>{`
-        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap');
-        
+      <style jsx global>{`
         @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(30px, -30px) rotate(120deg); }
-          66% { transform: translate(-20px, 20px) rotate(240deg); }
-        }
-
-        @keyframes slideInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
+          0%, 100% {
+            transform: translate(0px, 0px) rotate(0deg);
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+          33% {
+            transform: translate(30px, -50px) rotate(1deg);
+          }
+          66% {
+            transform: translate(-20px, 20px) rotate(-1deg);
           }
         }
-
-        @keyframes pulse {
-          0% { box-shadow: 0 20px 40px rgba(99, 102, 241, 0.4); }
-          50% { box-shadow: 0 25px 60px rgba(99, 102, 241, 0.6); }
-          100% { box-shadow: 0 20px 40px rgba(99, 102, 241, 0.4); }
+        
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
         }
       `}</style>
     </div>
   );
-};
-
-export default ForumHomepage;
+}
