@@ -28,7 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [fetchingProfile, setFetchingProfile] = useState(false);
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,104 +35,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const fetchProfile = useCallback(async (userId: string) => {
-    // Prevent multiple simultaneous profile fetches
-    if (fetchingProfile) {
-      console.log('Profile fetch already in progress, skipping...');
-      return;
-    }
-
-    setFetchingProfile(true);
-    console.log('Fetching profile for user:', userId);
-    
     try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000);
-      });
-
-      const fetchPromise = supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        if (error.code === 'PGRST116') {
-          // Profile doesn't exist yet - this is normal for new users
-          console.log('Profile not found - user may need to complete registration');
-        }
-        setProfile(null);
-        return;
-      }
-      
-      console.log('Profile fetched successfully:', data);
+      if (error) throw error;
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setProfile(null);
-    } finally {
-      setFetchingProfile(false);
     }
-  }, [supabase, fetchingProfile]);
+  }, [supabase]);
 
   useEffect(() => {
-    let isMounted = true;
-    let loadingTimeout: NodeJS.Timeout;
-
-    // Safety timeout - force stop loading after 8 seconds
-    const setLoadingTimeout = () => {
-      clearTimeout(loadingTimeout);
-      loadingTimeout = setTimeout(() => {
-        if (isMounted && loading) {
-          console.warn('Loading timeout reached - forcing completion');
-          setLoading(false);
-        }
-      }, 8000);
-    };
-
     // Get initial session
     const getInitialSession = async () => {
-      try {
-        console.log('Getting initial session...');
-        setLoadingTimeout();
-
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
-
-        if (error) {
-          console.error('Error getting session:', error);
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        console.log('Initial session:', session?.user?.id || 'No user');
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-        }
-        
-        if (isMounted) {
-          clearTimeout(loadingTimeout);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error in getInitialSession:', error);
-        if (isMounted) {
-          setUser(null);
-          setProfile(null);
-          clearTimeout(loadingTimeout);
-          setLoading(false);
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        await fetchProfile(session.user.id);
       }
+      
+      setLoading(false);
     };
 
     getInitialSession();
@@ -141,15 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted) return;
-
-        console.log('Auth state change:', event, session?.user?.id || 'No user');
-        
-        // Don't set loading to true again if we're just refreshing token
-        if (event === 'TOKEN_REFRESHED') {
-          return;
-        }
-
         setUser(session?.user ?? null);
         
         if (session?.user) {
@@ -158,17 +75,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
         }
         
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     );
 
-    return () => {
-      isMounted = false;
-      clearTimeout(loadingTimeout);
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [supabase.auth, fetchProfile]);
 
   const signIn = async (email: string, password: string): Promise<AuthResponse> => {
