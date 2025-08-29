@@ -5,7 +5,9 @@ import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn,
 import { useAuth } from './components/AuthProvider';
 import AuthModal from './components/AuthModal';
 
+// Development-only ProfileTestComponent
 function ProfileTestComponent() {
+  // Only show in development
   if (process.env.NODE_ENV === 'production') return null;
   
   return (
@@ -20,7 +22,7 @@ function ProfileTestComponent() {
       zIndex: 9999,
       borderRadius: '0 5px 0 0'
     }}>
-      Dev Debug Mode
+      ?? Dev Debug Mode
     </div>
   );
 }
@@ -49,7 +51,8 @@ export default function ForumHomepage() {
       votes: 8,
       views: 156,
       time: '???? 1 ???',
-      tags: ['??????', '???', '????? ?????', '?????']
+      tags: ['??????', '???', '????? ?????', '?????'],
+      image: 'https://picsum.photos/900/400?random=1'
     },
     {
       id: 2,
@@ -59,7 +62,8 @@ export default function ForumHomepage() {
       votes: 12,
       views: 234,
       time: '???? 2 ????',
-      tags: ['?????', '???????', '??????']
+      tags: ['?????', '???????', '??????'],
+      image: 'https://picsum.photos/900/400?random=2'
     },
     {
       id: 3,
@@ -69,7 +73,8 @@ export default function ForumHomepage() {
       votes: 6,
       views: 89,
       time: '???? 4 ????',
-      tags: ['React', 'Vue', '?????']
+      tags: ['React', 'Vue', '?????'],
+      image: 'https://picsum.photos/900/400?random=3'
     }
   ];
 
@@ -91,6 +96,7 @@ export default function ForumHomepage() {
       handleAuthAction('login');
       return;
     }
+    // Handle new question creation
     console.log('Create new question');
   };
 
@@ -115,6 +121,7 @@ export default function ForumHomepage() {
         color: '#0f172a'
       }}
     >
+      {/* Animated Background */}
       <div 
         className="fixed inset-0 -z-10"
         style={{
@@ -127,6 +134,7 @@ export default function ForumHomepage() {
         }}
       />
 
+      {/* Header */}
       <header className="relative bg-white/80 backdrop-blur-xl shadow-xl border-b border-gray-200/20">
         <div className="max-w-5xl mx-auto px-5">
           <div className="flex justify-between items-center py-4">
@@ -188,6 +196,7 @@ export default function ForumHomepage() {
         </div>
       </header>
 
+      {/* Side Drawer */}
       <div className={`fixed inset-0 z-40 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-black/30" onClick={() => setIsDrawerOpen(false)} />
         <div className={`absolute right-0 top-0 h-full w-72 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
@@ -217,6 +226,7 @@ export default function ForumHomepage() {
         </div>
       </div>
 
+      {/* Main Content */}
       <main className="max-w-5xl mx-auto px-5 py-8">
         <div className="mb-8 text-center">
           <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
@@ -227,6 +237,7 @@ export default function ForumHomepage() {
           </p>
         </div>
 
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
             { label: '?????', value: '1,234', color: 'indigo' },
@@ -246,6 +257,7 @@ export default function ForumHomepage() {
           ))}
         </div>
 
+        {/* Questions List */}
         <div className="space-y-6">
           <h3 className="text-2xl font-bold text-gray-800 mb-6">????? ???????</h3>
           
@@ -292,14 +304,27 @@ export default function ForumHomepage() {
                     ))}
                   </div>
                 </div>
+
+                {question.image && (
+                  <div className="w-32 h-24 rounded-xl overflow-hidden shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={question.image}
+                      alt="Question preview"
+                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
       </main>
 
+      {/* Development Debug Component */}
       <ProfileTestComponent />
 
+      {/* Auth Modal */}
       <AuthModal 
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
