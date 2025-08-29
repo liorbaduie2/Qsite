@@ -4,45 +4,56 @@ import React, { useState } from 'react';
 import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import AuthModal from './components/AuthModal';
-import NewQuestionModal from './components/NewQuestionModal';
-import { useQuestions } from './hooks/useQuestions';
 
-// Development-only ProfileTestComponent
-function ProfileTestComponent() {
-  if (process.env.NODE_ENV === 'production') return null;
-  
-  return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      background: 'rgba(0,0,0,0.9)',
-      color: 'white',
-      padding: '10px',
-      fontSize: '12px',
-      zIndex: 9999,
-      borderRadius: '0 5px 0 0'
-    }}>
-      ?? Dev Debug Mode
-    </div>
-  );
-}
-
-export default function ForumHomepage() {
+const ForumHomepage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
-  const [isNewQuestionModalOpen, setIsNewQuestionModalOpen] = useState(false);
   
-  const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { questions, loading: questionsLoading, error: questionsError, refetch, formatRelativeTime, incrementViews } = useQuestions();
+  const { user, profile, loading, signOut } = useAuth();
 
   const menuItems = [
-    { label: 'αιϊ', icon: Home, href: '/' },
-    { label: 'ρθθερ', icon: Users, href: '/status' },
-    { label: 'γιεπιν', icon: MessageSquare, href: '/discussions' },
-    { label: 'ωΰμεϊ', icon: HelpCircle, href: '/questions' },
-    { label: 'ριτεψιν', icon: BookOpen, href: '/stories' },
+    { label: 'Χ¨ΧΧ©Χ™', icon: Home, href: '/' },
+    { label: 'Χ΅ΧΧΧ•Χ΅Χ™Χ', icon: Users, href: '/status' },
+    { label: 'Χ“Χ™Χ•Χ Χ™Χ', icon: MessageSquare, href: '/discussions' },
+    { label: 'Χ©ΧΧΧ•Χª', icon: HelpCircle, href: '/questions' },
+    { label: 'Χ΅Χ™Χ¤Χ•Χ¨Χ™Χ', icon: BookOpen, href: '/stories' },
+  ];
+
+  const sampleQuestions = [
+    {
+      id: 1,
+      title: 'ΧΧΧ” Χ‘ΧΆΧ¦Χ Χ Χ©Χ™Χ ΧΧªΧ§Χ©Χ•Χª Χ‘Χ—Χ™Χ™Χ Χ”Χ¨Χ‘Χ” Χ™Χ•ΧªΧ¨ ΧΧ’Χ‘Χ¨Χ™Χ?',
+      author: 'Χ Χ•ΧΆΧ”24242',
+      replies: 12,
+      votes: 8,
+      views: 156,
+      time: 'ΧΧ¤Χ Χ™ 1 Χ“Χ§Χ”',
+      tags: ['Χ”Χ‘Χ“ΧΧ™Χ', 'ΧΧΧ”', 'ΧΧ©Χ™Χ›Χ” ΧΧ™Χ Χ™Χª', 'Χ”ΧΆΧ•ΧΧ'],
+      image: 'https://picsum.photos/900/400?random=1'
+    },
+    {
+      id: 2,
+      title: 'ΧΧ™Χ ΧΧ Χ™ Χ™Χ›Χ•Χ ΧΧΧΧ•Χ“ ΧªΧ›Χ Χ•Χª Χ‘Χ¦Χ•Χ¨Χ” Χ™ΧΆΧ™ΧΧ”?',
+      author: 'Χ“Χ Χ™ Χ›Χ”Χ',
+      replies: 15,
+      votes: 12,
+      views: 234,
+      time: 'ΧΧ¤Χ Χ™ 2 Χ©ΧΆΧ•Χª',
+      tags: ['ΧªΧ›Χ Χ•Χª', 'ΧΧ™ΧΧ•Χ“Χ™Χ', 'Χ§Χ¨Χ™Χ™Χ¨Χ”'],
+      image: 'https://picsum.photos/900/400?random=2'
+    },
+    {
+      id: 3,
+      title: 'ΧΧ” Χ”Χ”Χ‘Χ“Χ Χ‘Χ™Χ React Χ-Vue?',
+      author: 'Χ©Χ¨Χ” ΧΧ•Χ™',
+      replies: 8,
+      votes: 6,
+      views: 89,
+      time: 'ΧΧ¤Χ Χ™ 4 Χ©ΧΆΧ•Χª',
+      tags: ['React', 'Vue', 'Χ¤Χ™ΧªΧ•Χ—'],
+      image: 'https://picsum.photos/900/400?random=3'
+    }
   ];
 
   const handleAuthAction = (mode: 'login' | 'register') => {
@@ -63,24 +74,16 @@ export default function ForumHomepage() {
       handleAuthAction('login');
       return;
     }
-    setIsNewQuestionModalOpen(true);
+    // Handle new question creation
+    console.log('Create new question');
   };
 
-  const handleQuestionCreated = () => {
-    refetch();
-  };
-
-  const handleQuestionClick = (questionId: string) => {
-    incrementViews(questionId);
-    console.log('Navigate to question:', questionId);
-  };
-
-  if (authLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" dir="rtl">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <p className="text-gray-600 font-medium">θεςο...</p>
+          <p className="text-gray-600 font-medium">ΧΧ•ΧΆΧ...</p>
         </div>
       </div>
     );
@@ -118,53 +121,81 @@ export default function ForumHomepage() {
                 onClick={() => setIsDrawerOpen(!isDrawerOpen)}
                 className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300 hover:scale-105"
               >
-                {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
+                {isDrawerOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Q&A τεψεν
+              <h1 
+                className="text-2xl font-bold"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
+                Χ¤Χ•Χ¨Χ•Χ Χ”Χ§Χ”Χ™ΧΧ”
               </h1>
             </div>
 
+            {/* Auth Section */}
             <div className="flex items-center gap-3">
               {user ? (
                 <>
-                  <button
-                    onClick={handleNewQuestion}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
-                  >
-                    <Plus size={16} />
-                    ωΰμδ ηγωδ
-                  </button>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg shadow-lg">
-                    <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                      {profile?.username?.charAt(0)?.toUpperCase() || 'U'}
+                  {/* User Menu */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100/60">
+                      <img 
+                        src={profile?.avatar_url || `https://i.pravatar.cc/32?seed=${profile?.username}`}
+                        alt="Χ¤Χ¨Χ•Χ¤Χ™Χ"
+                        className="w-8 h-8 rounded-full border-2 border-indigo-200"
+                      />
+                      <div className="text-sm">
+                        <div className="font-semibold text-indigo-600">
+                          {profile?.username || 'ΧΧ©ΧªΧΧ©'}
+                        </div>
+                      </div>
                     </div>
-                    <span className="font-medium text-sm">{profile?.username || user.email}</span>
                     <button
                       onClick={handleSignOut}
-                      className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+                      className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300 hover:scale-105 text-gray-600"
+                      title="Χ”ΧªΧ ΧªΧ§"
                     >
-                      <LogOut size={16} className="text-red-600" />
+                      <LogOut size={20} />
                     </button>
                   </div>
+                  
+                  <button 
+                    onClick={handleNewQuestion}
+                    className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
+                    style={{
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                      boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
+                    }}
+                  >
+                    <Plus size={18} />
+                    Χ©ΧΧ Χ©ΧΧΧ” Χ—Χ“Χ©Χ”
+                  </button>
                 </>
               ) : (
-                <div className="flex gap-2">
+                <>
                   <button
                     onClick={() => handleAuthAction('login')}
-                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
+                    className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-all duration-300 hover:scale-105 flex items-center gap-2"
                   >
-                    <LogIn size={16} />
-                    δϊηαψεϊ
+                    <LogIn size={18} />
+                    Χ”ΧªΧ—Χ‘Χ¨
                   </button>
-                  <button
+                  <button 
                     onClick={() => handleAuthAction('register')}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    className="px-4 py-2 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center gap-2"
+                    style={{
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                      boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.3)'
+                    }}
                   >
-                    <User size={16} />
-                    δψωξδ
+                    <User size={18} />
+                    Χ”Χ™Χ¨Χ©Χ
                   </button>
-                </div>
+                </>
               )}
             </div>
           </div>
@@ -172,193 +203,297 @@ export default function ForumHomepage() {
       </header>
 
       {/* Drawer */}
-      <div className={`fixed inset-0 z-40 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/30" onClick={() => setIsDrawerOpen(false)} />
-        <div className={`absolute right-0 top-0 h-full w-72 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-gray-800">ϊτψιθ ψΰωι</h2>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} />
-              </button>
+      <div
+        className={`fixed top-0 right-0 h-full bg-white/90 backdrop-blur-xl shadow-2xl rounded-bl-3xl border-l border-gray-200/30 transition-all duration-500 z-[99999] ${
+          isDrawerOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
+        }`}
+        style={{ width: "18rem" }}
+      >
+        <nav className="p-8 w-full h-full overflow-y-auto">
+          {/* User Info in Drawer */}
+          {user && profile && (
+            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={profile.avatar_url || `https://i.pravatar.cc/40?seed=${profile.username}`}
+                  alt="Χ¤Χ¨Χ•Χ¤Χ™Χ"
+                  className="w-10 h-10 rounded-full border-2 border-indigo-200"
+                />
+                <div>
+                  <div className="font-semibold text-indigo-600">
+                    {profile.username}
+                  </div>
+                  {profile.full_name && (
+                    <div className="text-sm text-gray-600">
+                      {profile.full_name}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <nav className="space-y-2">
-              {menuItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all duration-300 group"
-                >
-                  <item.icon size={20} className="group-hover:scale-110 transition-transform" />
-                  <span className="font-medium">{item.label}</span>
-                </a>
-              ))}
-            </nav>
-          </div>
-        </div>
+          )}
+
+          <ul className="space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.label}>
+                  <a
+                    href={item.href}
+                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
+                  >
+                    <Icon size={22} className="group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-lg">{item.label}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       </div>
 
-      {/* Main */}
-      <main className="max-w-5xl mx-auto px-5 py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
-            αψεκ δαΰ μτεψεν δωΰμεϊ εδϊωεαεϊ
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            λΰο ΰτωψ μωΰεμ ωΰμεϊ, μωϊσ ιγς εμχαμ ϊωεαεϊ ξδχδιμδ
-          </p>
-        </div>
+      {/* Overlay for drawer */}
+      {isDrawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] transition-opacity duration-300"
+          onClick={() => setIsDrawerOpen(false)}
+        />
+      )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {[
-            { label: 'ωΰμεϊ', value: questions.length.toString(), color: 'indigo' },
-            { label: 'ϊβεαεϊ', value: questions.reduce((sum, q) => sum + q.replies_count, 0).toString(), color: 'purple' },
-            { label: 'ξωϊξωιν', value: '892', color: 'pink' },
-            { label: 'πεωΰιν', value: '156', color: 'blue' }
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
-            >
-              <div className={`text-3xl font-bold bg-gradient-to-r from-${stat.color}-600 to-${stat.color}-800 bg-clip-text text-transparent mb-2`}>
-                {stat.value}
+      {/* Welcome Message for logged in users */}
+      {user && profile && (
+        <div className="max-w-5xl mx-auto px-5 pt-6">
+          <div 
+            className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-gray-200/30 mb-6"
+            style={{
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05))'
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">π‘‹</div>
+              <div>
+                <h2 className="font-bold text-lg text-gray-800">
+                  Χ©ΧΧ•Χ {profile.username}!
+                </h2>
+                <p className="text-gray-600">
+                  Χ‘Χ¨Χ•Χ›Χ™Χ Χ”Χ‘ΧΧ™Χ Χ—Χ–Χ¨Χ” ΧΧ¤Χ•Χ¨Χ•Χ Χ”Χ§Χ”Χ™ΧΧ”
+                </p>
               </div>
-              <div className="text-gray-600 font-medium">{stat.label}</div>
             </div>
-          ))}
-        </div>
-
-        {/* Questions */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-gray-800">ωΰμεϊ ΰηψεπεϊ</h3>
-            {questionsError && (
-              <button
-                onClick={refetch}
-                className="px-4 py-2 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
-              >
-                πρδ ωεα
-              </button>
-            )}
           </div>
+        </div>
+      )}
 
-          {questionsLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 animate-pulse">
-                  <div className="h-6 bg-gray-300 rounded mb-4"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : questionsError ? (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-              <p className="text-red-700 font-medium">ωβιΰδ αθςιπϊ δωΰμεϊ</p>
-              <p className="text-red-600 text-sm mt-1">{questionsError}</p>
-            </div>
-          ) : questions.length === 0 ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-12 text-center">
-              <MessageSquare size={48} className="text-gray-400 mx-auto mb-4" />
-              <h4 className="text-xl font-semibold text-gray-700 mb-2">ΰιο ωΰμεϊ ςγιιο</h4>
-              <p className="text-gray-600 mb-6">διδ δψΰωεο μωΰεμ ωΰμδ αχδιμδ!</p>
-              {user && (
-                <button
-                  onClick={handleNewQuestion}
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
-                >
-                  ωΰμ ωΰμδ ηγωδ
-                </button>
-              )}
-            </div>
-          ) : (
-            questions.map((question) => (
-              <div
-                key={question.id}
-                className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-white/20 cursor-pointer"
-                onClick={() => handleQuestionClick(question.id)}
+      {/* Call to Action for non-logged users */}
+      {!user && (
+        <div className="max-w-5xl mx-auto px-5 pt-6">
+          <div 
+            className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200/30 mb-6 text-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05))'
+            }}
+          >
+            <h2 className="text-2xl font-bold mb-3" style={{
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              Χ”Χ¦ΧΧ¨Χ£ ΧΧ§Χ”Χ™ΧΧ” Χ©ΧΧ Χ•!
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Χ©ΧΧ Χ©ΧΧΧ•Χª, Χ©ΧªΧ£ Χ™Χ“ΧΆ Χ•Χ§Χ‘Χ ΧΆΧ–Χ¨Χ” ΧΧ§Χ”Χ™ΧΧª Χ”ΧΧ¤ΧªΧ—Χ™Χ Χ”Χ™Χ©Χ¨ΧΧΧ™Χª
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => handleAuthAction('register')}
+                className="px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
+                }}
               >
-                <div className="flex gap-6">
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <h4 className="text-xl font-semibold text-gray-800 hover:text-indigo-600 transition-colors leading-tight">
-                        {question.title}
-                      </h4>
-                      <div className="text-sm text-gray-500 whitespace-nowrap mr-4">
-                        {formatRelativeTime(question.created_at)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
-                      <span className="flex items-center gap-1">
-                        <User size={14} />
-                        {question.author_username}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageSquare size={14} />
-                        {question.replies_count} ϊβεαεϊ
-                      </span>
-                      <span className="flex items-center gap-1">
-                        ?? {question.votes_count} δφαςεϊ
-                      </span>
-                      <span>{question.views_count} φτιεϊ</span>
-                      {question.is_answered && (
-                        <span className="text-green-600 font-medium">? πςπδ</span>
-                      )}
-                    </div>
+                Χ”Χ™Χ¨Χ©Χ ΧΆΧ›Χ©Χ™Χ•
+              </button>
+              <button
+                onClick={() => handleAuthAction('login')}
+                className="px-6 py-3 rounded-xl border border-indigo-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-all duration-300 hover:scale-105"
+              >
+                Χ›Χ‘Χ¨ Χ™Χ© ΧΧ™ Χ—Χ©Χ‘Χ•Χ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                    {question.tags && question.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {question.tags.map((tag) => (
-                          <span
-                            key={tag.id}
-                            className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-lg text-sm font-medium hover:from-indigo-200 hover:to-purple-200 transition-all"
-                            style={{ 
-                              backgroundColor: tag.color ? `${tag.color}15` : undefined,
-                              color: tag.color || undefined 
-                            }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
+      {/* Main Content */}
+      <main className="max-w-5xl mx-auto px-5 py-10">
+        
+        {/* Questions Feed */}
+        <div className="space-y-8">
+          {sampleQuestions.map((question, index) => (
+            <article 
+              key={question.id} 
+              className="bg-white/80 backdrop-blur-xl rounded-3xl overflow-hidden shadow-xl border border-gray-200/30 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 group relative"
+              style={{
+                animationDelay: `${index * 0.1}s`,
+                animation: 'slideInUp 0.6s ease-out forwards'
+              }}
+            >
+              {/* Gradient Border Effect */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)' }}
+              />
+
+              {/* Question Image */}
+              <div 
+                className="h-80 bg-cover bg-center relative overflow-hidden"
+                style={{ 
+                  backgroundImage: `url(${question.image})`,
+                }}
+              >
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(45deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))',
+                    mixBlendMode: 'overlay'
+                  }}
+                />
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.1))'
+                  }}
+                />
+                <div className="absolute bottom-9 right-6 left-5 text-white">
+                  <h2 
+                    className="text-3xl font-bold mb-0 leading-tight"
+                    style={{ textShadow: '0 4px 12px rgba(0,0,0,0.6)' }}
+                  >
+                    {question.title}
+                  </h2>
+                </div>
+              </div>
+
+              {/* Question Body */}
+              <div className="p-6">
+                {/* Tags */}
+                <div className="flex flex-wrap gap-3 mb-4">
+                  {question.tags.map((tag, tagIndex) => (
+                    <span
+                      key={tagIndex}
+                      className="px-4 py-2 text-sm font-semibold text-white rounded-full transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Meta Row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      className="w-10 h-10 rounded-full border-2 border-indigo-200 transition-all duration-300 hover:scale-110 hover:border-indigo-400"
+                      src={`https://i.pravatar.cc/40?img=${question.id}`}
+                      alt="ΧΧ•Χ•ΧΧ¨ ΧΧ©ΧªΧΧ©"
+                    />
+                    <div>
+                      <div 
+                        className="font-bold text-lg relative group-hover:after:w-full"
+                        style={{
+                          color: '#4f46e5',
+                        }}
+                      >
+                        {question.author}
                       </div>
-                    )}
+                      <div className="text-sm text-gray-500 font-medium">
+                        {question.time}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Votes */}
+                  <div 
+                    className="flex items-center gap-2 px-3 py-2 rounded-full border transition-all duration-300 hover:scale-105"
+                    style={{
+                      background: 'rgba(99, 102, 241, 0.1)',
+                      borderColor: 'rgba(99, 102, 241, 0.2)'
+                    }}
+                  >
+                    <button 
+                      className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50"
+                      onClick={() => !user && handleAuthAction('login')}
+                    >
+                      β–²
+                    </button>
+                    <span className="font-bold text-indigo-600 min-w-5 text-center">
+                      {question.votes}
+                    </span>
+                    <button 
+                      className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50"
+                      onClick={() => !user && handleAuthAction('login')}
+                    >
+                      β–Ό
+                    </button>
                   </div>
                 </div>
               </div>
-            ))
-          )}
+            </article>
+          ))}
         </div>
       </main>
 
-      <ProfileTestComponent />
+      {/* Floating Action Button */}
+      <button 
+        onClick={handleNewQuestion}
+        className="fixed bottom-8 left-1/2 transform -translate-x-1/2 w-16 h-16 rounded-full text-white shadow-2xl transition-all duration-300 hover:scale-115 z-50 flex items-center justify-center text-2xl"
+        style={{
+          background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+          boxShadow: '0 20px 40px rgba(99, 102, 241, 0.4)',
+          animation: 'pulse 2s infinite'
+        }}
+      >
+        <Plus size={28} />
+      </button>
 
+      {/* Auth Modal */}
       <AuthModal 
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
       />
 
-      <NewQuestionModal
-        isOpen={isNewQuestionModalOpen}
-        onClose={() => setIsNewQuestionModalOpen(false)}
-        onQuestionCreated={handleQuestionCreated}
-      />
-
-      <style jsx global>{`
+      <style jsx>{`
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap');
+        
         @keyframes float {
-          0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
-          33% { transform: translate(30px, -50px) rotate(1deg); }
-          66% { transform: translate(-20px, 20px) rotate(-1deg); }
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(30px, -30px) rotate(120deg); }
+          66% { transform: translate(-20px, 20px) rotate(240deg); }
         }
-        .animate-float { animation: float 6s ease-in-out infinite; }
+
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes pulse {
+          0% { box-shadow: 0 20px 40px rgba(99, 102, 241, 0.4); }
+          50% { box-shadow: 0 25px 60px rgba(99, 102, 241, 0.6); }
+          100% { box-shadow: 0 20px 40px rgba(99, 102, 241, 0.4); }
+        }
       `}</style>
     </div>
   );
-}
+};
+
+export default ForumHomepage;
