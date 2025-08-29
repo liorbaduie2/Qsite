@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { X, Home, HelpCircle, User, Settings, MessageSquare, BookOpen, Users, Bell, LogOut } from 'lucide-react';
+import { X, LogOut } from 'lucide-react';
 
 // Types for better type safety
 export interface MenuItem {
@@ -15,7 +15,7 @@ export interface MenuItem {
 export interface NavigationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  menuItems?: MenuItem[];
+  menuItems: MenuItem[];
   user?: {
     username?: string;
     email?: string;
@@ -27,22 +27,10 @@ export interface NavigationDrawerProps {
   drawerClassName?: string;
 }
 
-// Default menu items if none provided
-const defaultMenuItems: MenuItem[] = [
-  { label: 'עמוד ראשי', href: '/', icon: Home },
-  { label: 'שאלות ותשובות', href: '/questions', icon: HelpCircle, active: true },
-  { label: 'פרופיל', href: '/profile', icon: User },
-  { label: 'פרויקטים', href: '/projects', icon: BookOpen },
-  { label: 'קהילה', href: '/community', icon: Users },
-  { label: 'דיונים', href: '/discussions', icon: MessageSquare },
-  { label: 'התראות', href: '/notifications', icon: Bell },
-  { label: 'הגדרות', href: '/settings', icon: Settings },
-];
-
 export function NavigationDrawer({
   isOpen,
   onClose,
-  menuItems = defaultMenuItems,
+  menuItems,
   user,
   onSignOut,
   className = '',
@@ -65,21 +53,22 @@ export function NavigationDrawer({
       {/* Overlay */}
       {isOpen && (
         <div
-          className={`fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] transition-opacity duration-300 ${overlayClassName}`}
+          className={`fixed inset-0 z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'} ${overlayClassName}`}
           onClick={onClose}
-        />
+        >
+          <div className="absolute inset-0 bg-black/30" />
+        </div>
       )}
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full bg-white/90 backdrop-blur-xl shadow-2xl rounded-bl-3xl border-l border-gray-200/30 transition-all duration-500 z-[99999] ${
-          isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
+        className={`fixed right-0 top-0 h-full w-72 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 z-50 ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
         } ${drawerClassName}`}
-        style={{ width: "18rem" }}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200/30">
+          <div className="flex items-center justify-between p-6">
             <h2 className="text-xl font-bold text-gray-800">תפריט ניווט</h2>
             <button
               onClick={onClose}
@@ -92,8 +81,8 @@ export function NavigationDrawer({
 
           {/* User info (if logged in) */}
           {user && (
-            <div className="p-6 border-b border-gray-200/30">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="px-6 pb-4 border-b border-gray-200/30">
+              <div className="flex items-center gap-3">
                 {user.avatar_url ? (
                   <img 
                     src={user.avatar_url} 
@@ -119,30 +108,29 @@ export function NavigationDrawer({
 
           {/* Navigation Menu */}
           <nav className="flex-1 p-4 overflow-y-auto">
-            <ul className="space-y-1">
+            <div className="space-y-2">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <li key={item.label}>
-                    <a
-                      href={item.href}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleMenuItemClick(item);
-                      }}
-                      className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg group cursor-pointer ${
-                        item.active 
-                          ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 shadow-md' 
-                          : 'hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 text-gray-700'
-                      }`}
-                    >
-                      <Icon size={22} className="group-hover:scale-110 transition-transform flex-shrink-0" />
-                      <span className="font-medium text-lg">{item.label}</span>
-                    </a>
-                  </li>
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleMenuItemClick(item);
+                    }}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group cursor-pointer ${
+                      item.active 
+                        ? 'bg-indigo-50 text-indigo-600' 
+                        : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600'
+                    }`}
+                  >
+                    <Icon size={20} className="group-hover:scale-110 transition-transform flex-shrink-0" />
+                    <span className="font-medium">{item.label}</span>
+                  </a>
                 );
               })}
-            </ul>
+            </div>
           </nav>
 
           {/* Footer with sign out (if logged in) */}
@@ -153,7 +141,7 @@ export function NavigationDrawer({
                   onSignOut();
                   onClose();
                 }}
-                className="flex items-center gap-3 w-full p-4 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-300 group"
+                className="flex items-center gap-3 w-full p-4 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-300 group"
               >
                 <LogOut size={20} className="group-hover:scale-110 transition-transform" />
                 <span className="font-medium">התנתקות</span>
