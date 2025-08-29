@@ -4,8 +4,6 @@ import React, { useState } from 'react';
 import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import AuthModal from './components/AuthModal';
-import NewQuestionModal from './components/NewQuestionModal';
-import { useQuestions } from './hooks/useQuestions';
 
 function ProfileTestComponent() {
   if (process.env.NODE_ENV === 'production') return null;
@@ -31,10 +29,8 @@ export default function ForumHomepage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
-  const [isNewQuestionModalOpen, setIsNewQuestionModalOpen] = useState(false);
   
-  const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { questions, loading: questionsLoading, error: questionsError, refetch, formatRelativeTime, incrementViews } = useQuestions();
+  const { user, profile, loading, signOut } = useAuth();
 
   const menuItems = [
     { label: '????', icon: Home, href: '/' },
@@ -42,6 +38,39 @@ export default function ForumHomepage() {
     { label: '??????', icon: MessageSquare, href: '/discussions' },
     { label: '?????', icon: HelpCircle, href: '/questions' },
     { label: '???????', icon: BookOpen, href: '/stories' },
+  ];
+
+  const sampleQuestions = [
+    {
+      id: 1,
+      title: '??? ???? ???? ?????? ????? ???? ???? ???????',
+      author: '????24242',
+      replies: 12,
+      votes: 8,
+      views: 156,
+      time: '???? 1 ???',
+      tags: ['??????', '???', '????? ?????', '?????']
+    },
+    {
+      id: 2,
+      title: '??? ??? ???? ????? ????? ????? ??????',
+      author: '??? ???',
+      replies: 15,
+      votes: 12,
+      views: 234,
+      time: '???? 2 ????',
+      tags: ['?????', '???????', '??????']
+    },
+    {
+      id: 3,
+      title: '?? ????? ??? React ?-Vue?',
+      author: '??? ???',
+      replies: 8,
+      votes: 6,
+      views: 89,
+      time: '???? 4 ????',
+      tags: ['React', 'Vue', '?????']
+    }
   ];
 
   const handleAuthAction = (mode: 'login' | 'register') => {
@@ -62,19 +91,10 @@ export default function ForumHomepage() {
       handleAuthAction('login');
       return;
     }
-    setIsNewQuestionModalOpen(true);
+    console.log('Create new question');
   };
 
-  const handleQuestionCreated = () => {
-    refetch();
-  };
-
-  const handleQuestionClick = (questionId: string) => {
-    incrementViews(questionId);
-    console.log('Navigate to question:', questionId);
-  };
-
-  if (authLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" dir="rtl">
         <div className="flex flex-col items-center gap-4">
@@ -183,7 +203,7 @@ export default function ForumHomepage() {
             </div>
             <nav className="space-y-2">
               {menuItems.map((item) => (
-                
+                <a
                   key={item.label}
                   href={item.href}
                   className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all duration-300 group"
@@ -209,8 +229,8 @@ export default function ForumHomepage() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
-            { label: '?????', value: questions.length.toString(), color: 'indigo' },
-            { label: '??????', value: questions.reduce((sum, q) => sum + q.replies_count, 0).toString(), color: 'purple' },
+            { label: '?????', value: '1,234', color: 'indigo' },
+            { label: '??????', value: '5,678', color: 'purple' },
             { label: '???????', value: '892', color: 'pink' },
             { label: '??????', value: '156', color: 'blue' }
           ].map((stat) => (
@@ -227,111 +247,54 @@ export default function ForumHomepage() {
         </div>
 
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-gray-800">????? ???????</h3>
-            {questionsError && (
-              <button
-                onClick={refetch}
-                className="px-4 py-2 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
-              >
-                ??? ???
-              </button>
-            )}
-          </div>
-
-          {questionsLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 animate-pulse">
-                  <div className="h-6 bg-gray-300 rounded mb-4"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <div className="h-6 bg-gray-200 rounded w-16"></div>
-                    <div className="h-6 bg-gray-200 rounded w-20"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : questionsError ? (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-              <p className="text-red-700 font-medium">????? ?????? ??????</p>
-              <p className="text-red-600 text-sm mt-1">{questionsError}</p>
-            </div>
-          ) : questions.length === 0 ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-12 text-center">
-              <MessageSquare size={48} className="text-gray-400 mx-auto mb-4" />
-              <h4 className="text-xl font-semibold text-gray-700 mb-2">????? ??? ?????</h4>
-              <p className="text-gray-600 mb-6">??? ?????? ????? ???? ?????????!</p>
-              {user && (
-                <button
-                  onClick={handleNewQuestion}
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
-                >
-                  ???? ???? ??????
-                </button>
-              )}
-            </div>
-          ) : (
-            questions.map((question) => (
-              <div
-                key={question.id}
-                className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-white/20 cursor-pointer"
-                onClick={() => handleQuestionClick(question.id)}
-              >
-                <div className="flex gap-6">
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <h4 className="text-xl font-semibold text-gray-800 hover:text-indigo-600 transition-colors leading-tight">
-                        {question.title}
-                      </h4>
-                      <div className="text-sm text-gray-500 whitespace-nowrap mr-4">
-                        {formatRelativeTime(question.created_at)}
-                      </div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">????? ???????</h3>
+          
+          {sampleQuestions.map((question) => (
+            <div
+              key={question.id}
+              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-white/20"
+            >
+              <div className="flex gap-6">
+                <div className="flex-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <h4 className="text-xl font-semibold text-gray-800 hover:text-indigo-600 transition-colors cursor-pointer leading-tight">
+                      {question.title}
+                    </h4>
+                    <div className="text-sm text-gray-500 whitespace-nowrap mr-4">
+                      {question.time}
                     </div>
-                    
-                    <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
-                      <span className="flex items-center gap-1">
-                        <User size={14} />
-                        {question.author_username}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageSquare size={14} />
-                        {question.replies_count} ??????
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="text-green-600">¡ü</span>
-                        {question.votes_count} ?????
-                      </span>
-                      <span>{question.views_count} ?????</span>
-                      {question.is_answered && (
-                        <span className="text-green-600 font-medium">? ?????</span>
-                      )}
-                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
+                    <span className="flex items-center gap-1">
+                      <User size={14} />
+                      {question.author}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare size={14} />
+                      {question.replies} ??????
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-green-600">¡ü</span>
+                      {question.votes} ?????
+                    </span>
+                    <span>{question.views} ?????</span>
+                  </div>
 
-                    {question.tags && question.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {question.tags.map((tag) => (
-                          <span
-                            key={tag.id}
-                            className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-lg text-sm font-medium hover:from-indigo-200 hover:to-purple-200 transition-all"
-                            style={{ 
-                              backgroundColor: tag.color ? `${tag.color}15` : undefined,
-                              color: tag.color || undefined 
-                            }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                  <div className="flex flex-wrap gap-2">
+                    {question.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-lg text-sm font-medium hover:from-indigo-200 hover:to-purple-200 transition-all cursor-pointer"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
       </main>
 
@@ -341,12 +304,6 @@ export default function ForumHomepage() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
-      />
-
-      <NewQuestionModal
-        isOpen={isNewQuestionModalOpen}
-        onClose={() => setIsNewQuestionModalOpen(false)}
-        onQuestionCreated={handleQuestionCreated}
       />
 
       <style jsx global>{`
