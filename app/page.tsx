@@ -22,7 +22,7 @@ function ProfileTestComponent() {
       zIndex: 9999,
       borderRadius: '0 5px 0 0'
     }}>
-      ?? Dev Debug Mode
+      π§ª Dev Debug Mode
     </div>
   );
 }
@@ -35,45 +35,45 @@ export default function ForumHomepage() {
   const { user, profile, loading, signOut } = useAuth();
 
   const menuItems = [
-    { label: 'ψΰωι', icon: Home, href: '/' },
-    { label: 'ρθθερι', icon: Users, href: '/status' },
-    { label: 'γιεπιν', icon: MessageSquare, href: '/discussions' },
-    { label: 'ωΰμεϊ', icon: HelpCircle, href: '/questions' },
-    { label: 'ριτεψιν', icon: BookOpen, href: '/stories' },
+    { label: 'Χ¨ΧΧ©Χ™', icon: Home, href: '/' },
+    { label: 'Χ΅ΧΧΧ•Χ΅Χ™', icon: Users, href: '/status' },
+    { label: 'Χ“Χ™Χ•Χ Χ™Χ', icon: MessageSquare, href: '/discussions' },
+    { label: 'Χ©ΧΧΧ•Χª', icon: HelpCircle, href: '/questions' },
+    { label: 'Χ΅Χ™Χ¤Χ•Χ¨Χ™Χ', icon: BookOpen, href: '/stories' },
   ];
 
   const sampleQuestions = [
     {
       id: 1,
-      title: 'μξδ αςφν πωιν ξϊχωεϊ αηιιν δψαδ ιεϊψ ξβαψιν?',
-      author: 'πεςγ24242',
+      title: 'ΧΧΧ” Χ‘ΧΆΧ¦Χ Χ Χ©Χ™Χ ΧΧªΧ§Χ©Χ•Χª Χ‘Χ—Χ™Χ™Χ Χ”Χ¨Χ‘Χ” Χ™Χ•ΧªΧ¨ ΧΧ’Χ‘Χ¨Χ™Χ?',
+      author: 'Χ Χ•ΧΆΧ“24242',
       replies: 12,
       votes: 8,
       views: 156,
-      time: 'μτπι 1 γχδ',
-      tags: ['δαγμιν', 'μξγ', 'ξωιλδ ξιπιϊ', 'δςεμν'],
+      time: 'ΧΧ¤Χ Χ™ 1 Χ“Χ§Χ”',
+      tags: ['Χ”Χ‘Χ“ΧΧ™Χ', 'ΧΧΧ“', 'ΧΧ©Χ™Χ›Χ” ΧΧ™Χ Χ™Χª', 'Χ”ΧΆΧ•ΧΧ'],
       image: 'https://picsum.photos/900/400?random=1'
     },
     {
       id: 2,
-      title: 'ΰικ ΰπι ιλεμ μμξεγ ϊλπεϊ αφεψδ ιςιμδ?',
-      author: 'γπι λδο',
+      title: 'ΧΧ™Χ ΧΧ Χ™ Χ™Χ›Χ•Χ ΧΧΧΧ•Χ“ ΧªΧ›Χ Χ•Χª Χ‘Χ¦Χ•Χ¨Χ” Χ™ΧΆΧ™ΧΧ”?',
+      author: 'Χ“Χ Χ™ Χ›Χ”Χ',
       replies: 15,
       votes: 12,
       views: 234,
-      time: 'μτπι 2 ωςεϊ',
-      tags: ['ϊλπεϊ', 'μιξεγιν', 'χψιιψδ'],
+      time: 'ΧΧ¤Χ Χ™ 2 Χ©ΧΆΧ•Χª',
+      tags: ['ΧªΧ›Χ Χ•Χª', 'ΧΧ™ΧΧ•Χ“Χ™Χ', 'Χ§Χ¨Χ™Χ™Χ¨Χ”'],
       image: 'https://picsum.photos/900/400?random=2'
     },
     {
       id: 3,
-      title: 'ξδ δδαγμ αιο React μ-Vue?',
-      author: 'ωψδ μει',
+      title: 'ΧΧ” Χ”Χ”Χ‘Χ“Χ Χ‘Χ™Χ React Χ-Vue?',
+      author: 'Χ©Χ¨Χ” ΧΧ•Χ™',
       replies: 8,
       votes: 6,
       views: 89,
-      time: 'μτπι 4 ωςεϊ',
-      tags: ['React', 'Vue', 'τιϊεη'],
+      time: 'ΧΧ¤Χ Χ™ 4 Χ©ΧΆΧ•Χª',
+      tags: ['React', 'Vue', 'Χ¤Χ™ΧªΧ•Χ—'],
       image: 'https://picsum.photos/900/400?random=3'
     }
   ];
@@ -105,7 +105,7 @@ export default function ForumHomepage() {
       <div className="min-h-screen flex items-center justify-center" dir="rtl">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <p className="text-gray-600 font-medium">θεςο...</p>
+          <p className="text-gray-600 font-medium">ΧΧ•ΧΆΧ...</p>
         </div>
       </div>
     );
@@ -146,7 +146,7 @@ export default function ForumHomepage() {
                 {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Q&A τμθτεψξδ
+                Q&A Χ¤ΧΧΧ¤Χ•Χ¨ΧΧ”
               </h1>
             </div>
 
@@ -158,7 +158,7 @@ export default function ForumHomepage() {
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                   >
                     <Plus size={16} />
-                    ωΰμδ ηγωδ
+                    Χ©ΧΧΧ” Χ—Χ“Χ©Χ”
                   </button>
                   <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg shadow-lg">
                     <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -180,14 +180,14 @@ export default function ForumHomepage() {
                     className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
                   >
                     <LogIn size={16} />
-                    δϊηαψεϊ
+                    Χ”ΧªΧ—Χ‘Χ¨Χ•Χª
                   </button>
                   <button
                     onClick={() => handleAuthAction('register')}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     <User size={16} />
-                    δψωξδ
+                    Χ”Χ¨Χ©ΧΧ”
                   </button>
                 </div>
               )}
@@ -202,7 +202,7 @@ export default function ForumHomepage() {
         <div className={`absolute right-0 top-0 h-full w-72 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="p-6">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-gray-800">ϊτψιθ πιεεθ</h2>
+              <h2 className="text-xl font-bold text-gray-800">ΧªΧ¤Χ¨Χ™Χ Χ Χ™Χ•Χ•Χ</h2>
               <button
                 onClick={() => setIsDrawerOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -230,20 +230,20 @@ export default function ForumHomepage() {
       <main className="max-w-5xl mx-auto px-5 py-8">
         <div className="mb-8 text-center">
           <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
-            αψελιν δαΰιν μτμθτεψξϊ δωΰμεϊ εδϊωεαεϊ
+            Χ‘Χ¨Χ•Χ›Χ™Χ Χ”Χ‘ΧΧ™Χ ΧΧ¤ΧΧΧ¤Χ•Χ¨ΧΧª Χ”Χ©ΧΧΧ•Χª Χ•Χ”ΧªΧ©Χ•Χ‘Χ•Χª
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            ξχεν αε ϊελμε μωΰεμ ωΰμεϊ, μχαμ ϊωεαεϊ ξχφεςιεϊ εμημεχ ΰϊ διγς ωμλν ςν δχδιμδ
+            ΧΧ§Χ•Χ Χ‘Χ• ΧªΧ•Χ›ΧΧ• ΧΧ©ΧΧ•Χ Χ©ΧΧΧ•Χª, ΧΧ§Χ‘Χ ΧªΧ©Χ•Χ‘Χ•Χª ΧΧ§Χ¦Χ•ΧΆΧ™Χ•Χª Χ•ΧΧ—ΧΧ•Χ§ ΧΧª Χ”Χ™Χ“ΧΆ Χ©ΧΧ›Χ ΧΆΧ Χ”Χ§Χ”Χ™ΧΧ”
           </p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
-            { label: 'ωΰμεϊ', value: '1,234', color: 'indigo' },
-            { label: 'ϊωεαεϊ', value: '5,678', color: 'purple' },
-            { label: 'ξωϊξωιν', value: '892', color: 'pink' },
-            { label: 'πεωΰιν', value: '156', color: 'blue' }
+            { label: 'Χ©ΧΧΧ•Χª', value: '1,234', color: 'indigo' },
+            { label: 'ΧªΧ©Χ•Χ‘Χ•Χª', value: '5,678', color: 'purple' },
+            { label: 'ΧΧ©ΧªΧΧ©Χ™Χ', value: '892', color: 'pink' },
+            { label: 'Χ Χ•Χ©ΧΧ™Χ', value: '156', color: 'blue' }
           ].map((stat) => (
             <div
               key={stat.label}
@@ -259,7 +259,7 @@ export default function ForumHomepage() {
 
         {/* Questions List */}
         <div className="space-y-6">
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">ωΰμεϊ ΰηψεπεϊ</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">Χ©ΧΧΧ•Χª ΧΧ—Χ¨Χ•Χ Χ•Χª</h3>
           
           {sampleQuestions.map((question) => (
             <div
@@ -284,13 +284,13 @@ export default function ForumHomepage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <MessageSquare size={14} />
-                      {question.replies} ϊβεαεϊ
+                      {question.replies} ΧªΧ’Χ•Χ‘Χ•Χª
                     </span>
                     <span className="flex items-center gap-1">
-                      <span className="text-green-600">?</span>
-                      {question.votes} χεμεϊ
+                      <span className="text-green-600">β†‘</span>
+                      {question.votes} Χ§Χ•ΧΧ•Χª
                     </span>
-                    <span>{question.views} φτιεϊ</span>
+                    <span>{question.views} Χ¦Χ¤Χ™Χ•Χª</span>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
