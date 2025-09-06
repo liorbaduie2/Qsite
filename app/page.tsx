@@ -1,114 +1,115 @@
 "use client";
 
 import React, { useState } from 'react';
-import Image from 'next/image';
-import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, Search, Filter, Eye, MessageCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User } from 'lucide-react';
+import { useAuth } from './components/AuthProvider';
+import AuthModal from './components/AuthModal';
 
-const QuestionsPage = () => {
+// Development-only ProfileTestComponent
+function ProfileTestComponent() {
+  // Only show in development
+  if (process.env.NODE_ENV === 'production') return null;
+  
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      background: 'rgba(0,0,0,0.9)',
+      color: 'white',
+      padding: '10px',
+      fontSize: '12px',
+      zIndex: 9999,
+      borderRadius: '0 5px 0 0'
+    }}>
+      馃И Dev Debug Mode
+    </div>
+  );
+}
+
+export default function ForumHomepage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
-  const [filterTag, setFilterTag] = useState('all');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  
+  const { user, profile, loading, signOut } = useAuth();
 
   const menuItems = [
-    { label: '×¨××?×?', icon: Home, href: '/' },
-    { label: '×?×?×?×?×?×?×', icon: Users, href: '/status' },
-    { label: '×"×?×?× ×?×', icon: MessageSquare, href: '/discussions' },
-    { label: '×?××?×?×a', icon: HelpCircle, href: '/questions', active: true },
-    { label: '×?×?×¤×?×¨×?×', icon: BookOpen, href: '/stories' },
+    { label: '专讗砖讬', icon: Home, href: '/' },
+    { label: '住讟讟讜住讬', icon: Users, href: '/status' },
+    { label: '讚讬讜谞讬诐', icon: MessageSquare, href: '/discussions' },
+    { label: '砖讗诇讜转', icon: HelpCircle, href: '/questions' },
+    { label: '住讬驻讜专讬诐', icon: BookOpen, href: '/stories' },
   ];
 
-  const allTags = ['×"×?×?', '×a×?× ×?×a', '×￠×?×|×?×'', '×§×¨×?×?×¨×"', '×?×?×?×?×"×?×', '×?×?× ×?×?×?×'×?×"', '×¤×?×a×?×—', 'React', 'Vue'];
-
-  const questions = [
+  const sampleQuestions = [
     {
       id: 1,
-      title: '××?×? ×× ×? ×?×?×?×? ×?×?×?×?×" ×a×?× ×?×a ×'×|×?×¨×" ×?×￠×?×?×"?',
-      content: '×× ×? ×?×a×—×?×? ×'×a×?× ×?×a ×?×¨×?×|×" ×?×"×￠×a ×?×" ×"×"×¨×? ×"×?×? ×?×?×'×" ×?×"×a×—×?×?. ×?×? ×"×?×?×|×?×a ×￠×? ×§×?×¨×?×?× ××? ×?×?××'×?×?',
-      author: '×"× ×? ×?×"×?',
-      authorAvatar: 'https://i.pravatar.cc/40?img=1',
-      replies: 15,
-      votes: 12,
-      views: 234,
-      time: '×?×¤× ×? 2 ×?×￠×?×a',
-      tags: ['×a×?× ×?×a', '×?×?×?×?×"×?×', '×§×¨×?×?×¨×"'],
-      isAnswered: true,
-      acceptedAnswerId: 5
+      title: '诇诪讛 讘注爪诐 谞砖讬诐 诪转拽砖讜转 讘讞讬讬诐 讛专讘讛 讬讜转专 诪讙讘专讬诐?',
+      author: '谞讜注讚24242',
+      replies: 12,
+      votes: 8,
+      views: 156,
+      time: '诇驻谞讬 1 讚拽讛',
+      tags: ['讛讘讚诇讬诐', '诇诪讚', '诪砖讬讻讛 诪讬谞讬转', '讛注讜诇诐'],
+      image: 'https://picsum.photos/900/400?random=1'
     },
     {
       id: 2,
-      title: '×?×" ×"×"×'×"×? ×'×?×? React ×?-Vue?',
-      content: '×× ×? ×|×¨×?×? ×?×'×—×?×¨ ×'×?×? React ×?-Vue ×?×¤×¨×?×?×§×? ×"×'× ×?×?×?. ×?×" ×"×?×a×¨×?× ×?×a ×?×"×—×?×¨×?× ×?×a ×?×? ×?×? ××—×"?',
-      author: '×?×¨×" ×?×?×?',
-      authorAvatar: 'https://i.pravatar.cc/40?img=2',
-      replies: 8,
-      votes: 6,
-      views: 89,
-      time: '×?×¤× ×? 4 ×?×￠×?×a',
-      tags: ['React', 'Vue', '×¤×?×a×?×—'],
-      isAnswered: false
+      title: '讗讬讱 讗谞讬 讬讻讜诇 诇诇诪讜讚 转讻谞讜转 讘爪讜专讛 讬注讬诇讛?',
+      author: '讚谞讬 讻讛谉',
+      replies: 15,
+      votes: 12,
+      views: 234,
+      time: '诇驻谞讬 2 砖注讜转',
+      tags: ['转讻谞讜转', '诇讬诪讜讚讬诐', '拽专讬讬专讛'],
+      image: 'https://picsum.photos/900/400?random=2'
     },
     {
       id: 3,
-      title: '××?×? ×?×￠×|×' ×?×?×?×§ ×?×?×a×?×? × ×?×— ×?×?×￠×?×??',
-      content: '×× ×? ×?×￠×|×' UI/UX ×?×¨×?×|×" ×?×?×¤×?× ×?×￠×?×|×?×' ×?×?×?×§ ×?×?×a×?×? ×?×?×"×?×" × ×?×— ×?×?×￠×?×? ×?×?×?×a×?×?×?×.',
-      author: '×?×?×?×? ××'×?×"×?',
-      authorAvatar: 'https://i.pravatar.cc/40?img=3',
-      replies: 12,
-      votes: 18,
-      views: 156,
-      time: '×?×¤× ×? ×?×?×',
-      tags: ['×￠×?×|×?×'', 'UI/UX'],
-      isAnswered: true,
-      acceptedAnswerId: 8
-    },
-    {
-      id: 4,
-      title: '×?×" ×"×—×?×?×'×?×a ×?×? ×'×"×?×§×?×a ××?×?×?×?×?×?×?×a ×'×¤×?×a×?×—?',
-      content: '×?×?×￠×a×? ×"×¨×'×" ×￠×? ×—×?×?×'×?×a ×"×'×"×?×§×?×a ×"××?×?×?×?×?×?×?×a ××'×? ×?× ×'×?×?×— ××?×? ×?×"×a×—×?×? ×￠× ×–×".',
-      author: '×?×?× ×a×? ×'×¨×?×?',
-      authorAvatar: 'https://i.pravatar.cc/40?img=4',
-      replies: 6,
-      votes: 9,
-      views: 78,
-      time: '×?×¤× ×? 2 ×?×?×?×',
-      tags: ['×a×?× ×?×a', '×'×"×?×§×?×a', '×¤×?×a×?×—'],
-      isAnswered: false
-    },
-    {
-      id: 5,
-      title: '××?×? ×?× ×"×? ×–×?×? ×'×|×?×¨×" ×?×￠×?×?×" ×?×?×¤×a×—?',
-      content: '×× ×? ×?×a×§×?×" ×?× ×"×? ××a ×"×–×?×? ×?×?×? ×'×?×? ×¤×¨×?×?×§×?×?× ×?×?× ×?× ×?×?×?×?×?×" ×?×?× ×?×?×?×'×?×?×a ×—×"×?×?×a.',
-      author: '×￠×?×?×a ×¨×?×–×?',
-      authorAvatar: 'https://i.pravatar.cc/40?img=5',
-      replies: 11,
-      votes: 14,
-      views: 203,
-      time: '×?×¤× ×? 3 ×?×?×?×',
-      tags: ['×§×¨×?×?×¨×"', '× ×?×"×?×? ×–×?×?'],
-      isAnswered: true,
-      acceptedAnswerId: 12
+      title: '诪讛 讛讛讘讚诇 讘讬谉 React 诇-Vue?',
+      author: '砖专讛 诇讜讬',
+      replies: 8,
+      votes: 6,
+      views: 89,
+      time: '诇驻谞讬 4 砖注讜转',
+      tags: ['React', 'Vue', '驻讬转讜讞'],
+      image: 'https://picsum.photos/900/400?random=3'
     }
   ];
 
-  const filteredQuestions = questions.filter(question => {
-    const matchesSearch = question.title.includes(searchTerm) || question.content.includes(searchTerm);
-    const matchesTag = filterTag === '×"×?×?' || question.tags.includes(filterTag);
-    return matchesSearch && matchesTag;
-  });
+  const handleAuthAction = (mode: 'login' | 'register') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
 
-  const sortedQuestions = [...filteredQuestions].sort((a, b) => {
-    switch (sortBy) {
-      case 'votes':
-        return b.votes - a.votes;
-      case 'views':
-        return b.views - a.views;
-      case 'replies':
-        return b.replies - a.replies;
-      default:
-        return b.id - a.id; // newest first
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
     }
-  });
+  };
+
+  const handleNewQuestion = () => {
+    if (!user) {
+      handleAuthAction('login');
+      return;
+    }
+    // Handle new question creation
+    console.log('Create new question');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" dir="rtl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="text-gray-600 font-medium">讟讜注谉...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -135,86 +136,73 @@ const QuestionsPage = () => {
 
       {/* Header */}
       <header className="relative bg-white/80 backdrop-blur-xl shadow-xl border-b border-gray-200/20">
-        <div className="max-w-6xl mx-auto px-5">
+        <div className="max-w-5xl mx-auto px-5">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setIsDrawerOpen(!isDrawerOpen)}
                 className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300 hover:scale-105"
               >
-                {isDrawerOpen ? <X size={24} /> : <Menu size={24} />}
+                {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-
-              <div className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                ×¤×?×?×¤×?×¨×?×a ×?××?×?×a ×?×a×?×?×'×?×a
-              </div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Q&A 驻诇讟驻讜专诪讛
+              </h1>
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
-                <Plus size={18} />
-                ×?××?×" ×—×"×?×"
-              </button>
-            </div>
-          </div>
-
-          {/* Search and Filters */}
-          <div className="pb-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search Bar */}
-              <div className="relative flex-1">
-                <Search size={20} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="×—×¤×? ×?××?×?×a..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pr-12 pl-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/70 backdrop-blur-sm"
-                />
-              </div>
-
-              {/* Filters */}
-              <div className="flex gap-3 items-center">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm"
-                >
-                  <option value="newest">×—×"×? ×'×?×?×a×¨</option>
-                  <option value="votes">×?×"×?×¨×' ×'×?×?×a×¨</option>
-                  <option value="views">× ×|×¤×" ×'×?×?×a×¨</option>
-                  <option value="replies">×￠× ×a×?×?×'×?×a</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Tags Filter */}
-            <div className="flex gap-2 mt-4 flex-wrap">
-              {allTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => setFilterTag(tag)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                    filterTag === tag
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
+              {user ? (
+                <>
+                  <button
+                    onClick={handleNewQuestion}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    <Plus size={16} />
+                    砖讗诇讛 讞讚砖讛
+                  </button>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg shadow-lg">
+                    <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {profile?.username?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <span className="font-medium text-sm">{profile?.username || user.email}</span>
+                    <button
+                      onClick={handleSignOut}
+                      className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+                    >
+                      <LogOut size={16} className="text-red-600" />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAuthAction('login')}
+                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
+                  >
+                    <LogIn size={16} />
+                    讛转讞讘专讜转
+                  </button>
+                  <button
+                    onClick={() => handleAuthAction('register')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    <User size={16} />
+                    讛专砖诪讛
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       {/* Side Drawer */}
-      <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-40 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-black/30" onClick={() => setIsDrawerOpen(false)} />
-        <div className={`absolute right-0 top-0 h-full w-80 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`absolute right-0 top-0 h-full w-72 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="p-6">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-gray-800">×a×¤×¨×?×? × ×?×?×?×?</h2>
+              <h2 className="text-xl font-bold text-gray-800">转驻专讬讟 谞讬讜讜讟</h2>
               <button
                 onClick={() => setIsDrawerOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -227,9 +215,7 @@ const QuestionsPage = () => {
                 <a
                   key={item.label}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                    item.active ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600' : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600'
-                  }`}
+                  className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all duration-300 group"
                 >
                   <item.icon size={20} className="group-hover:scale-110 transition-transform" />
                   <span className="font-medium">{item.label}</span>
@@ -241,141 +227,127 @@ const QuestionsPage = () => {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-5 py-8">
+      <main className="max-w-5xl mx-auto px-5 py-8">
+        <div className="mb-8 text-center">
+          <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
+            讘专讜讻讬诐 讛讘讗讬诐 诇驻诇讟驻讜专诪转 讛砖讗诇讜转 讜讛转砖讜讘讜转
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            诪拽讜诐 讘讜 转讜讻诇讜 诇砖讗讜诇 砖讗诇讜转, 诇拽讘诇 转砖讜讘讜转 诪拽爪讜注讬讜转 讜诇讞诇讜拽 讗转 讛讬讚注 砖诇讻诐 注诐 讛拽讛讬诇讛
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {[
+            { label: '砖讗诇讜转', value: '1,234', color: 'indigo' },
+            { label: '转砖讜讘讜转', value: '5,678', color: 'purple' },
+            { label: '诪砖转诪砖讬诐', value: '892', color: 'pink' },
+            { label: '谞讜砖讗讬诐', value: '156', color: 'blue' }
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
+            >
+              <div className={`text-3xl font-bold bg-gradient-to-r from-${stat.color}-600 to-${stat.color}-800 bg-clip-text text-transparent mb-2`}>
+                {stat.value}
+              </div>
+              <div className="text-gray-600 font-medium">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Questions List */}
         <div className="space-y-6">
-          {sortedQuestions.map((question, index) => (
-            <article
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">砖讗诇讜转 讗讞专讜谞讜转</h3>
+          
+          {sampleQuestions.map((question) => (
+            <div
               key={question.id}
-              className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] border border-white/20"
-              style={{
-                animationDelay: `${index * 0.1}s`,
-                animation: 'slideInUp 0.6s ease-out forwards'
-              }}
+              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-white/20"
             >
               <div className="flex gap-6">
-                {/* Vote Section */}
-                <div className="flex flex-col items-center gap-2 min-w-20">
-                  <button className="p-2 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
-                    <ArrowUp size={20} />
-                  </button>
-                  <span className={`text-xl font-bold px-3 py-1 rounded-lg ${
-                    question.votes > 10 
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white' 
-                      : 'bg-indigo-50 text-indigo-600'
-                  }`}>
-                    {question.votes}
-                  </span>
-                  <button className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
-                    <ArrowDown size={20} />
-                  </button>
-                </div>
-
-                {/* Content */}
                 <div className="flex-1">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-xl font-bold text-gray-800 hover:text-indigo-600 transition-colors cursor-pointer line-clamp-2">
+                  <div className="flex items-start justify-between mb-4">
+                    <h4 className="text-xl font-semibold text-gray-800 hover:text-indigo-600 transition-colors cursor-pointer leading-tight">
                       {question.title}
-                    </h3>
-                    {question.isAnswered && (
-                      <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                        × ×¤×a×¨
-                      </span>
-                    )}
+                    </h4>
+                    <div className="text-sm text-gray-500 whitespace-nowrap mr-4">
+                      {question.time}
+                    </div>
                   </div>
                   
-                  <p className="text-gray-600 mb-4 line-clamp-2">
-                    {question.content}
-                  </p>
-                  
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
+                    <span className="flex items-center gap-1">
+                      <User size={14} />
+                      {question.author}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare size={14} />
+                      {question.replies} 转讙讜讘讜转
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-green-600">鈫?/span>
+                      {question.votes} 拽讜诇讜转
+                    </span>
+                    <span>{question.views} 爪驻讬讜转</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
                     {question.tags.map((tag) => (
-                      <span 
+                      <span
                         key={tag}
-                        className="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm rounded-full hover:bg-indigo-100 transition-colors cursor-pointer"
+                        className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-lg text-sm font-medium hover:from-indigo-200 hover:to-purple-200 transition-all cursor-pointer"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
-
-                  {/* Meta Information */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Image 
-                        className="w-8 h-8 rounded-full border-2 border-indigo-200"
-                        src={question.authorAvatar}
-                        alt="××?×?×?×¨ ×?×?×a×?×?"
-                        width={32}
-                        height={32}
-                      />
-                      <div>
-                        <div className="font-semibold text-indigo-600 text-sm">
-                          {question.author}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {question.time}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <MessageCircle size={16} />
-                        <span>{question.replies}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Eye size={16} />
-                        <span>{question.views}</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
+
+                {question.image && (
+                  <div className="w-32 h-24 rounded-xl overflow-hidden shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={question.image}
+                      alt="Question preview"
+                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                )}
               </div>
-            </article>
+            </div>
           ))}
         </div>
-
-        {/* Empty State */}
-        {sortedQuestions.length === 0 && (
-          <div className="text-center py-12">
-            <HelpCircle size={64} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">×?× × ×?×|××? ×?××?×?×a</h3>
-            <p className="text-gray-500">× ×?×" ×?×?× ×?×a ××a ×"×¤×?×?×?×¨×?× ××? ×"×?×?×￡ ×?××?×" ×—×"×?×"</p>
-          </div>
-        )}
       </main>
 
-      <style jsx>{`
-        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap');
-        
+      {/* Development Debug Component */}
+      <ProfileTestComponent />
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
+
+      <style jsx global>{`
         @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(30px, -30px) rotate(120deg); }
-          66% { transform: translate(-20px, 20px) rotate(240deg); }
-        }
-
-        @keyframes slideInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
+          0%, 100% {
+            transform: translate(0px, 0px) rotate(0deg);
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+          33% {
+            transform: translate(30px, -50px) rotate(1deg);
+          }
+          66% {
+            transform: translate(-20px, 20px) rotate(-1deg);
           }
         }
-
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+        
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
         }
       `}</style>
     </div>
   );
-};
-
-export default QuestionsPage;
+}
