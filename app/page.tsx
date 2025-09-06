@@ -1,82 +1,181 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from './components/AuthProvider';
-import AuthModal from './components/AuthModal';
+import { AuthModal } from './components/AuthModal';
+import { ProfileTestComponent } from './components/ProfileTestComponent';
+import Drawer, { type MenuItem } from './components/Drawer';
+import { 
+  Menu, 
+  Plus, 
+  LogIn, 
+  User, 
+  LogOut, 
+  Search, 
+  Filter, 
+  ArrowUp, 
+  ArrowDown, 
+  MessageSquare, 
+  Eye, 
+  Clock,
+  Home, 
+  Users, 
+  Settings, 
+  HelpCircle,
+  Trophy,
+  Bookmark
+} from 'lucide-react';
 
-// Development-only ProfileTestComponent
-function ProfileTestComponent() {
-  // Only show in development
-  if (process.env.NODE_ENV === 'production') return null;
-  
-  return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      background: 'rgba(0,0,0,0.9)',
-      color: 'white',
-      padding: '10px',
-      fontSize: '12px',
-      zIndex: 9999,
-      borderRadius: '0 5px 0 0'
-    }}>
-      🧪 Dev Debug Mode
-    </div>
-  );
-}
-
-export default function ForumHomepage() {
+export default function Home() {
+  const { user, profile, loading, signOut } = useAuth();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
-  
-  const { user, profile, loading, signOut } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterTag, setFilterTag] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
 
-  const menuItems = [
-    { label: 'ראשי', icon: Home, href: '/' },
-    { label: 'סטטוסי', icon: Users, href: '/status' },
-    { label: 'דיונים', icon: MessageSquare, href: '/discussions' },
-    { label: 'שאלות', icon: HelpCircle, href: '/questions' },
-    { label: 'סיפורים', icon: BookOpen, href: '/stories' },
-  ];
+  // Menu items for the drawer
+  const menuItems: MenuItem[] = useMemo(() => [
+    {
+      label: '???',
+      href: '/',
+      icon: Home,
+      active: true
+    },
+    {
+      label: '?????? ???',
+      href: '/my-questions',
+      icon: MessageSquare
+    },
+    {
+      label: '??????? ???',
+      href: '/my-answers',
+      icon: User
+    },
+    {
+      label: '??????',
+      href: '/bookmarks',
+      icon: Bookmark
+    },
+    {
+      label: '??? ??????',
+      href: '/leaderboard',
+      icon: Trophy
+    },
+    {
+      label: '?????',
+      href: '/community',
+      icon: Users
+    },
+    {
+      label: '????',
+      href: '/help',
+      icon: HelpCircle
+    },
+    {
+      label: '??????',
+      href: '/settings',
+      icon: Settings
+    }
+  ], []);
 
-  const sampleQuestions = [
+  // Sample questions data
+  const questions = [
     {
       id: 1,
-      title: 'למה בעצם נשים מתקשות בחיים הרבה יותר מגברים?',
-      author: 'נועד24242',
-      replies: 12,
-      votes: 8,
-      views: 156,
-      time: 'לפני 1 דקה',
-      tags: ['הבדלים', 'למד', 'משיכה מינית', 'העולם'],
+      title: '??? ????? React component ????? ??????',
+      content: '??? ???? ??? ????? ????? ????????? ?????? ????? ?-React ?? TypeScript. ?? ???? ????? ????? ????? ?? ???',
+      author: '???? ???',
+      authorAvatar: 'https://i.pravatar.cc/40?img=1',
+      replies: 5,
+      votes: 12,
+      views: 145,
+      time: '???? 3 ????',
+      tags: ['React', 'TypeScript', '?????'],
+      isAnswered: true,
+      acceptedAnswerId: 3,
       image: 'https://picsum.photos/900/400?random=1'
     },
     {
       id: 2,
-      title: 'איך אני יכול ללמוד תכנות בצורה יעילה?',
-      author: 'דני כהן',
-      replies: 15,
-      votes: 12,
-      views: 234,
-      time: 'לפני 2 שעות',
-      tags: ['תכנות', 'לימודים', 'קריירה'],
-      image: 'https://picsum.photos/900/400?random=2'
+      title: '?? ????? ??? CSS Grid ?-Flexbox?',
+      content: '??? ???? ?????? ??? CSS Grid ?-Flexbox. ??? ???? ?????? ??? ??? ????',
+      author: '???? ????',
+      authorAvatar: 'https://i.pravatar.cc/40?img=2',
+      replies: 8,
+      votes: 15,
+      views: 203,
+      time: '???? 5 ????',
+      tags: ['CSS', '?????', '?????'],
+      isAnswered: false
     },
     {
       id: 3,
-      title: 'מה ההבדל בין React ל-Vue?',
-      author: 'שרה לוי',
-      replies: 8,
-      votes: 6,
-      views: 89,
-      time: 'לפני 4 שעות',
-      tags: ['React', 'Vue', 'פיתוח'],
-      image: 'https://picsum.photos/900/400?random=3'
+      title: '??? ???? ??????? ?????????? Next.js?',
+      content: '????????? ??? ????? ??? ???. ?? ????? ?????? ????????',
+      author: '???? ?????',
+      authorAvatar: 'https://i.pravatar.cc/40?img=3',
+      replies: 12,
+      votes: 18,
+      views: 156,
+      time: '???? ???',
+      tags: ['?????', 'UI/UX'],
+      isAnswered: true,
+      acceptedAnswerId: 8
+    },
+    {
+      id: 4,
+      title: '?? ??????? ?? ?????? ????????? ???????',
+      content: '????? ???? ?? ?????? ??????? ?????????? ??? ?? ???? ??? ?????? ?? ??.',
+      author: '????? ????',
+      authorAvatar: 'https://i.pravatar.cc/40?img=4',
+      replies: 6,
+      votes: 9,
+      views: 78,
+      time: '???? 2 ????',
+      tags: ['?????', '??????', '?????'],
+      isAnswered: false
+    },
+    {
+      id: 5,
+      title: '??? ???? ??? ????? ????? ??????',
+      content: '??? ????? ???? ?? ???? ??? ??? ???????? ????? ?????? ?????????? ?????.',
+      author: '??? ???',
+      replies: 15,
+      votes: 12,
+      views: 234,
+      time: '???? 2 ????',
+      tags: ['?????', '???????', '??????'],
+      image: 'https://picsum.photos/900/400?random=2'
     }
   ];
+
+  // Get unique tags for filtering
+  const allTags = Array.from(new Set(questions.flatMap(q => q.tags)));
+
+  // Filter and sort questions
+  const filteredQuestions = questions.filter(question => {
+    const matchesSearch = question.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         question.content.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTag = !filterTag || question.tags.includes(filterTag);
+    return matchesSearch && matchesTag;
+  });
+
+  const sortedQuestions = [...filteredQuestions].sort((a, b) => {
+    switch (sortBy) {
+      case 'newest':
+        return new Date(b.time).getTime() - new Date(a.time).getTime();
+      case 'votes':
+        return b.votes - a.votes;
+      case 'views':
+        return b.views - a.views;
+      case 'replies':
+        return b.replies - a.replies;
+      default:
+        return 0;
+    }
+  });
 
   const handleAuthAction = (mode: 'login' | 'register') => {
     setAuthModalMode(mode);
@@ -105,7 +204,7 @@ export default function ForumHomepage() {
       <div className="min-h-screen flex items-center justify-center" dir="rtl">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <p className="text-gray-600 font-medium">טוען...</p>
+          <p className="text-gray-600 font-medium">????...</p>
         </div>
       </div>
     );
@@ -136,17 +235,18 @@ export default function ForumHomepage() {
 
       {/* Header */}
       <header className="relative bg-white/80 backdrop-blur-xl shadow-xl border-b border-gray-200/20">
-        <div className="max-w-5xl mx-auto px-5">
+        <div className="max-w-6xl mx-auto px-5">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setIsDrawerOpen(!isDrawerOpen)}
                 className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300 hover:scale-105"
+                aria-label="??? ?????"
               >
-                {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
+                <Menu size={20} />
               </button>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Q&A פלטפורמה
+                Q&A ????????
               </h1>
             </div>
 
@@ -158,7 +258,7 @@ export default function ForumHomepage() {
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                   >
                     <Plus size={16} />
-                    שאלה חדשה
+                    ???? ????
                   </button>
                   <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg shadow-lg">
                     <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -180,124 +280,171 @@ export default function ForumHomepage() {
                     className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
                   >
                     <LogIn size={16} />
-                    התחברות
+                    ???????
                   </button>
                   <button
                     onClick={() => handleAuthAction('register')}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     <User size={16} />
-                    הרשמה
+                    ?????
                   </button>
                 </div>
               )}
             </div>
           </div>
+
+          {/* Search and Filters */}
+          <div className="pb-6">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/30">
+              <div className="flex flex-col lg:flex-row gap-4 items-center">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
+                  <Search size={20} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="??? ?????..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm"
+                  />
+                </div>
+
+                <div className="flex items-center gap-4 overflow-x-auto pb-2 lg:pb-0">
+                  {/* Tags Filter */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setFilterTag(filterTag === tag ? '' : tag)}
+                        className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 whitespace-nowrap ${
+                          filterTag === tag
+                            ? 'text-white shadow-lg'
+                            : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                        }`}
+                        style={filterTag === tag ? {
+                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
+                        } : {}}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sort */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Filter size={18} className="text-gray-500" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm whitespace-nowrap"
+                    >
+                      <option value="newest">??? ???</option>
+                      <option value="votes">??? ?????</option>
+                      <option value="views">??? ????</option>
+                      <option value="replies">??? ????</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* Side Drawer */}
-      <div className={`fixed inset-0 z-40 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/30" onClick={() => setIsDrawerOpen(false)} />
-        <div className={`absolute right-0 top-0 h-full w-72 bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-gray-800">תפריט ניווט</h2>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <nav className="space-y-2">
-              {menuItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all duration-300 group"
-                >
-                  <item.icon size={20} className="group-hover:scale-110 transition-transform" />
-                  <span className="font-medium">{item.label}</span>
-                </a>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </div>
+      {/* Drawer Component */}
+      <Drawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)}
+        menuItems={menuItems}
+      />
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-5 py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
-            ברוכים הבאים לפלטפורמת השאלות והתשובות
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            מקום בו תוכלו לשאול שאלות, לקבל תשובות מקצועיות ולחלוק את הידע שלכם עם הקהילה
-          </p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {[
-            { label: 'שאלות', value: '1,234', color: 'indigo' },
-            { label: 'תשובות', value: '5,678', color: 'purple' },
-            { label: 'משתמשים', value: '892', color: 'pink' },
-            { label: 'נושאים', value: '156', color: 'blue' }
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
-            >
-              <div className={`text-3xl font-bold bg-gradient-to-r from-${stat.color}-600 to-${stat.color}-800 bg-clip-text text-transparent mb-2`}>
-                {stat.value}
-              </div>
-              <div className="text-gray-600 font-medium">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-
+      <main className="max-w-6xl mx-auto px-5 py-8">
+        
         {/* Questions List */}
         <div className="space-y-6">
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">שאלות אחרונות</h3>
-          
-          {sampleQuestions.map((question) => (
-            <div
-              key={question.id}
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-white/20"
+          {sortedQuestions.map((question, index) => (
+            <article 
+              key={question.id} 
+              className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 group"
+              style={{
+                animationDelay: `${index * 0.1}s`,
+                animation: 'slideInUp 0.6s ease-out forwards'
+              }}
             >
-              <div className="flex gap-6">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-4">
-                    <h4 className="text-xl font-semibold text-gray-800 hover:text-indigo-600 transition-colors cursor-pointer leading-tight">
+              <div className="flex gap-4">
+                {/* Vote Section */}
+                <div className="flex flex-col items-center gap-2 min-w-16">
+                  <button className="p-2 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
+                    <ArrowUp size={20} />
+                  </button>
+                  <span 
+                    className="text-xl font-bold px-3 py-1 rounded-lg"
+                    style={{
+                      background: question.votes > 10 ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'rgba(99, 102, 241, 0.1)',
+                      color: question.votes > 10 ? 'white' : '#6366f1'
+                    }}
+                  >
+                    {question.votes}
+                  </span>
+                  <button className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
+                    <ArrowDown size={20} />
+                  </button>
+                </div>
+
+                {/* Content Section */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600 transition-colors cursor-pointer leading-tight">
                       {question.title}
-                    </h4>
-                    <div className="text-sm text-gray-500 whitespace-nowrap mr-4">
-                      {question.time}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
-                    <span className="flex items-center gap-1">
-                      <User size={14} />
-                      {question.author}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageSquare size={14} />
-                      {question.replies} תגובות
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="text-green-600">�?/span>
-                      {question.votes} קולות
-                    </span>
-                    <span>{question.views} צפיות</span>
+                    </h3>
+                    {question.isAnswered && (
+                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium whitespace-nowrap">
+                        ????? ?
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+                    {question.content}
+                  </p>
+
+                  {/* Question Meta */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <MessageSquare size={14} />
+                        <span>{question.replies} ??????</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye size={14} />
+                        <span>{question.views} ?????</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock size={14} />
+                        <span>{question.time}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={question.authorAvatar}
+                          alt={question.author}
+                          className="w-6 h-6 rounded-full"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{question.author}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-2 mt-4">
                     {question.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-lg text-sm font-medium hover:from-indigo-200 hover:to-purple-200 transition-all cursor-pointer"
+                        className="px-3 py-1 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-lg text-sm font-medium hover:from-indigo-200 hover:to-purple-200 transition-all cursor-pointer"
                       >
                         {tag}
                       </span>
@@ -316,7 +463,7 @@ export default function ForumHomepage() {
                   </div>
                 )}
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </main>
