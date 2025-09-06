@@ -1,172 +1,384 @@
 "use client";
 
-import React from 'react';
-import { X, Home, MessageSquare, User, Bookmark, Settings, HelpCircle, Bell, Search, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, X, Plus, LogIn, User, LogOut, Search, Filter, ArrowUp, ArrowDown, MessageSquare, Eye, Clock, Home, MessageSquare as MessageSquareIcon, TrendingUp, Bookmark, Settings, HelpCircle, Bell } from 'lucide-react';
+import { useAuth } from './components/AuthProvider';
+import AuthModal from './components/AuthModal';
+import Drawer, { useDrawer, MenuItem } from './components/Drawer';
 
-interface MenuItem {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  active?: boolean;
-  badge?: number;
-}
-
-interface DrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  menuItems?: MenuItem[];
-  className?: string;
-}
-
-const defaultMenuItems: MenuItem[] = [
-  { label: 'בית', href: '/', icon: Home, active: true },
-  { label: 'שאלות חדשות', href: '/questions', icon: MessageSquare },
-  { label: 'מגמות', href: '/trending', icon: TrendingUp },
-  { label: 'חיפוש', href: '/search', icon: Search },
-  { label: 'הודעות', href: '/notifications', icon: Bell, badge: 3 },
-  { label: 'שמורים', href: '/saved', icon: Bookmark },
-  { label: 'פרופיל', href: '/profile', icon: User },
-  { label: 'הגדרות', href: '/settings', icon: Settings },
-  { label: 'עזרה', href: '/help', icon: HelpCircle },
+// Mock data for demonstration
+const mockQuestions = [
+  {
+    id: 1,
+    title: "איך ליצור API ב-Next.js עם TypeScript?",
+    content: "אני מנסה ליצור API routes ב-Next.js 14 עם TypeScript אבל נתקל בבעיות...",
+    author: "developer123",
+    votes: 15,
+    views: 234,
+    replies: 8,
+    tags: ["Next.js", "TypeScript", "API"],
+    timeAgo: "לפני 2 שעות",
+    isResolved: false
+  },
+  {
+    id: 2,
+    title: "בעיה עם Supabase Authentication",
+    content: "האימות לא עובד כמו שצריך, המשתמש לא נשמר בסשן...",
+    author: "coder456",
+    votes: 8,
+    views: 156,
+    replies: 3,
+    tags: ["Supabase", "Authentication"],
+    timeAgo: "לפני 4 שעות",
+    isResolved: true
+  },
+  // Add more mock questions as needed
 ];
 
-export default function Drawer({ 
-  isOpen, 
-  onClose, 
-  menuItems = defaultMenuItems, 
-  className = "" 
-}: DrawerProps) {
-  // Handle backdrop click
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
+const availableTags = ["הכל", "Next.js", "React", "TypeScript", "Supabase", "CSS", "JavaScript", "API"];
+
+export default function HomePage() {
+  const { user, profile, signOut, loading } = useAuth();
+  const [authModal, setAuthModal] = useState<'login' | 'register' | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterTag, setFilterTag] = useState('הכל');
+  const [sortBy, setSortBy] = useState('newest');
+  
+  // Use the custom drawer hook
+  const { isOpen: isDrawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+
+  // Custom menu items with user context
+  const menuItems: MenuItem[] = [
+    { label: 'בית', href: '/', icon: Home, active: true },
+    { label: 'שאלות חדשות', href: '/questions', icon: MessageSquareIcon },
+    { label: 'מגמות', href: '/trending', icon: TrendingUp },
+    { label: 'חיפוש', href: '/search', icon: Search },
+    ...(user ? [
+      { label: 'הודעות', href: '/notifications', icon: Bell, badge: 3 },
+      { label: 'שמורים', href: '/saved', icon: Bookmark },
+      { label: 'פרופיל', href: '/profile', icon: User },
+    ] : []),
+    { label: 'הגדרות', href: '/settings', icon: Settings },
+    { label: 'עזרה', href: '/help', icon: HelpCircle },
+  ];
+
+  const handleAuthAction = (action: 'login' | 'register') => {
+    setAuthModal(action);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
     }
   };
 
-  // Handle keyboard navigation
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
+  const handleNewQuestion = () => {
+    // Navigate to new question page or open modal
+    console.log('Navigate to new question page');
+  };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      // Prevent body scroll when drawer is open
-      document.body.style.overflow = 'hidden';
+  // Filter and sort questions
+  const filteredQuestions = mockQuestions
+    .filter(q => 
+      (filterTag === 'הכל' || q.tags.includes(filterTag)) &&
+      (searchQuery === '' || 
+       q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       q.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+  const sortedQuestions = [...filteredQuestions].sort((a, b) => {
+    switch (sortBy) {
+      case 'votes':
+        return b.votes - a.votes;
+      case 'views':
+        return b.views - a.views;
+      case 'replies':
+        return b.replies - a.replies;
+      case 'newest':
+      default:
+        return b.id - a.id; // Assuming higher ID means newer
     }
+  });
 
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-lg text-gray-600">טוען...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] transition-opacity duration-300"
-          onClick={handleBackdropClick}
-          aria-hidden="true"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/30 shadow-lg">
+        <div className="max-w-7xl mx-auto px-5">
+          <div className="flex items-center justify-between h-16">
+            {/* Left side - Logo and menu button */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={toggleDrawer}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors md:hidden"
+                aria-label={isDrawerOpen ? 'סגור תפריט' : 'פתח תפריט'}
+              >
+                {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Q&A פלטפורמה
+              </h1>
+            </div>
+
+            {/* Right side - User actions */}
+            <div className="flex items-center gap-3">
+              {user ? (
+                <>
+                  <button
+                    onClick={handleNewQuestion}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    <Plus size={16} />
+                    שאלה חדשה
+                  </button>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg shadow-lg">
+                    <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {profile?.username?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <span className="font-medium text-sm">{profile?.username || user.email}</span>
+                    <button
+                      onClick={handleSignOut}
+                      className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+                      aria-label="התנתק"
+                    >
+                      <LogOut size={16} className="text-red-600" />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAuthAction('login')}
+                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
+                  >
+                    <LogIn size={16} />
+                    התחברות
+                  </button>
+                  <button
+                    onClick={() => handleAuthAction('register')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    <User size={16} />
+                    הרשמה
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Search and Filter Bar */}
+          <div className="pb-4">
+            <div className="flex flex-col lg:flex-row gap-4 items-center">
+              {/* Search */}
+              <div className="relative flex-1 w-full lg:max-w-md">
+                <Search size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="חפש שאלות..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm"
+                />
+              </div>
+
+              {/* Filters */}
+              <div className="flex items-center gap-4 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+                {/* Tags */}
+                <div className="flex gap-2 flex-shrink-0">
+                  {availableTags.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setFilterTag(tag)}
+                      className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 whitespace-nowrap ${
+                        filterTag === tag
+                          ? 'text-white shadow-lg'
+                          : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                      }`}
+                      style={filterTag === tag ? {
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
+                      } : {}}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sort */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Filter size={18} className="text-gray-500" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm whitespace-nowrap"
+                  >
+                    <option value="newest">הכי חדש</option>
+                    <option value="votes">הכי מדורג</option>
+                    <option value="views">הכי נצפה</option>
+                    <option value="replies">הכי נענה</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Drawer Component */}
+      <Drawer 
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
+        menuItems={menuItems}
+      />
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-5 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8 text-center">
+          <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
+            ברוכים הבאים לפלטפורמת השאלות והתשובות
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            מקום בו תוכלו לשאול שאלות, לקבל תשובות מקצועיות ולשתף ידע עם הקהילה
+          </p>
+        </div>
+        
+        {/* Questions List */}
+        <div className="space-y-6">
+          {sortedQuestions.map((question, index) => (
+            <article 
+              key={question.id} 
+              className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 group"
+              style={{
+                animationDelay: `${index * 0.1}s`,
+                animation: 'slideInUp 0.6s ease-out forwards'
+              }}
+            >
+              <div className="flex gap-4">
+                {/* Vote Section */}
+                <div className="flex flex-col items-center gap-2 min-w-16">
+                  <button className="p-2 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
+                    <ArrowUp size={20} />
+                  </button>
+                  <span 
+                    className="text-xl font-bold px-3 py-1 rounded-lg"
+                    style={{
+                      background: question.votes > 10 ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'rgba(99, 102, 241, 0.1)',
+                      color: question.votes > 10 ? 'white' : '#6366f1'
+                    }}
+                  >
+                    {question.votes}
+                  </span>
+                  <button className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
+                    <ArrowDown size={20} />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-xl font-bold text-gray-800 hover:text-indigo-600 transition-colors cursor-pointer line-clamp-2">
+                      {question.title}
+                    </h3>
+                    {question.isResolved && (
+                      <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                        נפתר
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-gray-600 mb-4 line-clamp-2">
+                    {question.content}
+                  </p>
+                  
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {question.tags.map((tag) => (
+                      <span 
+                        key={tag}
+                        className="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm rounded-full hover:bg-indigo-100 transition-colors cursor-pointer"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  
+                  {/* Meta Info */}
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1">
+                        <MessageSquare size={16} />
+                        {question.replies} תגובות
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Eye size={16} />
+                        {question.views} צפיות
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock size={16} />
+                        {question.timeAgo}
+                      </span>
+                    </div>
+                    <span className="font-medium">
+                      נשאל על ידי {question.author}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {/* No questions found */}
+        {sortedQuestions.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🤔</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">לא נמצאו שאלות</h3>
+            <p className="text-gray-600">נסה לשנות את מילות החיפוש או הסינון</p>
+          </div>
+        )}
+      </main>
+
+      {/* Auth Modal */}
+      {authModal && (
+        <AuthModal
+          mode={authModal}
+          onClose={() => setAuthModal(null)}
         />
       )}
 
-      {/* Drawer */}
-      <div
-        className={`fixed top-0 right-0 h-full bg-white/90 backdrop-blur-xl shadow-2xl rounded-bl-3xl border-l border-gray-200/30 transition-all duration-500 z-[99999] ${
-          isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
-        } ${className}`}
-        style={{ width: "18rem" }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="drawer-title"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200/30">
-          <h2 
-            id="drawer-title" 
-            className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
-          >
-            תפריט ניווט
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            aria-label="סגור תפריט"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav 
-          className="p-6 w-full h-full overflow-y-auto"
-          aria-label="תפריט ניווט ראשי"
-        >
-          <ul className="space-y-2" role="menu">
-            {menuItems.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.label} role="none">
-                  <a
-                    href={item.href}
-                    role="menuitem"
-                    tabIndex={isOpen ? 0 : -1}
-                    className={`flex items-center justify-between gap-4 p-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg group focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      item.active 
-                        ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 shadow-md' 
-                        : 'hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600'
-                    }`}
-                    onClick={onClose} // Close drawer when item is clicked
-                  >
-                    <div className="flex items-center gap-4">
-                      <Icon size={22} className="group-hover:scale-110 transition-transform" />
-                      <span className="font-medium text-lg">{item.label}</span>
-                    </div>
-                    
-                    {/* Badge for notifications */}
-                    {item.badge && item.badge > 0 && (
-                      <span className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200/30">
-            <div className="text-center text-sm text-gray-500">
-              <p>© 2025 פורום הקהילה</p>
-              <p className="mt-1">גרסה 1.0.0</p>
-            </div>
-          </div>
-        </nav>
-      </div>
-    </>
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
+    </div>
   );
 }
-
-// Hook for managing drawer state
-export function useDrawer(initialState = false) {
-  const [isOpen, setIsOpen] = React.useState(initialState);
-
-  const openDrawer = React.useCallback(() => setIsOpen(true), []);
-  const closeDrawer = React.useCallback(() => setIsOpen(false), []);
-  const toggleDrawer = React.useCallback(() => setIsOpen(prev => !prev), []);
-
-  return {
-    isOpen,
-    openDrawer,
-    closeDrawer,
-    toggleDrawer,
-  };
-}
-
-// Optional: Custom menu items type export for TypeScript users
-export type { MenuItem, DrawerProps };
