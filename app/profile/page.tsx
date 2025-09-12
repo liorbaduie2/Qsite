@@ -16,7 +16,6 @@ import {
   X,
   Camera,
   BarChart3,
-  TrendingUp,
   CheckCircle,
   Clock
 } from 'lucide-react';

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { 
   Menu, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, 
   Search, Filter, Eye, MessageCircle, ArrowUp, ArrowDown, Star, 
-  Clock, User, LogIn 
+  User, LogIn 
 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import AuthModal from '../components/AuthModal';

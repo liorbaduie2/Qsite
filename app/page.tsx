@@ -1,11 +1,11 @@
+//app/page.tsx
 "use client";
 
 import React, { useState } from 'react';
-import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User, Search, Filter, Eye, MessageCircle, ArrowUp } from 'lucide-react';
+import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User, Search, Filter, TrendingUp, Eye, MessageCircle, ArrowUp } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import AuthModal from './components/AuthModal';
 import Drawer from './components/Drawer';
-import Image from 'next/image';
 
 // Development-only ProfileTestComponent
 function ProfileTestComponent() {
@@ -42,9 +42,9 @@ export default function ForumHomepage() {
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
     { label: 'סטטוסי', icon: Users, href: '/status' },
-    { label: 'דיוני', icon: MessageSquare, href: '/discussions' },
+    { label: 'דיונים', icon: MessageSquare, href: '/discussions' },
     { label: 'שאלות', icon: HelpCircle, href: '/questions' },
-    { label: 'סיפורי', icon: BookOpen, href: '/stories' },
+    { label: 'סיפורים', icon: BookOpen, href: '/stories' },
   ];
 
   const questions = [
@@ -78,44 +78,63 @@ export default function ForumHomepage() {
       id: 3,
       title: 'מה ההבדל בין React ל-Vue?',
       content: 'אני מתלבט איזה פריימוורק ללמוד. מה היתרונות והחסרונות של כל אחד?',
-      author: 'מיכל לוי',
+      author: 'שרה לוי',
       authorAvatar: 'https://i.pravatar.cc/40?img=3',
       replies: 8,
-      votes: 15,
-      views: 189,
-      time: 'לפני 3 שעות',
-      tags: ['React', 'Vue', 'JavaScript'],
-      isAnswered: true
+      votes: 6,
+      views: 89,
+      time: 'לפני 4 שעות',
+      tags: ['React', 'Vue', 'פיתוח'],
+      isAnswered: false
     },
     {
       id: 4,
-      title: 'איך להכין קפה טוב בבית?',
-      content: 'מחפש טיפים להכנת קפה איכותי בבית בלי מכונת אספרסו יקרה',
-      author: 'עומר כספי',
+      title: 'איך לכתוב בדיקות יחידה יעילות?',
+      content: 'אני מתחיל עם בדיקות יחידה ולא בטוח איך לעשות את זה נכון.',
+      author: 'יונתן גרין',
       authorAvatar: 'https://i.pravatar.cc/40?img=4',
       replies: 6,
-      votes: 4,
-      views: 92,
-      time: 'לפני 5 שעות',
-      tags: ['קפה', 'בישול', 'טיפים'],
+      votes: 9,
+      views: 78,
+      time: 'לפני 2 ימים',
+      tags: ['תכנות', 'בדיקות', 'פיתוח'],
       isAnswered: false
+    },
+    {
+      id: 5,
+      title: 'איך לנהל זמן בצורה יעילה כמפתח?',
+      content: 'אני מתקשה לנהל את הזמן שלי בין פרויקטים שונים ולימוד טכנולוגיות חדשות.',
+      author: 'עמית רוזן',
+      authorAvatar: 'https://i.pravatar.cc/40?img=5',
+      replies: 11,
+      votes: 14,
+      views: 203,
+      time: 'לפני 3 ימים',
+      tags: ['קריירה', 'ניהול זמן'],
+      isAnswered: true
     }
   ];
 
-  const allTags = ['הכל', 'תכנות', 'עיצוב', 'קריירה', 'לימודים', 'טכנולוגיה', 'פיתוח', 'React', 'Vue', 'JavaScript', 'CSS', 'HTML'];
+  const allTags = ['הכל', 'תכנות', 'React', 'Vue', 'קריירה', 'למידה', 'פיתוח', 'בדיקות', 'ניהול זמן', 'חברה', 'פמיניזם', 'דיון'];
 
-  const filteredQuestions = questions
-    .filter(q => 
-      q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.content.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter(q => filterTag === 'הכל' || q.tags.includes(filterTag))
-    .sort((a, b) => {
-      if (sortBy === 'votes') return b.votes - a.votes;
-      if (sortBy === 'replies') return b.replies - a.replies;
-      if (sortBy === 'views') return b.views - a.views;
-      return b.id - a.id; // newest first
-    });
+  const filteredQuestions = questions.filter(question => {
+    const matchesSearch = question.title.includes(searchTerm) || question.content.includes(searchTerm);
+    const matchesTag = filterTag === 'הכל' || question.tags.includes(filterTag);
+    return matchesSearch && matchesTag;
+  });
+
+  const sortedQuestions = [...filteredQuestions].sort((a, b) => {
+    switch (sortBy) {
+      case 'votes':
+        return b.votes - a.votes;
+      case 'views':
+        return b.views - a.views;
+      case 'replies':
+        return b.replies - a.replies;
+      default:
+        return b.id - a.id; // newest first
+    }
+  });
 
   const handleAuthAction = (mode: 'login' | 'register') => {
     setAuthModalMode(mode);
@@ -188,48 +207,32 @@ export default function ForumHomepage() {
 
             <div className="flex items-center gap-3">
               {user ? (
-                <div className="flex items-center gap-3">
+                <>
                   <button
                     onClick={handleNewQuestion}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                   >
                     <Plus size={16} />
                     שאלה חדשה
                   </button>
-                  
-                  <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg border border-gray-200/50">
-                    <div className="flex items-center gap-2">
-                      {profile?.avatar_url ? (
-                        <Image
-                          src={profile.avatar_url}
-                          alt={profile.username || 'משתמש'}
-                          width={28}
-                          height={28}
-                          className="w-7 h-7 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                          <User size={14} className="text-white" />
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-gray-700">
-                        {profile?.username || 'משתמש'}
-                      </span>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg shadow-lg">
+                    <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {profile?.username?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
+                    <span className="font-medium text-sm">{profile?.username || user.email}</span>
                     <button
                       onClick={handleSignOut}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      title="התנתק"
+                      className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
                     >
-                      <LogOut size={16} className="text-gray-500" />
+                      <LogOut size={16} className="text-red-600" />
                     </button>
                   </div>
-                </div>
+                </>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleAuthAction('login')}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white/60 rounded-lg hover:bg-white/80 transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
+                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
                   >
                     <LogIn size={16} />
                     התחברות
@@ -271,163 +274,185 @@ export default function ForumHomepage() {
 
         {/* Search and Filter Section */}
         <div className="mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Search Bar */}
-              <div className="flex-1 relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/30 p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search size={18} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
                   placeholder="חפש שאלות..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pr-11 pl-4 py-3 border border-gray-300/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-300"
+                  className="w-full pr-12 pl-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm"
                 />
               </div>
 
-              {/* Filter by Tags */}
-              <div className="flex items-center gap-2">
-                <Filter size={20} className="text-gray-500" />
-                <select
-                  value={filterTag}
-                  onChange={(e) => setFilterTag(e.target.value)}
-                  className="px-4 py-3 border border-gray-300/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-300"
-                >
-                  {allTags.map(tag => (
-                    <option key={tag} value={tag}>{tag}</option>
-                  ))}
-                </select>
-              </div>
+              <div className="flex flex-col sm:flex-row gap-4 lg:gap-6">
+                {/* Tags Filter */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0">
+                  <span className="text-sm font-medium text-gray-600 whitespace-nowrap">תגיות:</span>
+                  <div className="flex gap-2">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setFilterTag(tag)}
+                        className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 whitespace-nowrap ${
+                          filterTag === tag
+                            ? 'text-white shadow-lg'
+                            : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                        }`}
+                        style={filterTag === tag ? {
+                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
+                        } : {}}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Sort Options */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 border border-gray-300/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-300"
-              >
-                <option value="newest">החדשות ביותר</option>
-                <option value="votes">הכי מצוינות</option>
-                <option value="replies">הכי פופולריות</option>
-                <option value="views">הכי נצפות</option>
-              </select>
+                {/* Sort */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Filter size={18} className="text-gray-500" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/70 backdrop-blur-sm whitespace-nowrap"
+                  >
+                    <option value="newest">הכי חדש</option>
+                    <option value="votes">הכי מדורג</option>
+                    <option value="views">הכי נצפה</option>
+                    <option value="replies">הכי נענה</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Questions List */}
         <div className="space-y-6">
-          {filteredQuestions.length > 0 ? (
-            filteredQuestions.map((question) => (
-              <div
-                key={question.id}
-                className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group"
-              >
+          {sortedQuestions.map((question) => (
+            <div
+              key={question.id}
+              className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/30 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
+            >
+              <div className="p-6">
                 <div className="flex items-start gap-4">
                   {/* Author Avatar */}
                   <div className="flex-shrink-0">
-                    <Image
+                    <img
                       src={question.authorAvatar}
                       alt={question.author}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 transition-transform duration-300"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg"
                     />
                   </div>
 
                   {/* Question Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2 leading-tight hover:text-indigo-600 transition-colors cursor-pointer">
+                          {question.title}
+                        </h3>
+                        <p className="text-gray-600 leading-relaxed line-clamp-2">
+                          {question.content}
+                        </p>
+                      </div>
+                      
                       {question.isAnswered && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                          נענתה
-                        </span>
+                        <div className="flex-shrink-0 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                          ✓ נענה
+                        </div>
                       )}
-                      <span className="text-sm text-gray-600">{question.time}</span>
                     </div>
 
-                    <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-indigo-600 transition-colors duration-300 leading-tight">
-                      {question.title}
-                    </h3>
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {question.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium hover:bg-indigo-200 transition-colors cursor-pointer"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
 
-                    <p className="text-gray-600 mb-4 leading-relaxed line-clamp-2">
-                      {question.content}
-                    </p>
-
+                    {/* Question Meta */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <span className="font-medium text-gray-700">{question.author}</span>
-                        
-                        <div className="flex items-center gap-1">
-                          <ArrowUp size={16} />
-                          <span>{question.votes}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <MessageCircle size={16} />
-                          <span>{question.replies}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <Eye size={16} />
-                          <span>{question.views}</span>
-                        </div>
+                        <span>{question.time}</span>
                       </div>
 
-                      <div className="flex gap-2">
-                        {question.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 hover:bg-indigo-200 transition-colors cursor-pointer"
-                            onClick={() => setFilterTag(tag)}
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-1 text-green-600">
+                          <ArrowUp size={16} />
+                          <span className="font-medium">{question.votes}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <MessageCircle size={16} />
+                          <span className="font-medium">{question.replies}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-500">
+                          <Eye size={16} />
+                          <span className="font-medium">{question.views}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <MessageSquare size={48} className="mx-auto" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                לא נמצאו שאלות
-              </h3>
-              <p className="text-gray-500">
-                נסה לשנות את הפילטרים או החיפוש
-              </p>
             </div>
-          )}
+          ))}
         </div>
+
+        {/* Empty State */}
+        {sortedQuestions.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <MessageSquare size={64} className="mx-auto" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-600 mb-2">לא נמצאו שאלות</h3>
+            <p className="text-gray-500 mb-6">נסה לשנות את החיפוש או הסינון</p>
+            {user && (
+              <button
+                onClick={handleNewQuestion}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+              >
+                <Plus size={16} />
+                שאל שאלה ראשונה
+              </button>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Auth Modal */}
-      {isAuthModalOpen && (
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authModalMode}
-        />
-      )}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
 
-      {/* Profile Test Component for Development */}
+      {/* Development Component */}
       <ProfileTestComponent />
 
-      <style jsx>{`
+      {/* Global Styles */}
+      <style jsx global>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          33% { transform: translateY(-10px) rotate(1deg); }
+          66% { transform: translateY(5px) rotate(-1deg); }
+        }
+        
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(1deg); }
         }
       `}</style>
     </div>
