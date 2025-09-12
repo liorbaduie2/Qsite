@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import type { User, AuthResponse } from '@supabase/supabase-js';
+import type { User, AuthResponse, AuthError } from '@supabase/supabase-js';
 
 interface Profile {
   id: string;
@@ -249,7 +249,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Unexpected sign in error:', error);
       const errorMessage = 'An unexpected error occurred during sign in';
       setError(errorMessage);
-      return { data: { user: null, session: null }, error: new Error(errorMessage) as any };
+      const authError: AuthError = {
+        name: 'AuthError',
+        message: errorMessage,
+      } as AuthError;
+      return { data: { user: null, session: null }, error: authError };
     }
   }, [supabase, clearError]);
 
@@ -282,7 +286,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Unexpected sign up error:', error);
       const errorMessage = 'An unexpected error occurred during sign up';
       setError(errorMessage);
-      return { data: { user: null, session: null }, error: new Error(errorMessage) as any };
+      const authError: AuthError = {
+        name: 'AuthError',
+        message: errorMessage,
+      } as AuthError;
+      return { data: { user: null, session: null }, error: authError };
     }
   }, [supabase, clearError]);
 

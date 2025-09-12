@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, LucideIcon, User, Settings, LogOut, Bell, Bookmark, Award } from 'lucide-react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface MenuItem {
   label: string;
@@ -20,7 +21,7 @@ interface DrawerProps {
   isDrawerOpen: boolean;
   setIsDrawerOpen: (open: boolean) => void;
   menuItems: MenuItem[];
-  user?: any; // Supabase user object
+  user?: SupabaseUser | null; // Fixed: Changed from any to proper Supabase User type
   profile?: Profile | null;
   onSignOut?: () => void;
 }
