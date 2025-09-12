@@ -442,8 +442,7 @@ const QuestionsPage = () => {
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
-          mode={authModalMode}
-          onModeSwitch={(mode) => setAuthModalMode(mode)}
+          initialMode={authModalMode}
         />
       )}
 
