@@ -10,7 +10,7 @@ import Drawer from './components/Drawer';
 function ProfileTestComponent() {
   // Only show in development
   if (process.env.NODE_ENV === 'production') return null;
-  
+
   return (
     <div style={{
       position: 'fixed',
@@ -35,7 +35,7 @@ export default function ForumHomepage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState('הכל');
   const [sortBy, setSortBy] = useState('newest');
-  
+
   const { user, profile, loading, signOut } = useAuth();
 
   const menuItems = [
@@ -62,7 +62,7 @@ export default function ForumHomepage() {
     },
     {
       id: 2,
-      title: 'איך אני יכול ללמוד תכנות בצורה יעילה?',
+      title: 'איך אני יכולה ללמוד תכנות בצורה יעילה?',
       content: 'אני רוצה להתחיל ללמוד תכנות אבל לא יודע מאיפה להתחיל. יש המלצות?',
       author: 'דני כהן',
       authorAvatar: 'https://i.pravatar.cc/40?img=2',
@@ -166,7 +166,7 @@ export default function ForumHomepage() {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen relative"
       dir="rtl"
       style={{
@@ -176,7 +176,7 @@ export default function ForumHomepage() {
       }}
     >
       {/* Animated Background */}
-      <div 
+      <div
         className="fixed inset-0 -z-10"
         style={{
           background: `
@@ -296,11 +296,10 @@ export default function ForumHomepage() {
                       <button
                         key={tag}
                         onClick={() => setFilterTag(tag)}
-                        className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 whitespace-nowrap ${
-                          filterTag === tag
+                        className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 whitespace-nowrap ${filterTag === tag
                             ? 'text-white shadow-lg'
                             : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
-                        }`}
+                          }`}
                         style={filterTag === tag ? {
                           background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
                         } : {}}
@@ -359,7 +358,7 @@ export default function ForumHomepage() {
                           {question.content}
                         </p>
                       </div>
-                      
+
                       {question.isAnswered && (
                         <div className="flex-shrink-0 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                           ✓ נענה
