@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import type { User, AuthResponse, AuthError } from '@supabase/supabase-js';
+import type { User, AuthResponse } from '@supabase/supabase-js';
 
 interface Profile {
   id: string;
@@ -90,48 +90,179 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
               if (createError) {
-                console.error('Error creating profile:', createError);
-                setError('Failed to create user profile');
+                console.error('Profile creation error:', createError);
                 return false;
               }
 
               console.log('Profile created successfully:', createdProfile);
               setProfile(createdProfile);
               return true;
-            } else {
-              console.error('User data mismatch or not available');
-              setError('User authentication issue');
-              return false;
             }
-          } catch (createErr) {
-            console.error('Error in profile creation process:', createErr);
-            setError('Failed to create user profile');
+          } catch (createError) {
+            console.error('Error in profile creation:', createError);
             return false;
           }
-        } else {
-          setError('Failed to load user profile');
-          return false;
         }
+        return false;
       }
 
       console.log('Profile fetched successfully:', data);
       setProfile(data);
       return true;
     } catch (error) {
-      console.error('Unexpected error fetching profile:', error);
-      setError('An unexpected error occurred while loading profile');
+      console.error('Unexpected error in fetchProfile:', error);
       return false;
     }
   }, [supabase]);
 
-  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
+  const initializeAuth = useCallback(async () => {
+    try {
+      console.log('Initializing auth...');
+      setLoading(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Initial session:', session?.user?.id || 'no session');
+      
+      if (session?.user) {
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    } catch (error) {
+      console.error('Auth initialization error:', error);
+      setError('Failed to initialize authentication');
+    } finally {
+      setLoading(false);
+      setInitialized(true);
+    }
+  }, [supabase, fetchProfile]);
+
+  useEffect(() => {
+    if (!initialized) {
+      initializeAuth();
+    }
+  }, [initializeAuth, initialized]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id || 'no user');
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        setUser(session.user);
+        if (!profile || profile.id !== session.user.id) {
+          await fetchProfile(session.user.id);
+        }
+      }
+      
+      if (initialized) {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase, fetchProfile, profile, initialized]);
+
+  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (response.error) {
+        setError(response.error.message);
+      }
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setError(errorMessage);
+      return { data: { user: null, session: null }, error: { message: errorMessage } } as AuthResponse;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUp = async (email: string, password: string, username: string, fullName?: string): Promise<AuthResponse> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Check if username is already taken
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .single();
+
+      if (existingProfile) {
+        const errorMessage = 'שם המשתמש כבר תפוס';
+        setError(errorMessage);
+        return { data: { user: null, session: null }, error: { message: errorMessage } } as AuthResponse;
+      }
+
+      const response = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            full_name: fullName || '',
+          }
+        }
+      });
+
+      if (response.error) {
+        setError(response.error.message);
+      } else if (response.data.user) {
+        // Profile will be created automatically via the auth state change listener
+        console.log('User signed up successfully');
+      }
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setError(errorMessage);
+      return { data: { user: null, session: null }, error: { message: errorMessage } } as AuthResponse;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signOut = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to sign out');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async (updates: Partial<Profile>): Promise<void> => {
     if (!user || !profile) {
-      throw new Error('User not authenticated');
+      throw new Error('No authenticated user');
     }
 
     try {
-      console.log('Updating profile with:', updates);
-      
+      setLoading(true);
+      setError(null);
+
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -140,193 +271,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
-        console.error('Profile update error:', error);
-        throw new Error('Failed to update profile');
-      }
-
-      console.log('Profile updated successfully:', data);
-      setProfile(data);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      throw error;
-    }
-  }, [supabase, user, profile]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...');
-        
-        // Wait a bit for auth to settle
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Session error:', error);
-          setError('Failed to get session');
-        } else {
-          console.log('Initial session found:', session?.user?.id || 'No session');
-          
-          if (isMounted) {
-            setUser(session?.user ?? null);
-            
-            if (session?.user) {
-              console.log('Fetching profile for authenticated user:', session.user.id);
-              const success = await fetchProfile(session.user.id);
-              if (!success) {
-                console.log('Profile fetch failed, but continuing...');
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Auth initialization error:', err);
-        if (isMounted) {
-          setError('Failed to initialize authentication');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-          setInitialized(true);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id || 'no user');
-        
-        if (isMounted) {
-          setUser(session?.user ?? null);
-          
-          if (session?.user && event === 'SIGNED_IN') {
-            console.log('User signed in, fetching profile...');
-            const success = await fetchProfile(session.user.id);
-            if (!success) {
-              console.log('Profile fetch failed after sign in');
-            }
-          } else if (event === 'SIGNED_OUT') {
-            console.log('User signed out, clearing profile...');
-            setProfile(null);
-            clearError();
-          }
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase, fetchProfile, clearError]);
-
-  const signIn = useCallback(async (email: string, password: string): Promise<AuthResponse> => {
-    try {
-      console.log('Attempting to sign in user:', email);
-      clearError();
-      
-      const result = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (result.error) {
-        console.error('Sign in error:', result.error);
-        setError(result.error.message);
-      } else if (result.data.user) {
-        console.log('Sign in successful:', result.data.user.id);
-        // Profile will be fetched by the auth state change listener
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Unexpected sign in error:', error);
-      const errorMessage = 'An unexpected error occurred during sign in';
-      setError(errorMessage);
-      const authError: AuthError = {
-        name: 'AuthError',
-        message: errorMessage,
-      } as AuthError;
-      return { data: { user: null, session: null }, error: authError };
-    }
-  }, [supabase, clearError]);
-
-  const signUp = useCallback(async (email: string, password: string, username: string, fullName?: string): Promise<AuthResponse> => {
-    try {
-      console.log('Attempting to sign up user:', email, username);
-      clearError();
-      
-      const result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-            full_name: fullName || '',
-          },
-        },
-      });
-
-      if (result.error) {
-        console.error('Sign up error:', result.error);
-        setError(result.error.message);
-      } else if (result.data.user) {
-        console.log('Sign up successful:', result.data.user.id);
-        // Profile creation will be handled by the auth state change listener or fetchProfile
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Unexpected sign up error:', error);
-      const errorMessage = 'An unexpected error occurred during sign up';
-      setError(errorMessage);
-      const authError: AuthError = {
-        name: 'AuthError',
-        message: errorMessage,
-      } as AuthError;
-      return { data: { user: null, session: null }, error: authError };
-    }
-  }, [supabase, clearError]);
-
-  const signOut = useCallback(async (): Promise<void> => {
-    try {
-      console.log('Attempting to sign out...');
-      clearError();
-      
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Sign out error:', error);
-        setError(error.message);
         throw error;
       }
-      
-      console.log('Sign out successful');
-      // Clear state will be handled by the auth state change listener
+
+      setProfile(data);
     } catch (error) {
-      console.error('Unexpected sign out error:', error);
-      setError('An unexpected error occurred during sign out');
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  }, [supabase, clearError]);
+  };
+
+  const value: AuthContextType = {
+    user,
+    profile,
+    loading,
+    error,
+    signIn,
+    signUp,
+    signOut,
+    updateProfile,
+    clearError,
+  };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      loading: loading || !initialized,
-      error,
-      signIn,
-      signUp,
-      signOut,
-      updateProfile,
-      clearError,
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
