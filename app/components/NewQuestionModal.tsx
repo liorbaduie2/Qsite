@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { X, Send, HelpCircle, Sparkles, Hash, CheckCircle, Tag } from 'lucide-react';
+import { X, Send, HelpCircle, Sparkles, Hash, CheckCircle } from 'lucide-react';
 
 interface NewQuestionModalProps {
   isOpen: boolean;
@@ -193,27 +193,6 @@ export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalPr
                 <div className="text-xs text-gray-500">
                   {title.length}/300 תווים
                 </div>
-              </div>
-
-              {/* Category - shows when title is filled */}
-              <div className={`space-y-2 transition-all duration-500 ${showCategory ? 'opacity-100 max-h-32' : 'opacity-0 max-h-0 overflow-hidden'}`}>
-                <label className="font-semibold text-gray-700 flex items-center gap-2">
-                  <Tag size={16} className="text-indigo-500" />
-                  קטגוריה
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full p-4 text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-colors"
-                  disabled={!showCategory}
-                >
-                  <option value="">בחר קטגוריה</option>
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               {/* Content - shows when title is filled */}
