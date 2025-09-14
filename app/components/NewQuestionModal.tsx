@@ -13,22 +13,11 @@ export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalPr
   const [content, setContent] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState<string>('');
-  const [category, setCategory] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
   // Refs for focus management
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
-
-  // Categories - matching your existing structure
-  const categories = [
-    { value: 'programming', label: 'תכנות' },
-    { value: 'design', label: 'עיצוב' },
-    { value: 'career', label: 'קריירה' },
-    { value: 'learning', label: 'לימודים' },
-    { value: 'tools', label: 'כלים' },
-    { value: 'general', label: 'כללי' }
-  ];
 
   // Popular tags - matching your existing Hebrew tags
   const popularTags: string[] = [
@@ -61,8 +50,7 @@ export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalPr
       console.log({
         title: title.trim(),
         content: content.trim(),
-        tags,
-        category
+        tags
       });
       
       // Reset form and close
@@ -70,7 +58,6 @@ export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalPr
       setContent('');
       setTags([]);
       setCurrentTag('');
-      setCategory('');
       onClose();
     } catch (error) {
       console.error('Error creating question:', error);
@@ -95,7 +82,6 @@ export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalPr
   // Progressive disclosure states
   const showContent = title.trim() !== '';
   const showTags = content.trim() !== '';
-  const showCategory = showContent; // Show category when content is available
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" dir="rtl">
