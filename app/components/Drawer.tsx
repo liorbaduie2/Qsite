@@ -1,5 +1,6 @@
+// /app/components/Drawer.tsx
 import React from 'react';
-import { X, LucideIcon, User, LogOut, Bell, Bookmark, Award } from 'lucide-react';
+import { X, LucideIcon, User, LogOut, Bell, Bookmark, Award, Shield } from 'lucide-react';
 import Image from 'next/image';
 
 interface MenuItem {
@@ -16,13 +17,21 @@ interface Profile {
   avatar_url?: string;
   bio?: string;
   reputation?: number;
+  email?: string;
+  phone?: string;
+  phone_verified_at?: string;
+  status?: string;
+  is_moderator?: boolean;  // Added admin field
+  is_verified?: boolean;   // Added verified field
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface DrawerProps {
   isDrawerOpen: boolean;
   setIsDrawerOpen: (open: boolean) => void;
   menuItems: MenuItem[];
-  user?: { id: string; email?: string } | null; // Fixed: replaced any with proper type
+  user?: { id: string; email?: string } | null;
   profile?: Profile | null;
   onSignOut?: () => void;
 }
@@ -45,6 +54,10 @@ const Drawer: React.FC<DrawerProps> = ({
 
   const handleProfileClick = () => {
     handleMenuClick('/profile');
+  };
+
+  const handleAdminClick = () => {
+    handleMenuClick('/admin');
   };
 
   const handleSignOut = async () => {
@@ -85,117 +98,131 @@ const Drawer: React.FC<DrawerProps> = ({
                   {profile?.avatar_url ? (
                     <Image
                       src={profile.avatar_url}
-                      alt={profile.username || 'משתמש'}
+                      alt={profile.username}
                       width={48}
                       height={48}
                       className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
                     />
                   ) : (
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
                       <User size={20} className="text-white" />
                     </div>
                   )}
-                </div>
-                
-                {/* Profile Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {profile?.full_name || profile?.username || 'משתמש'}
-                  </h3>
-                  <p className="text-sm text-gray-600 truncate">
-                    @{profile?.username || 'unknown'}
-                  </p>
-                  {profile?.reputation !== undefined && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Award size={12} className="text-yellow-500" />
-                      <span className="text-xs text-gray-600">{profile.reputation} נקודות</span>
+                  {profile?.is_verified && (
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
+                      <span className="text-white text-xs">✓</span>
                     </div>
                   )}
                 </div>
+
+                {/* Profile Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-800 truncate">
+                      {profile?.full_name || profile?.username || 'משתמש'}
+                    </h3>
+                    {profile?.is_moderator && (
+                      <div className="relative group">
+                        <Shield size={14} className="text-indigo-600 flex-shrink-0" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          מנהל
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 truncate">
+                    @{profile?.username}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Award size={12} className="text-yellow-500" />
+                    <span className="text-xs text-gray-600">
+                      {profile?.reputation || 0} נקודות מוניטין
+                    </span>
+                  </div>
+                </div>
               </div>
-              
+
               {/* Profile Actions */}
               <div className="flex gap-2">
                 <button
                   onClick={handleProfileClick}
-                  className="flex-1 text-sm px-3 py-2 bg-white/60 text-gray-700 rounded-lg hover:bg-white/80 transition-colors"
+                  className="flex-1 px-3 py-2 bg-white/60 text-gray-700 rounded-lg hover:bg-white/80 transition-colors text-sm font-medium"
                 >
                   פרופיל
                 </button>
-                <button
-                  onClick={() => handleMenuClick('/settings')}
-                  className="flex-1 text-sm px-3 py-2 bg-white/60 text-gray-700 rounded-lg hover:bg-white/80 transition-colors"
-                >
-                  הגדרות
-                </button>
+                {profile?.is_moderator && (
+                  <button
+                    onClick={handleAdminClick}
+                    className="flex-1 px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium"
+                  >
+                    ניהול
+                  </button>
+                )}
               </div>
             </div>
           )}
 
           {/* Navigation Menu */}
-          <nav className="flex-1 space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => handleMenuClick(item.href)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-right rounded-xl transition-all duration-200 group ${
-                    item.active
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
-                      : 'hover:bg-gray-100 text-gray-700 hover:text-gray-900'
-                  }`}
-                >
-                  <Icon 
-                    size={20} 
-                    className={`transition-transform group-hover:scale-110 ${
-                      item.active ? 'text-white' : 'text-gray-500'
-                    }`} 
-                  />
-                  <span className="font-medium">{item.label}</span>
-                </button>
-              );
-            })}
+          <nav className="flex-1">
+            <div className="space-y-2">
+              {menuItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => handleMenuClick(item.href)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      item.active
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
+                        : 'text-gray-700 hover:bg-gray-100/60'
+                    }`}
+                  >
+                    <IconComponent size={20} />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </nav>
 
-          {/* Bottom Actions */}
+          {/* Quick Actions - Show when user is logged in */}
+          {user && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="space-y-2">
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100/60 rounded-xl transition-colors">
+                  <Bell size={20} />
+                  <span>התראות</span>
+                  <span className="mr-auto bg-indigo-500 text-white text-xs px-2 py-1 rounded-full">
+                    3
+                  </span>
+                </button>
+                
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100/60 rounded-xl transition-colors">
+                  <Bookmark size={20} />
+                  <span>שמורים</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Footer - Sign Out or Sign In */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             {user ? (
-              <div className="space-y-2">
-                <button
-                  onClick={() => handleMenuClick('/notifications')}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-right rounded-xl hover:bg-gray-100 text-gray-700 transition-colors"
-                >
-                  <Bell size={20} className="text-gray-500" />
-                  <span>התראות</span>
-                </button>
-                <button
-                  onClick={() => handleMenuClick('/bookmarks')}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-right rounded-xl hover:bg-gray-100 text-gray-700 transition-colors"
-                >
-                  <Bookmark size={20} className="text-gray-500" />
-                  <span>סימניות</span>
-                </button>
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-right rounded-xl hover:bg-red-50 text-red-600 transition-colors"
-                >
-                  <LogOut size={20} />
-                  <span>התנתקות</span>
-                </button>
-              </div>
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
+              >
+                <LogOut size={20} />
+                <span>התנתקות</span>
+              </button>
             ) : (
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-4">
-                  התחבר כדי לגשת לכל התכונות
-                </p>
-                <button
-                  onClick={() => handleMenuClick('/auth')}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg"
-                >
-                  התחברות / הרשמה
-                </button>
-              </div>
+              <button
+                onClick={() => handleMenuClick('/login')}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl transition-colors font-medium shadow-lg hover:shadow-xl"
+              >
+                <User size={20} />
+                <span>התחברות</span>
+              </button>
             )}
           </div>
         </div>

@@ -1,12 +1,14 @@
 //app\page.tsx
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User, Search, Filter, Eye, MessageCircle, ArrowUp } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
-import AuthModal from './components/AuthModal';
+import LoginModal from './components/LoginModal';
+import HebrewRegistration from './components/HebrewRegistration';
 import Drawer from './components/Drawer';
 import Image from 'next/image';
+import AuthStatusDisplay from './components/AuthStatusDisplay';
 
 // Development-only ProfileTestComponent
 function ProfileTestComponent() {
@@ -32,13 +34,21 @@ function ProfileTestComponent() {
 
 export default function ForumHomepage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState('הכל');
   const [sortBy, setSortBy] = useState('newest');
   
   const { user, profile, loading, signOut } = useAuth();
+
+  useEffect(() => {
+    if (isRegisterModalOpen || isLoginModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+  }, [isRegisterModalOpen, isLoginModalOpen]);
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -118,9 +128,12 @@ export default function ForumHomepage() {
       return b.id - a.id; // newest first
     });
 
-  const handleAuthAction = (mode: 'login' | 'register') => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
+  const handleLogin = () => {
+    setIsLoginModalOpen(true);
+  };
+
+  const handleRegister = () => {
+    setIsRegisterModalOpen(true);
   };
 
   const handleSignOut = async () => {
@@ -133,11 +146,19 @@ export default function ForumHomepage() {
 
   const handleNewQuestion = () => {
     if (!user) {
-      handleAuthAction('login');
+      handleLogin();
       return;
     }
     // Handle new question creation
     console.log('Create new question');
+  };
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false);
+  };
+
+  const closeRegisterModal = () => {
+    setIsRegisterModalOpen(false);
   };
 
   if (loading) {
@@ -153,12 +174,11 @@ export default function ForumHomepage() {
       className="min-h-screen relative"
       dir="rtl"
       style={{
-        fontFamily: 'Assistant, system-ui, sans-serif',
+        fontFamily: "'Assistant', 'Heebo', system-ui, sans-serif",
         background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
         color: '#0f172a'
       }}
     >
-      {/* Animated Background */}
       <div 
         className="fixed inset-0 -z-10"
         style={{
@@ -171,8 +191,10 @@ export default function ForumHomepage() {
         }}
       />
 
-      {/* Header */}
       <header className="relative bg-white/80 backdrop-blur-xl shadow-xl border-b border-gray-200/20">
+        {/* Global status display - shows Hebrew messages for auth issues */}
+        {!user && <AuthStatusDisplay className="bg-white/90 border-b border-gray-200" showOnlyErrors={true} />}
+        
         <div className="max-w-6xl mx-auto px-5">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-4">
@@ -229,14 +251,14 @@ export default function ForumHomepage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleAuthAction('login')}
+                    onClick={handleLogin}
                     className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white/60 rounded-lg hover:bg-white/80 transition-all duration-300 border border-indigo-200 hover:border-indigo-300"
                   >
                     <LogIn size={16} />
                     התחברות
                   </button>
                   <button
-                    onClick={() => handleAuthAction('register')}
+                    onClick={handleRegister}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     <User size={16} />
@@ -249,7 +271,6 @@ export default function ForumHomepage() {
         </div>
       </header>
 
-      {/* Enhanced Drawer Component */}
       <Drawer
         isDrawerOpen={isDrawerOpen}
         setIsDrawerOpen={setIsDrawerOpen}
@@ -259,7 +280,6 @@ export default function ForumHomepage() {
         onSignOut={handleSignOut}
       />
 
-      {/* Main Content */}
       <main className="max-w-6xl mx-auto px-5 py-8">
         <div className="mb-8 text-center">
           <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
@@ -270,11 +290,9 @@ export default function ForumHomepage() {
           </p>
         </div>
 
-        {/* Search and Filter Section */}
         <div className="mb-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6">
             <div className="flex flex-col md:flex-row gap-4">
-              {/* Search Bar */}
               <div className="flex-1 relative">
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
@@ -286,7 +304,6 @@ export default function ForumHomepage() {
                 />
               </div>
 
-              {/* Filter by Tags */}
               <div className="flex items-center gap-2">
                 <Filter size={20} className="text-gray-500" />
                 <select
@@ -300,7 +317,6 @@ export default function ForumHomepage() {
                 </select>
               </div>
 
-              {/* Sort Options */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -315,7 +331,6 @@ export default function ForumHomepage() {
           </div>
         </div>
 
-        {/* Questions List */}
         <div className="space-y-6">
           {filteredQuestions.length > 0 ? (
             filteredQuestions.map((question) => (
@@ -324,7 +339,6 @@ export default function ForumHomepage() {
                 className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group"
               >
                 <div className="flex items-start gap-4">
-                  {/* Author Avatar */}
                   <div className="flex-shrink-0">
                     <Image
                       src={question.authorAvatar}
@@ -335,7 +349,6 @@ export default function ForumHomepage() {
                     />
                   </div>
 
-                  {/* Question Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       {question.isAnswered && (
@@ -406,19 +419,90 @@ export default function ForumHomepage() {
         </div>
       </main>
 
-      {/* Auth Modal */}
-      {isAuthModalOpen && (
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authModalMode}
-        />
-      )}
+      {/* Enhanced Login Modal - Matching Registration Style */}
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={closeLoginModal}
+        onSwitchToRegister={() => {
+          closeLoginModal();
+          setIsRegisterModalOpen(true);
+        }}
+      />
 
-      {/* Profile Test Component for Development */}
+      {/* Enhanced Hebrew Registration Modal */}
+      {isRegisterModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <div className="w-full max-w-2xl max-h-[95vh] overflow-y-auto relative modal-scroll">
+            <button
+              onClick={closeRegisterModal}
+              className="absolute top-2 right-2 z-20 bg-white/90 backdrop-blur-sm rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-white hover:shadow-xl transition-all duration-200 group"
+              style={{ direction: 'ltr' }}
+            >
+              <svg className="w-6 h-6 text-gray-600 group-hover:text-gray-800 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20">
+              <div 
+                className="text-center p-8 text-white relative overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)'
+                }}
+              >
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                  <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+                </div>
+                
+                <div className="relative z-10">
+                  <h2 className="text-4xl font-bold mb-3 drop-shadow-lg">הצטרפות לקהילה</h2>
+                  <p className="text-white/90 text-lg font-medium">
+                    רישום לפלטפורמת השאלות והתשובות של המפתחים הישראלים
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-8 bg-gradient-to-br from-gray-50/50 to-white/50">
+                <HebrewRegistration onComplete={closeRegisterModal} />
+                
+                {/* Add login link at bottom */}
+                <div className="mt-8 text-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300/60"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-gradient-to-br from-gray-50/50 to-white/50 text-gray-600 font-medium">
+                        או
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <p className="mt-6 text-sm text-gray-600" dir="rtl">
+                    יש לך כבר חשבון?{' '}
+                    <button 
+                      onClick={() => {
+                        closeRegisterModal();
+                        setIsLoginModalOpen(true);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors duration-200 hover:underline"
+                    >
+                      התחבר כאן
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <ProfileTestComponent />
 
-      <style jsx>{`
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Heebo:wght@400;500;700&display=swap');
+        
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -430,6 +514,45 @@ export default function ForumHomepage() {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-10px) rotate(1deg); }
         }
+
+        .modal-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+        }
+        
+        .modal-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .modal-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        .modal-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(99, 102, 241, 0.3);
+          border-radius: 3px;
+        }
+
+        body.modal-open {
+          overflow: hidden;
+        }
+        
+        .button-gradient {
+          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+          transition: all 0.3s ease;
+        }
+
+        .button-gradient:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
+
       `}</style>
     </div>
   );

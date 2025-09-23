@@ -1,7 +1,8 @@
+// components/AuthModal.tsx - UPDATED
 "use client";
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Mail, Lock, User, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 interface AuthModalProps {
@@ -69,58 +70,42 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         if (result.error) {
           throw new Error(result.error.message);
         }
-        setSuccess('הרשמה בוצעה בהצלחה! בדוק את המייל שלך לאימות.');
-        setTimeout(() => handleClose(), 3000);
+        
+        // 🔥 UPDATED: New admin approval success message
+        setSuccess('הרשמה בוצעה בהצלחה! בקשתך ממתינה לאישור מנהל. תקבל אימייל כשהחשבון יאושר.');
+        setTimeout(() => handleClose(), 3000); // Longer timeout for reading
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('אירעה שגיאה');
-      }
+    } catch (error: any) {
+      setError(error.message || 'שגיאה לא צפויה');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999999] flex items-center justify-center p-4">
-      <div 
-        className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative"
-        style={{
-          animation: 'modalSlideIn 0.3s ease-out'
-        }}
-      >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div 
-          className="p-6 text-white relative"
-          style={{
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
-          }}
-        >
+        <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
           <button
             onClick={handleClose}
-            className="absolute top-4 left-4 p-2 rounded-lg hover:bg-white/20 transition-colors"
+            className="absolute left-4 top-4 p-2 hover:bg-white/20 rounded-full transition-colors"
           >
             <X size={20} />
           </button>
           <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">
-              {mode === 'login' ? 'התחברות' : 'הרשמה'}
+            <h2 className="text-2xl font-bold">
+              {mode === 'login' ? 'התחברות' : 'הרשמה חדשה'}
             </h2>
-            <p className="text-white/80">
-              {mode === 'login' 
-                ? 'התחבר לחשבון שלך כדי להמשיך' 
-                : 'צור חשבון חדש כדי להצטרף לקהילה'
-              }
+            <p className="text-indigo-100 mt-1">
+              {mode === 'login' ? 'ברוכים השבים!' : 'הצטרפו אלינו'}
             </p>
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-6">
-          {/* Mode Toggle */}
-          <div className="flex rounded-xl p-1 mb-6 bg-gray-100">
+          {/* Mode Switch */}
+          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
             <button
               onClick={() => handleModeSwitch('login')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
@@ -145,45 +130,39 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
           {/* Error/Success Messages */}
           {error && (
-            <div className="flex items-center gap-3 p-4 bg-red-50 text-red-700 rounded-xl mb-4">
-              <AlertCircle size={20} />
+            <div className="flex items-start gap-3 p-4 bg-red-50 text-red-700 rounded-xl mb-4">
+              <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl mb-4">
-              <CheckCircle size={20} />
-              <span className="text-sm">{success}</span>
+            <div className="flex items-start gap-3 p-4 bg-green-50 text-green-700 rounded-xl mb-4">
+              {mode === 'register' ? (
+                <Clock size={20} className="mt-0.5 flex-shrink-0" />
+              ) : (
+                <CheckCircle size={20} className="mt-0.5 flex-shrink-0" />
+              )}
+              <div className="text-sm">
+                <div className="font-medium mb-1">
+                  {mode === 'register' ? 'בקשה נשלחה בהצלחה!' : 'התחברת בהצלחה!'}
+                </div>
+                {mode === 'register' && (
+                  <div className="text-green-600">
+                    {success}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                כתובת מייל
-              </label>
-              <div className="relative">
-                <Mail size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="your@email.com"
-                  required
-                  dir="ltr"
-                />
-              </div>
-            </div>
-
-            {/* Username (register only) */}
+            {/* Username (Register only) */}
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  שם משתמש
+                  שם משתמש *
                 </label>
                 <div className="relative">
                   <User size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -194,33 +173,52 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                     className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="שם המשתמש שלך"
                     required
-                    minLength={3}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">לפחות 3 תווים</p>
               </div>
             )}
 
-            {/* Full Name (register only) */}
+            {/* Full Name (Register only) */}
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   שם מלא (אופציונלי)
                 </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="השם המלא שלך"
-                />
+                <div className="relative">
+                  <User size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="השם המלא שלך"
+                  />
+                </div>
               </div>
             )}
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                כתובת מייל *
+              </label>
+              <div className="relative">
+                <Mail size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+            </div>
 
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                סיסמה
+                סיסמה *
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -229,33 +227,37 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="הסיסמה שלך"
+                  placeholder={mode === 'register' ? 'לפחות 8 תווים' : 'הסיסמה שלך'}
                   required
-                  minLength={6}
-                  dir="ltr"
                 />
               </div>
-              {mode === 'register' && (
-                <p className="text-xs text-gray-500 mt-1">לפחות 6 תווים</p>
-              )}
             </div>
+
+            {/* Admin Approval Notice (Register only) */}
+            {mode === 'register' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Clock size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-700">
+                    <div className="font-medium mb-1">תהליך האישור</div>
+                    <div className="text-blue-600">
+                      לאחר ההרשמה, הבקשה שלך תישלח לבדיקת מנהל. 
+                      תקבל אימייל כאשר החשבון יאושר ותוכל להתחבר.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 px-4 rounded-xl text-white font-semibold transition-all duration-300 ${
-                loading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'hover:scale-105 hover:shadow-lg'
-              }`}
-              style={!loading ? {
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)'
-              } : {}}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-3 px-4 rounded-xl transition-all transform hover:scale-105 disabled:scale-100 shadow-lg"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   {mode === 'login' ? 'מתחבר...' : 'נרשם...'}
                 </div>
               ) : (
@@ -265,7 +267,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           </form>
 
           {/* Footer */}
-          <div className="text-center mt-6 text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-gray-500">
             {mode === 'login' ? (
               <>
                 אין לך חשבון?{' '}
@@ -278,7 +280,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               </>
             ) : (
               <>
-                יש לך כבר חשבון?{' '}
+                יש לך חשבון?{' '}
                 <button
                   onClick={() => handleModeSwitch('login')}
                   className="text-indigo-600 hover:text-indigo-800 font-medium"
@@ -290,19 +292,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9) translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
