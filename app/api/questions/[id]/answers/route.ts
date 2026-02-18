@@ -37,7 +37,8 @@ export async function GET(
       return NextResponse.json({ error: 'שגיאה בטעינת התשובות' }, { status: 500 });
     }
 
-    const formatted = (answers || []).map((a: any) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formatted = (answers || []).map((a: Record<string, any>) => ({
       id: a.id,
       content: a.content,
       votes: a.votes_count || 0,

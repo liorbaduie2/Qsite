@@ -36,19 +36,20 @@ export const sendSMS = async (to: string, body: string): Promise<{ success: bool
     console.log(`SMS sent successfully. SID: ${message.sid}, Status: ${message.status}`);
     return { success: true };
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('SMS sending failed:', error);
     
     // Handle specific Twilio errors
     let errorMessage = 'שגיאה בשליחת SMS';
+    const errCode = (error as { code?: number })?.code;
     
-    if (error.code === 21211) {
+    if (errCode === 21211) {
       errorMessage = 'מספר טלפון לא חוקי';
-    } else if (error.code === 21614) {
+    } else if (errCode === 21614) {
       errorMessage = 'מספר טלפון לא חוקי למדינה';
-    } else if (error.code === 21610) {
+    } else if (errCode === 21610) {
       errorMessage = 'הודעה נחסמה - מספר לא קיים';
-    } else if (error.code === 30007) {
+    } else if (errCode === 30007) {
       errorMessage = 'הודעה לא נשלחה - נסה שוב';
     }
     

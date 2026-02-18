@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     let age;
     try {
       age = calculateAge(dateOfBirth);
-    } catch (error) {
+    } catch {
       return NextResponse.json({ 
         error: 'פורמט תאריך לא תקין',
         error_code: 'INVALID_DATE_FORMAT'

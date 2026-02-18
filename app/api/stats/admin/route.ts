@@ -14,14 +14,12 @@ const supabase = createClient(
   }
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
-    // Extract user from authorization header or session
-    const authHeader = request.headers.get('authorization');
-    
     // For now, we'll get the current user from the session
     // In production, you should properly validate the admin token
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.user) {
       return NextResponse.json({ 

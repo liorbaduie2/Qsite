@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'שגיאה בטעינת השאלות' }, { status: 500 });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formatted = (questions || []).map((q: any) => ({
       id: q.id,
       title: q.title,
@@ -78,11 +79,13 @@ export async function GET(request: NextRequest) {
         avatar_url: q.profiles?.avatar_url || null,
       },
       tags: (q.question_tags || [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((qt: any) => qt.tags?.name)
         .filter(Boolean),
     }));
 
     if (tag && tag !== 'הכל') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const filtered = formatted.filter((q: any) => q.tags.includes(tag));
       return NextResponse.json({ questions: filtered });
     }
@@ -152,6 +155,7 @@ export async function POST(request: NextRequest) {
 
           await supabase
             .from('tags')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .update({ use_count: (existingTag as any).use_count ? (existingTag as any).use_count + 1 : 1 })
             .eq('id', existingTag.id);
         }

@@ -58,7 +58,7 @@ interface LoginStatusResult {
 interface AuthResponse {
   data: {
     user: User | null;
-    session: any;
+    session: Session | null;
   };
   error: AuthError | null;
 }
@@ -338,7 +338,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 message: status.message_hebrew, 
                 name: 'ApprovalRequired',
                 status_code: status.status 
-              } as any
+              } as unknown as AuthError
             };
           }
         } catch (loginCheckError) {
@@ -446,7 +446,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({
           username: profileData.username || undefined,

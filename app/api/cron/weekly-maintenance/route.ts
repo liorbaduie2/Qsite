@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Run the weekly maintenance function
-    const { data, error } = await supabase.rpc('weekly_maintenance')
+    const { error } = await supabase.rpc('weekly_maintenance')
     
     if (error) {
       console.error('Weekly maintenance error:', error)

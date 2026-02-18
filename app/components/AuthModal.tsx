@@ -75,8 +75,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         setSuccess('הרשמה בוצעה בהצלחה! בקשתך ממתינה לאישור מנהל. תקבל אימייל כשהחשבון יאושר.');
         setTimeout(() => handleClose(), 3000); // Longer timeout for reading
       }
-    } catch (error: any) {
-      setError(error.message || 'שגיאה לא צפויה');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'שגיאה לא צפויה');
     } finally {
       setLoading(false);
     }

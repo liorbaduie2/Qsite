@@ -50,12 +50,14 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
   }, [formStage, onComplete]);
 
   // Debounced validation hook
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
     const callbackRef = useRef(callback);
     useEffect(() => {
       callbackRef.current = callback;
     }, [callback]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return useCallback((...args: any[]) => {
       const handler = setTimeout(() => {
         callbackRef.current(...args);
@@ -373,10 +375,10 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
 
     // Field-specific validation and debouncing
     if (field === 'phone' && value.length > 0) {
-      phoneRegex.test(value) ? debouncedCheckAvailability('phone', value) : setFieldStates(prev => ({ ...prev, phone: {} }));
+      if (phoneRegex.test(value)) { debouncedCheckAvailability('phone', value); } else { setFieldStates(prev => ({ ...prev, phone: {} })); }
     }
     if (field === 'email' && value.length > 0) {
-      emailRegex.test(value) ? debouncedCheckAvailability('email', value) : setFieldStates(prev => ({ ...prev, email: {} }));
+      if (emailRegex.test(value)) { debouncedCheckAvailability('email', value); } else { setFieldStates(prev => ({ ...prev, email: {} })); }
     }
     if (field === 'username' && value.length >= 3) {
       debouncedCheckAvailability('username', value);
@@ -502,7 +504,7 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
               מגדר לידה
             </h3>
             <p className="text-gray-600 mb-6">
-              כאשר בחרת "אחר", אנא ציין את המגדר שבו נולדת:
+              כאשר בחרת &quot;אחר&quot;, אנא ציין את המגדר שבו נולדת:
             </p>
             
             <div className="space-y-3">

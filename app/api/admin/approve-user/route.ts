@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user status using the admin function
-    const { data: updateResult, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .rpc('admin_update_user_status', {
         admin_user_id: adminId,
         target_user_id: userId,

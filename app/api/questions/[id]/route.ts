@@ -61,12 +61,17 @@ export async function GET(
       updatedAt: question.updated_at,
       lastActivityAt: question.last_activity_at,
       author: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         id: (question.profiles as any)?.id || question.author_id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         username: (question.profiles as any)?.username || 'אנונימי',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         avatar_url: (question.profiles as any)?.avatar_url || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         reputation: (question.profiles as any)?.reputation || 0,
       },
       tags: (question.question_tags || [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((qt: any) => qt.tags?.name)
         .filter(Boolean),
     };

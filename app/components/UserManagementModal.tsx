@@ -99,7 +99,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   user,
   isOpen,
   onClose,
-  loading: externalLoading,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  loading: _propLoading,
   onAction
 }) => {
   const [activeTab, setActiveTab] = useState<'role' | 'actions'>('role');
@@ -278,6 +279,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   const selectedRoleData = roleOptions.find(r => r.value === selectedRole);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const IconComponent = selectedRoleData?.icon || UserIcon;
 
   return (

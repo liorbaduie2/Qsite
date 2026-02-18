@@ -363,8 +363,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
         try {
             await suspendUser(user.id, suspensionHours, suspensionReason);
             onAction(`המשתמש ${user.username} הושעה בהצלחה`, false);
-        } catch (error: any) {
-            onAction(error.message || 'שגיאה בהשעיית המשתמש', true);
+        } catch (err: unknown) {
+            onAction(err instanceof Error ? err.message : 'שגיאה בהשעיית המשתמש', true);
         }
     };
 
@@ -393,8 +393,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                 ? (penaltyTypes.find(p => p.penalty_type === selectedPenaltyType)?.points_deduction || 0)
                 : customAmount;
             onAction(`נוכו ${deductedPoints} נקודות מוניטין מ-${user.username}`, false);
-        } catch (error: any) {
-            onAction(error.message || 'שגיאה בניכוי נקודות מוניטין', true);
+        } catch (err: unknown) {
+            onAction(err instanceof Error ? err.message : 'שגיאה בניכוי נקודות מוניטין', true);
         }
     };
 
@@ -417,8 +417,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
             
             const roleName = roleOptions.find(r => r.value === selectedRole)?.label || selectedRole;
             onAction(`התפקיד "${roleName}" הוענק ל-${user.username} בהצלחה`, false);
-        } catch (error: any) {
-            onAction(error.message || 'שגיאה במתן תפקיד', true);
+        } catch (err: unknown) {
+            onAction(err instanceof Error ? err.message : 'שגיאה במתן תפקיד', true);
         }
     };
 
@@ -544,7 +544,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                                         <div>
                                             <label className="text-sm font-medium text-slate-600 dark:text-slate-400">סוג עונש</label>
                                             <select value={selectedPenaltyType} onChange={e => setSelectedPenaltyType(e.target.value)} className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
-                                                {penaltyTypes.map(p => <option key={p.penalty_type} value={p.penalty_type}>{p.description_hebrew} (-{p.points_deduction} נק')</option>)}
+                                                {penaltyTypes.map(p => <option key={p.penalty_type} value={p.penalty_type}>{p.description_hebrew} (-{p.points_deduction} נק&apos;)</option>)}
                                             </select>
                                             {selectedPenalty && <p className="text-xs text-slate-500 mt-1">ינוכו {selectedPenalty.points_deduction} נקודות</p>}
                                         </div>
@@ -552,7 +552,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                                         <div>
                                             <label className="text-sm font-medium text-slate-600 dark:text-slate-400">כמות נקודות</label>
                                             <input type="number" value={customAmount} onChange={e => setCustomAmount(Number(e.target.value))} max={userPermissions.max_reputation_deduction || 0} min="1" className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
-                                            {userPermissions.max_reputation_deduction > 0 && <p className="text-xs text-slate-500 mt-1">מגבלה לתפקידך: {userPermissions.max_reputation_deduction} נק'</p>}
+                                            {userPermissions.max_reputation_deduction > 0 && <p className="text-xs text-slate-500 mt-1">מגבלה לתפקידך: {userPermissions.max_reputation_deduction} נק&apos;</p>}
                                         </div>
                                     )}
                                     <div>
@@ -626,8 +626,8 @@ const AdminDashboard: React.FC = () => {
             if (usersError) throw new Error('שגיאה בטעינת רשימת משתמשים');
             setUsers(usersData || []);
 
-        } catch (error: any) {
-            setError(error.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'שגיאה בטעינת נתונים');
         } finally {
             setLoading(false);
         }
@@ -643,6 +643,7 @@ const AdminDashboard: React.FC = () => {
         if (currentUser && userPermissions?.can_view_user_list) {
             loadDashboardData();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser, userPermissions]);
     
     const handleApprove = async (applicationId: string, reason?: string) => {
@@ -695,9 +696,9 @@ const AdminDashboard: React.FC = () => {
           ? 'המשתמש אושר בהצלחה ונשלח אימייל אישור!'
           : 'המשתמש אושר בהצלחה (בעיה בשליחת אימייל)');
         
-      } catch (error: any) {
-        console.error('Approval error:', error);
-        setError(error.message || 'שגיאה באישור המשתמש');
+      } catch (err: unknown) {
+        console.error('Approval error:', err);
+        setError(err instanceof Error ? err.message : 'שגיאה באישור המשתמש');
       } finally {
         setActionLoading(false);
       }
@@ -758,9 +759,9 @@ const AdminDashboard: React.FC = () => {
           ? 'המשתמש נדחה ונשלח אימייל הודעה!'
           : 'המשתמש נדחה (בעיה בשליחת אימייל)');
         
-      } catch (error: any) {
-        console.error('Rejection error:', error);
-        setError(error.message || 'שגיאה בדחיית המשתמש');
+      } catch (err: unknown) {
+        console.error('Rejection error:', err);
+        setError(err instanceof Error ? err.message : 'שגיאה בדחיית המשתמש');
       } finally {
         setActionLoading(false);
       }

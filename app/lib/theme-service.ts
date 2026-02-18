@@ -15,7 +15,7 @@ export class ThemeService {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('user_preferences')
       .select('*')
       .eq('user_id', user.id)
