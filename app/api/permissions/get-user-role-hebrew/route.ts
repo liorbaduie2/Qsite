@@ -1,17 +1,21 @@
 // app/api/permissions/get-user-role-hebrew/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
     // Get user ID from query params
     const { searchParams } = new URL(request.url)
     const targetUserId = searchParams.get('userId')
-    
+
     if (!targetUserId) {
-      return NextResponse.json({ 
-        error: 'חסר מזהה משתמש' 
+      return NextResponse.json({
+        error: 'חסר מזהה משתמש'
       }, { status: 400 })
     }
 
@@ -22,14 +26,14 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching role:', error)
-      return NextResponse.json({ 
-        error: 'שגיאה בטעינת תפקיד משתמש' 
+      return NextResponse.json({
+        error: 'שגיאה בטעינת תפקיד משתמש'
       }, { status: 500 })
     }
 
     if (!adminPerms) {
-      return NextResponse.json({ 
-        error: 'משתמש לא נמצא' 
+      return NextResponse.json({
+        error: 'משתמש לא נמצא'
       }, { status: 404 })
     }
 
@@ -43,20 +47,19 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Get role error:', error)
-    return NextResponse.json({ 
-      error: 'שגיאה פנימית בשרת' 
+    return NextResponse.json({
+      error: 'שגיאה פנימית בשרת'
     }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
     const { userId } = await request.json()
-    
+
     if (!userId) {
-      return NextResponse.json({ 
-        error: 'חסר מזהה משתמש' 
+      return NextResponse.json({
+        error: 'חסר מזהה משתמש'
       }, { status: 400 })
     }
 
@@ -67,14 +70,14 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching role:', error)
-      return NextResponse.json({ 
-        error: 'שגיאה בטעינת תפקיד משתמש' 
+      return NextResponse.json({
+        error: 'שגיאה בטעינת תפקיד משתמש'
       }, { status: 500 })
     }
 
     if (!adminPerms) {
-      return NextResponse.json({ 
-        error: 'משתמש לא נמצא' 
+      return NextResponse.json({
+        error: 'משתמש לא נמצא'
       }, { status: 404 })
     }
 
@@ -88,8 +91,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Get role error:', error)
-    return NextResponse.json({ 
-      error: 'שגיאה פנימית בשרת' 
+    return NextResponse.json({
+      error: 'שגיאה פנימית בשרת'
     }, { status: 500 })
   }
 }

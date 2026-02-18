@@ -1,18 +1,22 @@
 // app/api/permissions/get-user-permissions/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
     const { userId } = await request.json()
 
     if (!userId) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'חסר מזהה משתמש' 
-        }, 
+        {
+          success: false,
+          error: 'חסר מזהה משתמש'
+        },
         { status: 400 }
       )
     }
@@ -25,11 +29,11 @@ const { data, error } = await supabase.rpc('get_user_all_permissions', {
     if (error) {
       console.error('Error fetching permissions:', error)
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'שגיאה בטעינת הרשאות',
-          details: error.message 
-        }, 
+          details: error.message
+        },
         { status: 500 }
       )
     }
@@ -43,10 +47,10 @@ const { data, error } = await supabase.rpc('get_user_all_permissions', {
   } catch (error) {
     console.error('Permissions API error:', error)
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'שגיאה פנימית בשרת' 
-      }, 
+      {
+        success: false,
+        error: 'שגיאה פנימית בשרת'
+      },
       { status: 500 }
     )
   }

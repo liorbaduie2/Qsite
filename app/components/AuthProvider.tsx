@@ -1,8 +1,20 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
-import type { User, AuthError, AuthChangeEvent, Session } from '@supabase/supabase-js';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import type {
+  User,
+  AuthError,
+  AuthChangeEvent,
+  Session,
+} from "@supabase/supabase-js";
 
 interface Profile {
   id: string;
@@ -16,7 +28,7 @@ interface Profile {
   email?: string;
   phone?: string;
   phone_verified_at?: string;
-  approval_status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  approval_status: "pending" | "approved" | "rejected" | "suspended";
   approved_at?: string;
   approved_by?: string;
   rejection_reason?: string;
@@ -50,7 +62,7 @@ interface UserPermissions {
 
 interface LoginStatusResult {
   can_login: boolean;
-  status: 'pending' | 'approved' | 'rejected' | 'suspended' | 'error';
+  status: "pending" | "approved" | "rejected" | "suspended" | "error";
   message_hebrew: string;
   user_id?: string;
 }
@@ -71,7 +83,12 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
-  signUp: (email: string, password: string, username: string, fullName?: string) => Promise<AuthResponse>;
+  signUp: (
+    email: string,
+    password: string,
+    username: string,
+    fullName?: string,
+  ) => Promise<AuthResponse>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshPermissions: () => Promise<void>;
@@ -85,7 +102,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -97,8 +114,11 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
-  const [loginStatus, setLoginStatus] = useState<LoginStatusResult | null>(null);
+  const [userPermissions, setUserPermissions] =
+    useState<UserPermissions | null>(null);
+  const [loginStatus, setLoginStatus] = useState<LoginStatusResult | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,166 +130,192 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        storage:
+          typeof window !== "undefined" ? window.localStorage : undefined,
       },
-    }
+    },
   );
 
   // Check if user can login using API route
-  const checkLoginStatus = useCallback(async (userId?: string): Promise<LoginStatusResult> => {
-    try {
-      const targetUserId = userId || user?.id;
-      if (!targetUserId) {
+  const checkLoginStatus = useCallback(
+    async (userId?: string): Promise<LoginStatusResult> => {
+      try {
+        const targetUserId = userId || user?.id;
+        if (!targetUserId) {
+          const errorResult: LoginStatusResult = {
+            can_login: false,
+            status: "error",
+            message_hebrew: "אין מזהה משתמש",
+          };
+          setLoginStatus(errorResult);
+          return errorResult;
+        }
+
+        const response = await fetch("/api/permissions/can-user-login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId: targetUserId }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to check login status");
+        }
+
+        const result = await response.json();
+        const loginResult: LoginStatusResult = {
+          can_login: result.data,
+          status: result.data ? "approved" : "pending",
+          message_hebrew: result.data ? "משתמש מאושר" : "משתמש לא מאושר",
+        };
+
+        setLoginStatus(loginResult);
+        return loginResult;
+      } catch (error) {
+        console.error("Login status check error:", error);
         const errorResult: LoginStatusResult = {
-          can_login: false,
-          status: 'error',
-          message_hebrew: 'אין מזהה משתמש'
+          can_login: true, // Allow login by default if API fails
+          status: "error",
+          message_hebrew: "שגיאה בבדיקת סטטוס המשתמש",
         };
         setLoginStatus(errorResult);
         return errorResult;
       }
+    },
+    [user?.id],
+  );
 
-      const response = await fetch('/api/permissions/can-user-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: targetUserId })
-      });
+  const getUserPermissions = useCallback(
+    async (userId: string): Promise<UserPermissions | null> => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!response.ok) {
-        throw new Error('Failed to check login status');
-      }
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
 
-      const result = await response.json();
-      const loginResult: LoginStatusResult = {
-        can_login: result.data,
-        status: result.data ? 'approved' : 'pending',
-        message_hebrew: result.data ? 'משתמש מאושר' : 'משתמש לא מאושר'
-      };
-
-      setLoginStatus(loginResult);
-      return loginResult;
-    } catch (error) {
-      console.error('Login status check error:', error);
-      const errorResult: LoginStatusResult = {
-        can_login: true, // Allow login by default if API fails
-        status: 'error',
-        message_hebrew: 'שגיאה בבדיקת סטטוס המשתמש'
-      };
-      setLoginStatus(errorResult);
-      return errorResult;
-    }
-  }, [user?.id]);
-
-  const getUserPermissions = useCallback(async (userId: string): Promise<UserPermissions | null> => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-  
-      const response = await fetch('/api/permissions/get-user-permissions', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ userId })
-      });
-  
-      if (!response.ok) {
-        if (response.status === 401 && !session?.access_token) {
-          console.log('No session token available yet');
-          return null;
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
         }
-        throw new Error('Failed to get user permissions');
+
+        const response = await fetch("/api/permissions/get-user-permissions", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ userId }),
+        });
+
+        if (!response.ok) {
+          if (response.status === 401 && !session?.access_token) {
+            console.log("No session token available yet");
+            return null;
+          }
+          throw new Error("Failed to get user permissions");
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.permissions) {
+          setUserPermissions(result.permissions);
+          return result.permissions;
+        }
+
+        return null;
+      } catch (error) {
+        console.error("Error getting user permissions:", error);
+
+        const defaultPermissions: UserPermissions = {
+          role: "user",
+          role_hebrew: "משתמש",
+          is_hidden: false,
+          reputation: 50,
+          can_approve_registrations: false,
+          can_manage_user_ranks: false,
+          can_view_user_list: false,
+          can_view_private_chats: false,
+          can_block_user: false,
+          can_suspend_user: false,
+          can_permanent_ban: false,
+          can_edit_delete_content: false,
+          can_deduct_reputation: false,
+          can_mark_rule_violation: false,
+          max_reputation_deduction: 0,
+          max_suspension_hours: null,
+        };
+        setUserPermissions(defaultPermissions);
+        return defaultPermissions;
       }
-  
-      const result = await response.json();
-      
-      if (result.success && result.permissions) {
-        setUserPermissions(result.permissions);
-        return result.permissions;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error getting user permissions:', error);
-      
-      const defaultPermissions: UserPermissions = {
-        role: 'user',
-        role_hebrew: 'משתמש',
-        is_hidden: false,
-        reputation: 50,
-        can_approve_registrations: false,
-        can_manage_user_ranks: false,
-        can_view_user_list: false,
-        can_view_private_chats: false,
-        can_block_user: false,
-        can_suspend_user: false,
-        can_permanent_ban: false,
-        can_edit_delete_content: false,
-        can_deduct_reputation: false,
-        can_mark_rule_violation: false,
-        max_reputation_deduction: 0,
-        max_suspension_hours: null,
-      };
-      setUserPermissions(defaultPermissions);
-      return defaultPermissions;
-    }
-  }, [supabase]);
+    },
+    [supabase],
+  );
 
   // Fetch user profile
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
+  const fetchUserProfile = useCallback(
+    async (userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select(
+            `
           id, username, full_name, avatar_url, bio, location, website,
           reputation, phone, phone_verified_at, approval_status,
           approved_at, approved_by, rejection_reason, is_moderator,
           is_verified, created_at, updated_at, email
-        `)
-        .eq('id', userId)
-        .single();
+        `,
+          )
+          .eq("id", userId)
+          .single();
 
-      if (error) {
-        console.error('Profile fetch error:', error);
+        if (error) {
+          console.error("Profile fetch error:", error);
+          return null;
+        }
+
+        const profile: Profile = {
+          id: String(data.id),
+          username: String(data.username),
+          full_name: data.full_name ? String(data.full_name) : undefined,
+          avatar_url: data.avatar_url ? String(data.avatar_url) : undefined,
+          bio: data.bio ? String(data.bio) : undefined,
+          location: data.location ? String(data.location) : undefined,
+          website: data.website ? String(data.website) : undefined,
+          reputation: data.reputation ? Number(data.reputation) : 0,
+          email: data.email
+            ? String(data.email)
+            : user?.email
+              ? String(user.email)
+              : undefined,
+          phone: data.phone ? String(data.phone) : undefined,
+          phone_verified_at: data.phone_verified_at
+            ? String(data.phone_verified_at)
+            : undefined,
+          approval_status: data.approval_status as
+            | "pending"
+            | "approved"
+            | "rejected"
+            | "suspended",
+          approved_at: data.approved_at ? String(data.approved_at) : undefined,
+          approved_by: data.approved_by ? String(data.approved_by) : undefined,
+          rejection_reason: data.rejection_reason
+            ? String(data.rejection_reason)
+            : undefined,
+          is_moderator: Boolean(data.is_moderator),
+          is_verified: Boolean(data.is_verified),
+          created_at: data.created_at ? String(data.created_at) : undefined,
+          updated_at: data.updated_at ? String(data.updated_at) : undefined,
+        };
+
+        setProfile(profile);
+        return profile;
+      } catch (error) {
+        console.error("Profile fetch error:", error);
         return null;
       }
-
-      const profile: Profile = {
-        id: String(data.id),
-        username: String(data.username),
-        full_name: data.full_name ? String(data.full_name) : undefined,
-        avatar_url: data.avatar_url ? String(data.avatar_url) : undefined,
-        bio: data.bio ? String(data.bio) : undefined,
-        location: data.location ? String(data.location) : undefined,
-        website: data.website ? String(data.website) : undefined,
-        reputation: data.reputation ? Number(data.reputation) : 0,
-        email: data.email ? String(data.email) : (user?.email ? String(user.email) : undefined),
-        phone: data.phone ? String(data.phone) : undefined,
-        phone_verified_at: data.phone_verified_at ? String(data.phone_verified_at) : undefined,
-        approval_status: data.approval_status as 'pending' | 'approved' | 'rejected' | 'suspended',
-        approved_at: data.approved_at ? String(data.approved_at) : undefined,
-        approved_by: data.approved_by ? String(data.approved_by) : undefined,
-        rejection_reason: data.rejection_reason ? String(data.rejection_reason) : undefined,
-        is_moderator: Boolean(data.is_moderator),
-        is_verified: Boolean(data.is_verified),
-        created_at: data.created_at ? String(data.created_at) : undefined,
-        updated_at: data.updated_at ? String(data.updated_at) : undefined,
-      };
-
-      setProfile(profile);
-      return profile;
-    } catch (error) {
-      console.error('Profile fetch error:', error);
-      return null;
-    }
-  }, [user?.email, supabase]);
+    },
+    [user?.email, supabase],
+  );
 
   const refreshProfile = useCallback(async () => {
     if (user?.id) {
@@ -287,7 +333,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
   }, []);
 
-  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
+  const signIn = async (
+    email: string,
+    password: string,
+  ): Promise<AuthResponse> => {
     try {
       setLoading(true);
       setError(null);
@@ -298,32 +347,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
 
       if (error) {
-        console.log('Sign in error:', error);
-        
-        let hebrewError = 'שגיאה בהתחברות';
+        console.log("Sign in error:", error);
+
+        let hebrewError = "שגיאה בהתחברות";
         switch (error.message) {
-          case 'Invalid login credentials':
-            hebrewError = 'אימייל או סיסמה שגויים';
+          case "Invalid login credentials":
+            hebrewError = "אימייל או סיסמה שגויים";
             break;
-          case 'Too many requests':
-            hebrewError = 'יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר';
+          case "Too many requests":
+            hebrewError = "יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר";
             break;
           default:
-            if (error.message.includes('email')) {
-              hebrewError = 'בעיה עם כתובת האימייל';
-            } else if (error.message.includes('password')) {
-              hebrewError = 'בעיה עם הסיסמה';
+            if (error.message.includes("email")) {
+              hebrewError = "בעיה עם כתובת האימייל";
+            } else if (error.message.includes("password")) {
+              hebrewError = "בעיה עם הסיסמה";
             }
         }
-        
+
         setError(hebrewError);
         return { data, error };
       }
 
       if (data.user) {
-        console.log('User signed in successfully');
+        console.log("User signed in successfully");
         setUser(data.user);
-        
+
         // Try to get login status, but don't block if it fails
         try {
           const status = await checkLoginStatus(data.user.id);
@@ -331,20 +380,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             await supabase.auth.signOut();
             setError(status.message_hebrew);
             setLoginStatus(status);
-            
+
             return {
               data: { user: null, session: null },
-              error: { 
-                message: status.message_hebrew, 
-                name: 'ApprovalRequired',
-                status_code: status.status 
-              } as unknown as AuthError
+              error: {
+                message: status.message_hebrew,
+                name: "ApprovalRequired",
+                status_code: status.status,
+              } as unknown as AuthError,
             };
           }
         } catch (loginCheckError) {
-          console.log('Login status check failed, allowing login anyway:', loginCheckError);
+          console.log(
+            "Login status check failed, allowing login anyway:",
+            loginCheckError,
+          );
         }
-        
+
         // Fetch profile and permissions
         await fetchUserProfile(data.user.id);
         await getUserPermissions(data.user.id);
@@ -352,14 +404,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       return { data, error };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'שגיאה לא צפויה';
+      const errorMessage =
+        error instanceof Error ? error.message : "שגיאה לא צפויה";
       setError(errorMessage);
-      return { 
-        data: { user: null, session: null }, 
-        error: { 
+      return {
+        data: { user: null, session: null },
+        error: {
           message: errorMessage,
-          name: 'UnexpectedError',
-        } as AuthError
+          name: "UnexpectedError",
+        } as AuthError,
       };
     } finally {
       setLoading(false);
@@ -367,53 +420,53 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signUp = async (
-    email: string, 
-    password: string, 
-    username: string, 
-    fullName?: string
+    email: string,
+    password: string,
+    username: string,
+    fullName?: string,
   ): Promise<AuthResponse> => {
     try {
       setLoading(true);
       setError(null);
 
-      const registrationResponse = await fetch('/api/auth/register', {
-        method: 'POST',
+      const registrationResponse = await fetch("/api/auth/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email,
           password,
           username,
-          fullName: fullName || '',
-          phone: '',
-          applicationText: ''
+          fullName: fullName || "",
+          phone: "",
+          applicationText: "",
         }),
       });
 
       const registrationData = await registrationResponse.json();
 
       if (!registrationResponse.ok) {
-        throw new Error(registrationData.error || 'שגיאה ברישום');
+        throw new Error(registrationData.error || "שגיאה ברישום");
       }
 
       return {
         data: {
           user: { id: registrationData.userId } as User,
-          session: null
+          session: null,
         },
-        error: null
+        error: null,
       };
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'שגיאה לא צפויה';
+      const errorMessage =
+        error instanceof Error ? error.message : "שגיאה לא צפויה";
       setError(errorMessage);
-      return { 
-        data: { user: null, session: null }, 
-        error: { 
+      return {
+        data: { user: null, session: null },
+        error: {
           message: errorMessage,
-          name: 'SignUpError',
-        } as AuthError
+          name: "SignUpError",
+        } as AuthError,
       };
     } finally {
       setLoading(false);
@@ -430,68 +483,72 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoginStatus(null);
       setError(null);
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error("Sign out error:", error);
     } finally {
       setLoading(false);
     }
   };
-  
-  const updateProfile = useCallback(async (profileData: Partial<Profile>): Promise<boolean> => {
-    if (!user?.id) {
-      setError('משתמש לא מחובר');
-      return false;
-    }
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username: profileData.username || undefined,
-          bio: profileData.bio || undefined,
-          location: profileData.location || undefined,
-          website: profileData.website || undefined,
-          avatar_url: profileData.avatar_url || undefined,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Profile update error:', error);
-        
-        if (error.message.includes('username')) {
-          setError('שם משתמש כבר תפוס');
-        } else if (error.code === '23505') {
-          setError('הערך כבר קיים במערכת');
-        } else {
-          setError('שגיאה בעדכון פרופיל');
-        }
+  const updateProfile = useCallback(
+    async (profileData: Partial<Profile>): Promise<boolean> => {
+      if (!user?.id) {
+        setError("משתמש לא מחובר");
         return false;
       }
 
-      await refreshProfile();
-      return true;
+      try {
+        setLoading(true);
+        setError(null);
 
-    } catch (error) {
-      console.error('Profile update error:', error);
-      setError('שגיאה לא צפויה');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, supabase, refreshProfile, setError, setLoading]);
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            username: profileData.username || undefined,
+            bio: profileData.bio || undefined,
+            location: profileData.location || undefined,
+            website: profileData.website || undefined,
+            avatar_url: profileData.avatar_url || undefined,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+
+        if (error) {
+          console.error("Profile update error:", error);
+
+          if (error.message.includes("username")) {
+            setError("שם משתמש כבר תפוס");
+          } else if (error.code === "23505") {
+            setError("הערך כבר קיים במערכת");
+          } else {
+            setError("שגיאה בעדכון פרופיל");
+          }
+          return false;
+        }
+
+        await refreshProfile();
+        return true;
+      } catch (error) {
+        console.error("Profile update error:", error);
+        setError("שגיאה לא צפויה");
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.id, supabase, refreshProfile, setError, setLoading],
+  );
 
   // Handle auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        console.log('Auth state change:', event, session?.user?.id);
+        console.log("Auth state change:", event, session?.user?.id);
 
         if (session?.user) {
           setUser(session.user);
-          
+
           try {
             // Try to check login status, but don't block if it fails
             const loginStatus = await checkLoginStatus(session.user.id);
@@ -505,7 +562,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               setUserPermissions(null);
             }
           } catch (error) {
-            console.error('Auth state change error:', error);
+            console.error("Auth state change error:", error);
             // Still fetch profile even if login status check fails
             await fetchUserProfile(session.user.id);
             await getUserPermissions(session.user.id);
@@ -516,9 +573,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUserPermissions(null);
           setLoginStatus(null);
         }
-        
+
         setLoading(false);
-      }
+      },
     );
 
     return () => subscription.unsubscribe();
@@ -528,7 +585,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
           await fetchUserProfile(session.user.id);
@@ -536,7 +595,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           await checkLoginStatus(session.user.id);
         }
       } catch (error) {
-        console.error('Initial session error:', error);
+        console.error("Initial session error:", error);
       } finally {
         setLoading(false);
       }
@@ -562,11 +621,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     updateProfile,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // Permission-based component wrapper
@@ -577,11 +632,11 @@ interface RequirePermissionProps {
   children: ReactNode;
 }
 
-export function RequirePermission({ 
-  permission, 
-  role, 
-  fallback = null, 
-  children 
+export function RequirePermission({
+  permission,
+  role,
+  fallback = null,
+  children,
 }: RequirePermissionProps) {
   const { userPermissions, loading } = useAuth();
 

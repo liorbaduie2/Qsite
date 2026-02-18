@@ -1,10 +1,14 @@
 // app/api/admin/grant-role/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
     const { targetUserId, newRole, reason, reasonHebrew, isHidden, temporaryUntil } = await request.json()
 
     // Get current user from auth header
@@ -15,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'אימות לא חוקי' }, { status: 401 })
     }
@@ -28,8 +32,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!currentUserRole || currentUserRole.role !== 'owner') {
-      return NextResponse.json({ 
-        error: 'רק בעלים יכול לתת הרשאות' 
+      return NextResponse.json({
+        error: 'רק בעלים יכול לתת הרשאות'
       }, { status: 403 })
     }
 
@@ -46,15 +50,15 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error granting role:', error)
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'שגיאה במתן הרשאה',
-        details: error.message 
+        details: error.message
       }, { status: 500 })
     }
 
     if (!data?.success) {
-      return NextResponse.json({ 
-        error: data?.error || 'שגיאה במתן הרשאה' 
+      return NextResponse.json({
+        error: data?.error || 'שגיאה במתן הרשאה'
       }, { status: 400 })
     }
 
@@ -66,8 +70,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Grant role API error:', error)
-    return NextResponse.json({ 
-      error: 'שגיאה פנימית בשרת' 
+    return NextResponse.json({
+      error: 'שגיאה פנימית בשרת'
     }, { status: 500 })
   }
 }

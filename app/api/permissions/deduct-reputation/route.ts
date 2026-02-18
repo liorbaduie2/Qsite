@@ -1,22 +1,26 @@
 // app/api/permissions/deduct-reputation/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
-    const { 
-      targetUserId, 
+    const {
+      targetUserId,
       penaltyType,        // 'rule_violation', 'spam_reported', 'harassment', etc.
       customAmount,       // Optional: for custom deductions
-      reason, 
+      reason,
       reasonHebrew,
-      relatedContentId 
+      relatedContentId
     } = await request.json()
 
     if (!targetUserId) {
-      return NextResponse.json({ 
-        error: 'חסר מזהה משתמש' 
+      return NextResponse.json({
+        error: 'חסר מזהה משתמש'
       }, { status: 400 })
     }
 
@@ -28,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'אימות לא חוקי' }, { status: 401 })
     }
@@ -39,8 +43,8 @@ export async function POST(request: NextRequest) {
     })
 
     if (!adminPerms?.can_deduct_reputation) {
-      return NextResponse.json({ 
-        error: 'אין הרשאה לניכוי נקודות מוניטין' 
+      return NextResponse.json({
+        error: 'אין הרשאה לניכוי נקודות מוניטין'
       }, { status: 403 })
     }
 
@@ -59,27 +63,27 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error applying penalty:', error)
-        return NextResponse.json({ 
-          error: error.message || 'שגיאה בהטלת עונש' 
+        return NextResponse.json({
+          error: error.message || 'שגיאה בהטלת עונש'
         }, { status: 500 })
       }
 
       // Check if the SQL function returned an error in the data
       if (data && !data.success) {
-        return NextResponse.json({ 
-          error: data.error || 'שגיאה בהטלת עונש' 
+        return NextResponse.json({
+          error: data.error || 'שגיאה בהטלת עונש'
         }, { status: 400 })
       }
 
       result = data
 
-    } 
+    }
     // If customAmount is provided, use custom deduction
     else if (customAmount) {
       // Check if admin can deduct this amount
       if (customAmount > adminPerms.max_reputation_deduction) {
-        return NextResponse.json({ 
-          error: `ניתן לנכות עד ${adminPerms.max_reputation_deduction} נקודות בלבד` 
+        return NextResponse.json({
+          error: `ניתן לנכות עד ${adminPerms.max_reputation_deduction} נקודות בלבד`
         }, { status: 403 })
       }
 
@@ -94,23 +98,23 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error deducting reputation:', error)
-        return NextResponse.json({ 
-          error: error.message || 'שגיאה בניכוי נקודות מוניטין' 
+        return NextResponse.json({
+          error: error.message || 'שגיאה בניכוי נקודות מוניטין'
         }, { status: 500 })
       }
 
       // Check if the SQL function returned an error in the data
       if (data && !data.success) {
-        return NextResponse.json({ 
-          error: data.error || 'שגיאה בניכוי נקודות מוניטין' 
+        return NextResponse.json({
+          error: data.error || 'שגיאה בניכוי נקודות מוניטין'
         }, { status: 400 })
       }
 
       result = data
 
     } else {
-      return NextResponse.json({ 
-        error: 'חסר סוג עונש או כמות ניכוי' 
+      return NextResponse.json({
+        error: 'חסר סוג עונש או כמות ניכוי'
       }, { status: 400 })
     }
 
@@ -121,8 +125,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Deduct reputation error:', error)
-    return NextResponse.json({ 
-      error: 'שגיאה פנימית בשרת' 
+    return NextResponse.json({
+      error: 'שגיאה פנימית בשרת'
     }, { status: 500 })
   }
 }

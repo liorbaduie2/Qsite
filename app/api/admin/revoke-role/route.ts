@@ -1,10 +1,14 @@
 //app/api/admin/revoke-role/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
     const { targetUserId, reason, reasonHebrew } = await request.json()
 
     const authHeader = request.headers.get('authorization')
@@ -14,7 +18,7 @@ export async function DELETE(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'אימות לא חוקי' }, { status: 401 })
     }
@@ -29,8 +33,8 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('Error revoking role:', error)
-      return NextResponse.json({ 
-        error: 'שגיאה בביטול תפקיד' 
+      return NextResponse.json({
+        error: 'שגיאה בביטול תפקיד'
       }, { status: 500 })
     }
 
@@ -38,8 +42,8 @@ export async function DELETE(request: NextRequest) {
 
   } catch (error) {
     console.error('Revoke role error:', error)
-    return NextResponse.json({ 
-      error: 'שגיאה פנימית בשרת' 
+    return NextResponse.json({
+      error: 'שגיאה פנימית בשרת'
     }, { status: 500 })
   }
 }

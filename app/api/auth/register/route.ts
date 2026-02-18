@@ -1,6 +1,18 @@
 // app/api/auth/register/route.ts - COMPLETE FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@supabase/supabase-js';
+
+// Create Supabase admin client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 // Helper function to calculate age
 const calculateAge = (dateOfBirth: string): number => {
@@ -16,35 +28,34 @@ const calculateAge = (dateOfBirth: string): number => {
 
 export async function POST(request: NextRequest) {
   console.log('=== Complete Fixed Hebrew Registration API Called ===');
-  
+
   try {
-    const supabase = getSupabaseAdmin();
-    const { 
-      phone, 
-      email, 
-      username, 
-      password, 
-      fullName = '', 
+    const {
+      phone,
+      email,
+      username,
+      password,
+      fullName = '',
       applicationText = '',
       dateOfBirth,
       gender,
       birthGender
     } = await request.json();
-    
-    console.log('Registration data:', { 
-      phone, 
-      email, 
-      username, 
+
+    console.log('Registration data:', {
+      phone,
+      email,
+      username,
       fullNameLength: fullName?.length,
       dateOfBirth,
       gender,
       birthGender,
-      hasDateOfBirth: !!dateOfBirth 
+      hasDateOfBirth: !!dateOfBirth
     });
-    
+
     // Validate required fields
     if (!phone || !email || !username || !password) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'כל השדות נדרשים',
         error_code: 'MISSING_FIELDS'
       }, { status: 400 });
@@ -52,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Validate Date of Birth
     if (!dateOfBirth) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'יש למלא תאריך לידה',
         error_code: 'MISSING_DOB'
       }, { status: 400 });
@@ -63,7 +74,7 @@ export async function POST(request: NextRequest) {
     try {
       age = calculateAge(dateOfBirth);
     } catch {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'פורמט תאריך לא תקין',
         error_code: 'INVALID_DATE_FORMAT'
       }, { status: 400 });
@@ -71,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Validate age (must be 16+)
     if (age < 16) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: `גיל מינימום לרישום הוא 16 שנים. הגיל שלך: ${age} שנים`,
         error_code: 'AGE_TOO_YOUNG'
       }, { status: 400 });
@@ -79,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Validate gender
     if (!gender || !['male', 'female', 'other'].includes(gender)) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'יש לבחור מגדר תקין',
         error_code: 'INVALID_GENDER'
       }, { status: 400 });
@@ -87,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Validate birth gender if gender is 'other'
     if (gender === 'other' && (!birthGender || !['male', 'female'].includes(birthGender))) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'יש לציין מגדר לידה (זכר או נקבה) כאשר נבחר "אחר"',
         error_code: 'MISSING_BIRTH_GENDER'
       }, { status: 400 });
@@ -95,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     // Validate username
     if (username.length < 2 || username.length > 50) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'שם המשתמש חייב להיות בין 2 ל-50 תווים',
         error_code: 'INVALID_USERNAME_LENGTH'
       }, { status: 400 });
@@ -103,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     // Validate password
     if (password.length < 8) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'סיסמה חייבת להיות לפחות 8 תווים',
         error_code: 'INVALID_PASSWORD_LENGTH'
       }, { status: 400 });
@@ -119,19 +130,19 @@ export async function POST(request: NextRequest) {
     if (existingUsers && existingUsers.length > 0) {
       const existing = existingUsers[0];
       if (existing.phone === phone) {
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'מספר הטלפון כבר רשום במערכת',
           error_code: 'PHONE_EXISTS'
         }, { status: 400 });
       }
       if (existing.email === email) {
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'כתובת האימייל כבר רשומה במערכת',
           error_code: 'EMAIL_EXISTS'
         }, { status: 400 });
       }
       if (existing.username === username) {
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'שם המשתמש כבר תפוס',
           error_code: 'USERNAME_EXISTS'
         }, { status: 400 });
@@ -156,7 +167,7 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
 
     if (authError || !authData.user) {
       console.error('Auth signup error:', authError);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: `שגיאה ביצירת חשבון: ${authError?.message || 'שגיאה לא ידועה'}`,
         error_code: 'AUTH_CREATE_ERROR'
       }, { status: 500 });
@@ -199,11 +210,11 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
 
     if (profileError) {
       console.error('Profile upsert failed:', profileError);
-      
+
       // Clean up: delete the auth user if profile creation failed
       await supabase.auth.admin.deleteUser(authData.user.id);
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         error: 'שגיאה ביצירת פרופיל משתמש',
         error_code: 'PROFILE_CREATE_ERROR',
         details: profileError.message
@@ -253,7 +264,7 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
 
     // Create user application
     console.log('Creating user application...');
-    const finalApplicationText = applicationText || 
+    const finalApplicationText = applicationText ||
       'בקשה להצטרפות לקהילה. אני מעוניין להיות חלק מהקהילה ולתרום לדיונים.';
 
     const { error: applicationError } = await supabase
@@ -274,7 +285,7 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
     }
 
     console.log('Registration completed successfully');
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       userId: authData.user.id,
       message: 'חשבון נוצר בהצלחה! בקשתך ממתינה לאישור מנהל. תקבל אימייל כשהחשבון יאושר.',
@@ -289,7 +300,7 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
 
   } catch (error) {
     console.error('Unexpected registration error:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'שגיאה לא צפויה בתהליך הרישום',
       error_code: 'UNEXPECTED_ERROR'
     }, { status: 500 });

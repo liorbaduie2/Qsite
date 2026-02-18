@@ -1,7 +1,14 @@
 // app/api/admin/approve-user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -15,7 +22,7 @@ async function sendApprovalEmail(email: string, username: string) {
       <p>חשבונך באתר אושר בהצלחה!</p>
       <p>כעת תוכל להתחבר ולהתחיל להשתמש בכל השירותים שלנו.</p>
       <div style="text-align: center; margin: 20px 0;">
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL}/login" 
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL}/login"
            style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
           התחבר עכשיו
         </a>
@@ -63,9 +70,9 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
     const { userId, action, notes, adminId } = await request.json();
-    
+
     if (!userId || !action || !adminId) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'חסרים פרמטרים נדרשים',
         error_code: 'MISSING_PARAMS'
       }, { status: 400 });
@@ -79,7 +86,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!adminProfile?.is_moderator) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'אין הרשאה לביצוע פעולה זו',
         error_code: 'UNAUTHORIZED'
       }, { status: 403 });
@@ -93,7 +100,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!userProfile) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'משתמש לא נמצא',
         error_code: 'USER_NOT_FOUND'
       }, { status: 404 });
@@ -104,7 +111,7 @@ export async function POST(request: NextRequest) {
     const userEmail = userProfile.email || authUser.user?.email;
 
     if (!userEmail) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'לא נמצא מייל למשתמש',
         error_code: 'NO_EMAIL'
       }, { status: 400 });
@@ -115,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'approve') {
       newStatus = 'approved';
-      
+
       // 🔥 KEY: Confirm the user's email in Supabase Auth
       const { error: confirmError } = await supabase.auth.admin.updateUserById(userId, {
         email_confirm: true // This confirms their email
@@ -135,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     } else if (action === 'reject') {
       newStatus = 'rejected';
-      
+
       // Send rejection email
       try {
         await sendRejectionEmail(userEmail, userProfile.username, notes);
@@ -144,7 +151,7 @@ export async function POST(request: NextRequest) {
         console.error('Error sending rejection email:', emailError);
       }
     } else {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'פעולה לא חוקית',
         error_code: 'INVALID_ACTION'
       }, { status: 400 });
@@ -161,13 +168,13 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('Error updating user status:', updateError);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'שגיאה בעדכון סטטוס המשתמש',
         error_code: 'UPDATE_ERROR'
       }, { status: 500 });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: action === 'approve' ? 'המשתמש אושר בהצלחה' : 'המשתמש נדחה',
       email_sent: emailSent,
@@ -176,7 +183,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Admin approval error:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'שגיאה לא צפויה',
       error_code: 'UNEXPECTED_ERROR'
     }, { status: 500 });

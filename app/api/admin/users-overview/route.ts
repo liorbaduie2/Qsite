@@ -1,9 +1,13 @@
 // app/api/admin/users-overview/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
@@ -16,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'אימות לא חוקי' }, { status: 401 })
     }
@@ -27,8 +31,8 @@ export async function GET(request: NextRequest) {
     })
 
     if (!adminPerms?.can_view_user_list) {
-      return NextResponse.json({ 
-        error: 'גישה נדחתה - אין הרשאה לצפות ברשימת משתמשים' 
+      return NextResponse.json({
+        error: 'גישה נדחתה - אין הרשאה לצפות ברשימת משתמשים'
       }, { status: 403 })
     }
 
@@ -40,8 +44,8 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching users overview:', error)
-      return NextResponse.json({ 
-        error: 'שגיאה בטעינת סקירת משתמשים' 
+      return NextResponse.json({
+        error: 'שגיאה בטעינת סקירת משתמשים'
       }, { status: 500 })
     }
 
@@ -49,8 +53,8 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Users overview error:', error)
-    return NextResponse.json({ 
-      error: 'שגיאה פנימית בשרת' 
+    return NextResponse.json({
+      error: 'שגיאה פנימית בשרת'
     }, { status: 500 })
   }
 }

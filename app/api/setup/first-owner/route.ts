@@ -1,12 +1,16 @@
 // app/api/setup/first-owner/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
     const { ownerEmail, setupKey } = await request.json()
-    
+
     // Security check - use environment variable for setup
     if (setupKey !== process.env.SETUP_SECRET_KEY) {
       return NextResponse.json({ error: 'מפתח הגדרה לא חוקי' }, { status: 401 })
@@ -20,8 +24,8 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (existingOwner && existingOwner.length > 0) {
-      return NextResponse.json({ 
-        error: 'בעלים כבר קיים במערכת' 
+      return NextResponse.json({
+        error: 'בעלים כבר קיים במערכת'
       }, { status: 400 })
     }
 
@@ -33,8 +37,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!profile) {
-      return NextResponse.json({ 
-        error: 'משתמש עם כתובת מייל זו לא נמצא' 
+      return NextResponse.json({
+        error: 'משתמש עם כתובת מייל זו לא נמצא'
       }, { status: 404 })
     }
 
@@ -52,8 +56,8 @@ export async function POST(request: NextRequest) {
 
     if (roleError) {
       console.error('Error assigning owner role:', roleError)
-      return NextResponse.json({ 
-        error: 'שגיאה במתן תפקיד בעלים' 
+      return NextResponse.json({
+        error: 'שגיאה במתן תפקיד בעלים'
       }, { status: 500 })
     }
 
@@ -79,8 +83,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Setup owner error:', error)
-    return NextResponse.json({ 
-      error: 'שגיאה פנימית בשרת' 
+    return NextResponse.json({
+      error: 'שגיאה פנימית בשרת'
     }, { status: 500 })
   }
 }
