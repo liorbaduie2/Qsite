@@ -23,7 +23,8 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
     password: '',
     confirmPassword: '',
     verificationCode: Array(4).fill(''),
-    applicationText: ''
+    applicationText: '',
+    fullName: '' // Added based on the new function
   });
   const [fieldStates, setFieldStates] = useState<{ [key: string]: { isValid?: boolean, isInvalid?: boolean, isValidating?: boolean } }>({});
   const [passwordVisible, setPasswordVisible] = useState({ password: false, confirmPassword: false });
@@ -164,32 +165,51 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
 
   const registerUser = async () => {
     try {
+      console.log('Starting registration with data:', {
+        phone: formData.phone,
+        email: formData.email,
+        username: formData.username,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        birthGender: formData.birthGender,
+        hasPassword: !!formData.password
+      });
+  
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: formData.phone,
           email: formData.email,
+          username: formData.username,
+          password: formData.password,
+          fullName: formData.fullName || '', // Add this if you have it in formData
           dateOfBirth: formData.dateOfBirth,
           gender: formData.gender,
           birthGender: formData.gender === 'other' ? formData.birthGender : null,
-          username: formData.username,
-          password: formData.password
+          applicationText: '' // Default application text
         })
       });
+  
       const data = await response.json();
+      console.log('Registration response:', data);
+  
       if (!response.ok) {
+        console.error('Registration failed:', data);
         setError(data.error || 'שגיאה ברישום');
         return null;
       }
+  
       if (data.success) {
-        setSuccess('חשבון נוצר בהצלחה');
-        setTimeout(() => setSuccess(''), 3000);
+        setSuccess(data.message || 'חשבון נוצר בהצלחה');
+        setTimeout(() => setSuccess(''), 5000);
+        return data.userId;
       }
-      return data.userId;
+  
+      return null;
     } catch (error) {
       console.error('Register user error:', error);
-      setError('שגיאת רשת');
+      setError('שגיאת רשת - אנא נסה שוב');
       return null;
     }
   };

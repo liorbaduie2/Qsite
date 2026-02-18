@@ -22,12 +22,17 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+    if (!supabaseUrl || !serviceKey) {
+      console.error('Missing Supabase config: url=', !!supabaseUrl, 'serviceKey=', !!serviceKey);
+      return NextResponse.json({ error: 'שגיאת הגדרת שרת' }, { status: 500 });
+    }
+
     // Check if there's a recent verification request (within last 1 minute)
     const recentCheck = await fetch(
-      `${supabaseUrl}/rest/v1/phone_verifications?phone=eq.${phone}&created_at=gte.${new Date(Date.now() - 60000).toISOString()}&order=created_at.desc&limit=1`,
+      `${supabaseUrl}/rest/v1/phone_verifications?phone=eq.${encodeURIComponent(phone)}&created_at=gte.${new Date(Date.now() - 60000).toISOString()}&order=created_at.desc&limit=1`,
       {
         headers: {
-          'apikey': serviceKey!,
+          'apikey': serviceKey,
           'Authorization': `Bearer ${serviceKey}`,
           'Content-Type': 'application/json',
         }
@@ -35,8 +40,9 @@ export async function POST(request: NextRequest) {
     );
 
     const recentVerifications = await recentCheck.json();
+    const hasRecent = Array.isArray(recentVerifications) && recentVerifications.length > 0;
     
-    if (recentVerifications.length > 0) {
+    if (hasRecent) {
       console.log('Recent verification found, preventing spam');
       return NextResponse.json({ 
         error: 'נשלח קוד לאחרונה. אנא המתן דקה לפני בקשה נוספת' 
@@ -44,12 +50,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark any existing pending verifications as expired
-    await fetch(`${supabaseUrl}/rest/v1/phone_verifications?phone=eq.${phone}&status=eq.pending`, {
+    await fetch(`${supabaseUrl}/rest/v1/phone_verifications?phone=eq.${encodeURIComponent(phone)}&status=eq.pending`, {
       method: 'PATCH',
       headers: {
-        'apikey': serviceKey!,
+        'apikey': serviceKey,
         'Authorization': `Bearer ${serviceKey}`,
         'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
       },
       body: JSON.stringify({ status: 'expired' })
     });
@@ -62,9 +69,10 @@ export async function POST(request: NextRequest) {
     const dbResponse = await fetch(`${supabaseUrl}/rest/v1/phone_verifications`, {
       method: 'POST',
       headers: {
-        'apikey': serviceKey!,
+        'apikey': serviceKey,
         'Authorization': `Bearer ${serviceKey}`,
         'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
       },
       body: JSON.stringify({
         phone,
@@ -74,8 +82,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!dbResponse.ok) {
-      console.error('Failed to store verification code:', await dbResponse.text());
-      return NextResponse.json({ error: 'שגיאה בשמירת קוד אימות' }, { status: 500 });
+      const errText = await dbResponse.text();
+      console.error('Failed to store verification code:', dbResponse.status, errText);
+      const errMsg = process.env.NODE_ENV === 'development' && errText
+        ? `DB: ${errText.slice(0, 200)}`
+        : 'שגיאה בשמירת קוד אימות';
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     // Send SMS using Twilio

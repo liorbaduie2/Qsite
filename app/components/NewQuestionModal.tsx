@@ -6,14 +6,16 @@ import { X, Send, HelpCircle, Sparkles, Hash, CheckCircle } from 'lucide-react';
 interface NewQuestionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onQuestionCreated?: () => void;
 }
 
-export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalProps) {
+export default function NewQuestionModal({ isOpen, onClose, onQuestionCreated }: NewQuestionModalProps) {
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Refs for focus management
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -42,25 +44,34 @@ export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalPr
     if (!title.trim() || !content.trim()) return;
     
     setLoading(true);
+    setError(null);
     try {
-      // Simulate API call - replace with actual Supabase submission
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Log the data that would be submitted to Supabase
-      console.log({
-        title: title.trim(),
-        content: content.trim(),
-        tags
+      const response = await fetch('/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          content: content.trim(),
+          tags,
+        }),
       });
-      
-      // Reset form and close
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'שגיאה ביצירת השאלה');
+        return;
+      }
+
       setTitle('');
       setContent('');
       setTags([]);
       setCurrentTag('');
+      onQuestionCreated?.();
       onClose();
-    } catch (error) {
-      console.error('Error creating question:', error);
+    } catch (err) {
+      console.error('Error creating question:', err);
+      setError('שגיאה בחיבור לשרת');
     } finally {
       setLoading(false);
     }
@@ -231,6 +242,12 @@ export default function NewQuestionModal({ isOpen, onClose }: NewQuestionModalPr
                   )}
                 </div>
               </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">

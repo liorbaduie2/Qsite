@@ -1,4 +1,4 @@
-// app/api/auth/register/route.ts 
+// app/api/auth/register/route.ts - COMPLETE FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -27,7 +27,7 @@ const calculateAge = (dateOfBirth: string): number => {
 };
 
 export async function POST(request: NextRequest) {
-  console.log('=== Hebrew Registration API with DOB & Gender Called ===');
+  console.log('=== Complete Fixed Hebrew Registration API Called ===');
   
   try {
     const { 
@@ -149,23 +149,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 🔥 KEY FIX: Use admin.createUser with email confirmed
-    // We control access via approval_status, not email confirmation
-    console.log('Creating Supabase Auth user with admin client...');
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // 🔥 FIXED: Email confirmed, but pending admin approval
-      user_metadata: {
-        username,
-        phone,
-        full_name: fullName,
-        date_of_birth: dateOfBirth,
-        gender,
-        birth_gender: gender === 'other' ? birthGender : null,
-        age
-      }
-    });
+// NEW - This creates user WITHOUT sending any Supabase emails
+const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+  email,
+  password,
+  email_confirm: true, // Mark email as confirmed, skip Supabase emails completely
+  user_metadata: {
+    username,
+    phone,
+    full_name: fullName,
+    date_of_birth: dateOfBirth,
+    gender,
+    birth_gender: gender === 'other' ? birthGender : null,
+    age
+  }
+});
 
     if (authError || !authData.user) {
       console.error('Auth signup error:', authError);
@@ -177,33 +175,22 @@ export async function POST(request: NextRequest) {
 
     console.log('User created successfully:', authData.user.id);
 
-    // Wait a moment for potential trigger
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Check if profile was created by trigger
-    const { data: existingProfile } = await supabase
+    // Create or update profile (trigger may have already created it)
+    console.log('Upserting profile...');
+    const { error: profileError } = await supabase
       .from('profiles')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single();
-
-    if (!existingProfile) {
-      // Create profile manually
-      console.log('Creating profile manually...');
-      
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
+      .upsert(
+        {
           id: authData.user.id,
-          username,
+          username: username,
           full_name: fullName,
-          phone,
-          email,
+          phone: phone,
+          email: email,
           date_of_birth: dateOfBirth,
-          gender,
+          gender: gender,
           birth_gender: gender === 'other' ? birthGender : null,
-          age,
-          approval_status: 'pending', // 🔥 KEY: Set to pending
+          age: age,
+          approval_status: 'pending',
           is_verified: false,
           is_moderator: false,
           reputation: 0,
@@ -211,48 +198,74 @@ export async function POST(request: NextRequest) {
           answers_count: 0,
           best_answers_count: 0,
           total_views: 0,
+          behavior_score: 100.00,
+          credibility_score: 100.00,
+          theme_role: 'user',
+          status: 'active',
           phone_verified_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        });
+        },
+        { onConflict: 'id' }
+      );
 
-      if (profileError) {
-        console.error('Manual profile creation failed:', profileError);
-        // Continue anyway - could be handled later
-      } else {
-        console.log('Profile created manually with DOB and gender');
-      }
-    } else {
-      // Update existing profile with new data
-      console.log('Profile exists, updating with new data...');
+    if (profileError) {
+      console.error('Profile upsert failed:', profileError);
       
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          phone,
-          email,
-          full_name: fullName,
-          date_of_birth: dateOfBirth,
-          gender,
-          birth_gender: gender === 'other' ? birthGender : null,
-          age, // This will trigger the age calculation trigger
-          phone_verified_at: new Date().toISOString(),
-          approval_status: 'pending', // 🔥 KEY: Ensure pending status
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', authData.user.id);
+      // Clean up: delete the auth user if profile creation failed
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      
+      return NextResponse.json({ 
+        error: 'שגיאה ביצירת פרופיל משתמש',
+        error_code: 'PROFILE_CREATE_ERROR',
+        details: profileError.message
+      }, { status: 500 });
+    }
 
-      if (updateError) {
-        console.error('Profile update error:', updateError);
-      } else {
-        console.log('Profile updated with DOB and gender successfully');
-      }
+    console.log('Profile upserted successfully');
+
+    // Create user role manually
+    console.log('Creating user role...');
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: authData.user.id,
+        role: 'user',
+        role_name_hebrew: 'משתמש',
+        granted_at: new Date().toISOString(),
+        is_hidden: false,
+        max_reputation_deduction: 0,
+        temporary_permissions: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    if (roleError) {
+      console.error('Role creation failed but continuing:', roleError);
+    } else {
+      console.log('User role created successfully');
+    }
+
+    // Create user preferences manually (replaces the removed trigger functionality)
+    console.log('Creating user preferences...');
+    const { error: preferencesError } = await supabase
+      .from('user_preferences')
+      .insert({
+        user_id: authData.user.id,
+        theme_mode: 'system', // Default theme mode
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    if (preferencesError) {
+      console.error('User preferences creation failed but continuing:', preferencesError);
+    } else {
+      console.log('User preferences created successfully');
     }
 
     // Create user application
     console.log('Creating user application...');
     const finalApplicationText = applicationText || 
-      'בקשה להצטרפות לקהילה. אני מעוניין להיות חלק מהקהילה ולתרום להיוניס.';
+      'בקשה להצטרפות לקהילה. אני מעוניין להיות חלק מהקהילה ולתרום לדיונים.';
 
     const { error: applicationError } = await supabase
       .from('user_applications')
@@ -266,23 +279,22 @@ export async function POST(request: NextRequest) {
 
     if (applicationError) {
       console.error('Application creation error:', applicationError);
+      // Continue anyway - admin can create application manually if needed
     } else {
       console.log('Application created successfully');
     }
 
-    console.log('Registration completed successfully with DOB and gender - NO EMAIL SENT YET');
-    
-    // 🔥 KEY: Different success message - no mention of email confirmation
+    console.log('Registration completed successfully');
     return NextResponse.json({ 
       success: true,
       userId: authData.user.id,
       message: 'חשבון נוצר בהצלחה! בקשתך ממתינה לאישור מנהל. תקבל אימייל כשהחשבון יאושר.',
       userData: {
-        username,
-        email,
-        age,
-        gender,
-        phone
+        username: username,
+        email: email,
+        age: age,
+        gender: gender,
+        phone: phone
       }
     });
 

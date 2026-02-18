@@ -1,7 +1,6 @@
-//app\questions\page.tsx
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Menu, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, 
   Search, Filter, Eye, MessageCircle, ArrowUp, ArrowDown, Star, 
@@ -12,20 +11,38 @@ import AuthModal from '../components/AuthModal';
 import Drawer from '../components/Drawer';
 import NewQuestionModal from '../components/NewQuestionModal';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface Question {
-  id: number;
+  id: string;
   title: string;
   content: string;
-  author: string;
-  authorAvatar: string;
+  author: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+  };
   replies: number;
   votes: number;
   views: number;
-  time: string;
+  createdAt: string;
   tags: string[];
   isAnswered: boolean;
-  acceptedAnswerId?: number;
+}
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'הרגע';
+  if (diffMins < 60) return `לפני ${diffMins} דקות`;
+  if (diffHours < 24) return `לפני ${diffHours} שעות`;
+  if (diffDays < 30) return `לפני ${diffDays} ימים`;
+  return date.toLocaleDateString('he-IL');
 }
 
 const QuestionsPage = () => {
@@ -36,6 +53,9 @@ const QuestionsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [filterTag, setFilterTag] = useState('הכל');
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const { user, profile, loading, signOut } = useAuth();
 
@@ -47,100 +67,36 @@ const QuestionsPage = () => {
     { label: 'סיפורי', icon: BookOpen, href: '/stories' },
   ];
 
-  const allTags = ['הכל', 'תכנות', 'עיצוב', 'קריירה', 'לימודי', 'טכנולוגי', 'פיתוח', 'React', 'Vue', 'JavaScript', 'CSS', 'HTML'];
+  const allTags = ['הכל', 'תכנות', 'עיצוב', 'קריירה', 'לימודים', 'טכנולוגי', 'פיתוח', 'React', 'Vue', 'JavaScript', 'CSS', 'HTML'];
 
-  const questions: Question[] = [
-    {
-      id: 1,
-      title: 'איך אני יכול ללמוד תכנות בצורה יעילה?',
-      content: 'אני מתחיל בתכנות ורוצה לדעת מה הדרך הכי טובה להתחיל. יש המלצות על קורסי או משאבי?',
-      author: 'דני כהן',
-      authorAvatar: 'https://i.pravatar.cc/40?img=1',
-      replies: 15,
-      votes: 12,
-      views: 234,
-      time: 'לפני 2 שעות',
-      tags: ['תכנות', 'לימודי', 'קריירה'],
-      isAnswered: true,
-      acceptedAnswerId: 5
-    },
-    {
-      id: 2,
-      title: 'מה ההבדל בין React ל-Vue?',
-      content: 'אני צריך לבחור בין React ל-Vue לפרויקט הבא שלי. מה היתרונות והחסרונות של כל אחד?',
-      author: 'מיכל לוי',
-      authorAvatar: 'https://i.pravatar.cc/40?img=2',
-      replies: 8,
-      votes: 15,
-      views: 189,
-      time: 'לפני 3 שעות',
-      tags: ['React', 'Vue', 'JavaScript'],
-      isAnswered: true,
-      acceptedAnswerId: 3
-    },
-    {
-      id: 3,
-      title: 'איך לבצע optimization בביצועי אתר?',
-      content: 'האתר שלי איטי ואני מחפש דרכי לשפר את הביצועי. מה הטכניקות הכי יעילות?',
-      author: 'יוסי אברם',
-      authorAvatar: 'https://i.pravatar.cc/40?img=3',
-      replies: 6,
-      votes: 9,
-      views: 167,
-      time: 'לפני 4 שעות',
-      tags: ['ביצועי', 'אופטימיזציה', 'פיתוח'],
-      isAnswered: false
-    },
-    {
-      id: 4,
-      title: 'איך לכתוב קוד נקי וקריא?',
-      content: 'אני רוצה לשפר את איכות הקוד שלי. איזה עקרונות חשוב לעקוב אחריה?',
-      author: 'שרה גולן',
-      authorAvatar: 'https://i.pravatar.cc/40?img=4',
-      replies: 11,
-      votes: 18,
-      views: 298,
-      time: 'לפני 6 שעות',
-      tags: ['קוד נקי', 'בסט פרקטיס', 'תכנות'],
-      isAnswered: true,
-      acceptedAnswerId: 7
-    },
-    {
-      id: 5,
-      title: 'איך להתמודד עם bugs מורכבי?',
-      content: 'יש לי bug שקשה לי לזהות ולתקן. איזה טכניקות דיבוגינג אתם ממליצי?',
-      author: 'אלון רוז',
-      authorAvatar: 'https://i.pravatar.cc/40?img=5',
-      replies: 4,
-      votes: 7,
-      views: 134,
-      time: 'לפני 8 שעות',
-      tags: ['דיבוגינג', 'בעיות', 'פתרון בעיות'],
-      isAnswered: false
-    }
-  ];
+  const fetchQuestions = useCallback(async () => {
+    setLoadingQuestions(true);
+    setFetchError(null);
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) params.set('search', searchTerm);
+      if (filterTag && filterTag !== 'הכל') params.set('tag', filterTag);
+      params.set('sort', sortBy);
 
-  const filteredQuestions = questions
-    .filter(q => 
-      q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.author.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter(q => filterTag === 'הכל' || q.tags.includes(filterTag))
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'votes':
-          return b.votes - a.votes;
-        case 'replies':
-          return b.replies - a.replies;
-        case 'views':
-          return b.views - a.views;
-        case 'oldest':
-          return a.id - b.id;
-        default: // newest
-          return b.id - a.id;
+      const res = await fetch(`/api/questions?${params.toString()}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFetchError(data.error || 'שגיאה בטעינת השאלות');
+        return;
       }
-    });
+
+      setQuestions(data.questions || []);
+    } catch {
+      setFetchError('שגיאה בחיבור לשרת');
+    } finally {
+      setLoadingQuestions(false);
+    }
+  }, [searchTerm, filterTag, sortBy]);
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const handleAuthAction = (mode: 'login' | 'register') => {
     setAuthModalMode(mode);
@@ -181,7 +137,6 @@ const QuestionsPage = () => {
         color: '#0f172a'
       }}
     >
-      {/* Animated Background */}
       <div 
         className="fixed inset-0 -z-10"
         style={{
@@ -190,7 +145,6 @@ const QuestionsPage = () => {
             radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
             radial-gradient(circle at 40% 40%, rgba(236, 72, 153, 0.05) 0%, transparent 50%)
           `,
-          animation: 'float 20s ease-in-out infinite'
         }}
       />
 
@@ -263,7 +217,6 @@ const QuestionsPage = () => {
         </div>
       </header>
 
-      {/* Drawer */}
       <Drawer
         isDrawerOpen={isDrawerOpen}
         setIsDrawerOpen={setIsDrawerOpen}
@@ -275,7 +228,6 @@ const QuestionsPage = () => {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-5 py-8">
-        {/* Page Header */}
         <div className="mb-8 text-center">
           <h2 className="text-4xl font-bold text-gray-800 mb-4 leading-tight">
             שאלות ותשובות
@@ -285,11 +237,10 @@ const QuestionsPage = () => {
           </p>
         </div>
 
-        {/* Search and Filter Section */}
+        {/* Search and Filter */}
         <div className="mb-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6">
             <div className="flex flex-col md:flex-row gap-4">
-              {/* Search Bar */}
               <div className="flex-1 relative">
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
@@ -301,7 +252,6 @@ const QuestionsPage = () => {
                 />
               </div>
 
-              {/* Filter by Tags */}
               <div className="flex items-center gap-2">
                 <Filter size={20} className="text-gray-500" />
                 <select
@@ -315,7 +265,6 @@ const QuestionsPage = () => {
                 </select>
               </div>
 
-              {/* Sort Options */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -332,89 +281,96 @@ const QuestionsPage = () => {
         </div>
 
         {/* Questions List */}
-        <div className="space-y-6">
-          {filteredQuestions.length > 0 ? (
-            filteredQuestions.map((question) => (
-              <div
-                key={question.id}
-                className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group"
+        <div className="space-y-3">
+          {loadingQuestions ? (
+            <div className="flex justify-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+            </div>
+          ) : fetchError ? (
+            <div className="text-center py-12">
+              <div className="text-red-400 mb-4">
+                <HelpCircle size={48} className="mx-auto" />
+              </div>
+              <h3 className="text-xl font-semibold text-red-600 mb-2">{fetchError}</h3>
+              <button
+                onClick={fetchQuestions}
+                className="mt-4 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg"
               >
-                <div className="flex gap-6">
-                  {/* Vote Section */}
-                  <div className="flex flex-col items-center gap-2 min-w-[60px]">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors group-hover:bg-indigo-50">
-                      <ArrowUp size={20} className="text-gray-600 group-hover:text-indigo-600" />
-                    </button>
+                נסה שוב
+              </button>
+            </div>
+          ) : questions.length > 0 ? (
+            questions.map((question) => (
+              <Link
+                key={question.id}
+                href={`/questions/${question.id}`}
+                className="block bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-5 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group"
+              >
+                <div className="flex gap-5 items-center">
+                  {/* Vote count */}
+                  <div className="flex flex-col items-center gap-1 min-w-[50px]">
+                    <ArrowUp size={18} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
                     <span className="font-bold text-lg text-gray-800">{question.votes}</span>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors group-hover:bg-indigo-50">
-                      <ArrowDown size={20} className="text-gray-600 group-hover:text-indigo-600" />
-                    </button>
-                    {question.isAnswered && (
-                      <div className="mt-2 p-1 bg-green-100 rounded-full">
-                        <Star size={16} className="text-green-600" fill="currentColor" />
-                      </div>
-                    )}
+                    <ArrowDown size={18} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
                   </div>
 
-                  {/* Content Section */}
+                  {/* Title + meta */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       {question.isAnswered && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                          <Star size={12} className="ml-1" fill="currentColor" />
                           נענתה
                         </span>
                       )}
-                      <span className="text-sm text-gray-600">{question.time}</span>
-                    </div>
-
-                    <h3 className="text-xl font-bold text-gray-800 mb-3 group-hover:text-indigo-600 transition-colors duration-300 leading-tight cursor-pointer">
-                      {question.title}
-                    </h3>
-
-                    <p className="text-gray-600 mb-4 leading-relaxed line-clamp-2">
-                      {question.content}
-                    </p>
-
-                    {/* Tags */}
-                    <div className="flex gap-2 mb-4">
-                      {question.tags.map((tag) => (
-                        <button
+                      {question.tags.length > 0 && question.tags.slice(0, 3).map((tag) => (
+                        <span
                           key={tag}
-                          onClick={() => setFilterTag(tag)}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 hover:bg-indigo-200 transition-colors cursor-pointer"
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100"
                         >
                           {tag}
-                        </button>
+                        </span>
                       ))}
+                      {question.tags.length > 3 && (
+                        <span className="text-xs text-gray-400">+{question.tags.length - 3}</span>
+                      )}
                     </div>
 
-                    {/* Author and Stats */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-indigo-600 transition-colors duration-300 leading-snug">
+                      {question.title}
+                    </h3>
+                  </div>
+
+                  {/* Right meta */}
+                  <div className="flex items-center gap-4 text-sm text-gray-500 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      {question.author.avatar_url ? (
                         <Image
-                          src={question.authorAvatar}
-                          alt={question.author}
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                          src={question.author.avatar_url}
+                          alt={question.author.username}
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 rounded-full object-cover border border-gray-200"
                         />
-                        <span className="font-medium text-gray-700">{question.author}</span>
-                      </div>
-
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <MessageCircle size={16} />
-                          <span>{question.replies}</span>
+                      ) : (
+                        <div className="w-6 h-6 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                          <User size={12} className="text-white" />
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Eye size={16} />
-                          <span>{question.views}</span>
-                        </div>
-                      </div>
+                      )}
+                      <span className="font-medium text-gray-600 text-sm hidden sm:inline">{question.author.username}</span>
                     </div>
+                    <div className="flex items-center gap-1" title="תגובות">
+                      <MessageCircle size={15} />
+                      <span>{question.replies}</span>
+                    </div>
+                    <div className="flex items-center gap-1" title="צפיות">
+                      <Eye size={15} />
+                      <span>{question.views}</span>
+                    </div>
+                    <span className="text-xs text-gray-400 hidden md:inline">{timeAgo(question.createdAt)}</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))
           ) : (
             <div className="text-center py-12">
@@ -422,23 +378,22 @@ const QuestionsPage = () => {
                 <HelpCircle size={48} className="mx-auto" />
               </div>
               <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                לא נמצאו שאלות
+                אין שאלות עדיין
               </h3>
               <p className="text-gray-500 mb-6">
-                נסה לשנות את הפילטרים או החיפוש
+                היה הראשון לשאול שאלה ולהתחיל את השיח
               </p>
               <button
                 onClick={handleNewQuestion}
                 className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
-                היה הראשון לשאול שאלה
+                שאל שאלה חדשה
               </button>
             </div>
           )}
         </div>
       </main>
 
-      {/* Modals */}
       {isAuthModalOpen && (
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -451,22 +406,10 @@ const QuestionsPage = () => {
         <NewQuestionModal
           isOpen={isNewQuestionModalOpen}
           onClose={() => setIsNewQuestionModalOpen(false)}
+          onQuestionCreated={fetchQuestions}
         />
       )}
 
-      <style jsx>{`
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(1deg); }
-        }
-      `}</style>
     </div>
   );
 };
