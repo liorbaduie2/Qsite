@@ -1,11 +1,6 @@
 // app/api/auth/submit-application/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 // 🔥 FIXED: Make sure this matches EXACTLY what's created in registration
 const DEFAULT_APPLICATION_TEXTS = [
@@ -19,6 +14,7 @@ export async function POST(request: NextRequest) {
   console.log('=== Submit Application API Called ===');
   
   try {
+    const supabase = getSupabaseAdmin();
     const { userId, applicationText } = await request.json();
     console.log('Application data:', { userId, applicationText, textLength: applicationText?.length });
     
@@ -215,6 +211,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     

@@ -1,11 +1,6 @@
 //app/api/cron/weekly-maintenance/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   console.log('=== Weekly Maintenance Cron Job ===');
@@ -18,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Run the weekly maintenance function
-    const { error } = await supabase.rpc('weekly_maintenance')
+    const { error } = await getSupabaseAdmin().rpc('weekly_maintenance')
     
     if (error) {
       console.error('Weekly maintenance error:', error)
