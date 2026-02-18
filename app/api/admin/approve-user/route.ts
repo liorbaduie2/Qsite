@@ -3,13 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 // Function to send approval email
 async function sendApprovalEmail(email: string, username: string) {
@@ -29,7 +32,7 @@ async function sendApprovalEmail(email: string, username: string) {
     </div>
   `;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.FROM_EMAIL || 'noreply@yoursite.com',
     to: [email],
     subject: 'חשבונך אושר בהצלחה!',
@@ -52,7 +55,7 @@ async function sendRejectionEmail(email: string, username: string, reason?: stri
     </div>
   `;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.FROM_EMAIL || 'noreply@yoursite.com',
     to: [email],
     subject: 'בקשת הרשמה נדחתה',
@@ -65,6 +68,7 @@ async function sendRejectionEmail(email: string, username: string, reason?: stri
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdmin();
     const { userId, action, notes, adminId } = await request.json();
     
     if (!userId || !action || !adminId) {
