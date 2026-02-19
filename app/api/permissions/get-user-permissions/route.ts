@@ -4,50 +4,36 @@ import { getAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getAdminClient()
-    const { userId } = await request.json()
-
+    const { userId } = await request.json();
+    console.log("[API get-user-permissions] userId:", userId);
+    const supabase = getAdminClient();
     if (!userId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'חסר מזהה משתמש'
-        },
+        { success: false, error: "חסר מזהה משתמש" },
         { status: 400 }
-      )
+      );
     }
-
-    // קריאה לפונקציה המתוקנת ב-Supabase
-const { data, error } = await supabase.rpc('get_user_all_permissions', {
-  check_user_id: userId
-})
-
+    const { data, error } = await supabase.rpc("get_user_all_permissions", {
+      check_user_id: userId,
+    });
     if (error) {
-      console.error('Error fetching permissions:', error)
+      console.error("[API get-user-permissions] RPC error:", error);
       return NextResponse.json(
         {
           success: false,
-          error: 'שגיאה בטעינת הרשאות',
-          details: error.message
+          error: "שגיאה בטעינת הרשאות",
+          details: error.message,
         },
         { status: 500 }
-      )
+      );
     }
-
-    // data כבר jsonb מהפונקציה המתוקנת
-    return NextResponse.json({
-      success: true,
-      permissions: data
-    })
-
+    console.log("[API get-user-permissions] success");
+    return NextResponse.json({ success: true, permissions: data });
   } catch (error) {
-    console.error('Permissions API error:', error)
+    console.error("[API get-user-permissions] catch:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'שגיאה פנימית בשרת'
-      },
+      { success: false, error: "שגיאה פנימית בשרת" },
       { status: 500 }
-    )
+    );
   }
 }
