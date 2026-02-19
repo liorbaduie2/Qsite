@@ -540,90 +540,86 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     [user?.id, supabase, refreshProfile, setError, setLoading],
   );
 
-  // Handle auth state changes
+  // Handle auth state changes + initial session (single source of truth)
   useEffect(() => {
+    let mounted = true;
+    const loadingTimeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 8000); // Safety: stop loading after 8s if something hangs
+
+    const loadUserData = async (userId: string) => {
+      try {
+        const loginStatus = await Promise.race([
+          checkLoginStatus(userId),
+          new Promise<LoginStatusResult>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), 5000)
+          ),
+        ]);
+        if (!loginStatus.can_login) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+          setUserPermissions(null);
+          return;
+        }
+        await Promise.all([
+          fetchUserProfile(userId),
+          getUserPermissions(userId),
+        ]);
+      } catch (err) {
+        console.error("Load user data error:", err);
+        // Still try to load profile/permissions on timeout or error
+        try {
+          await fetchUserProfile(userId);
+          await getUserPermissions(userId);
+        } catch (e) {
+          console.error("Fallback load failed:", e);
+        }
+      }
+    };
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        console.log("Auth state change:", event, session?.user?.id);
-
+        if (!mounted) return;
         if (session?.user) {
           setUser(session.user);
-
-          try {
-            const loginStatus = await checkLoginStatus(session.user.id);
-            if (loginStatus.can_login) {
-              await Promise.allSettled([
-                fetchUserProfile(session.user.id),
-                getUserPermissions(session.user.id),
-              ]);
-            } else {
-              await supabase.auth.signOut();
-              setUser(null);
-              setProfile(null);
-              setUserPermissions(null);
-            }
-          } catch (error) {
-            console.error("Auth state change error:", error);
-            await Promise.allSettled([
-              fetchUserProfile(session.user.id),
-              getUserPermissions(session.user.id),
-            ]);
-          }
+          await loadUserData(session.user.id);
         } else {
           setUser(null);
           setProfile(null);
           setUserPermissions(null);
           setLoginStatus(null);
         }
-
-        setLoading(false);
+        if (mounted) setLoading(false);
       },
     );
 
-    return () => subscription.unsubscribe();
-  }, [supabase, checkLoginStatus, fetchUserProfile, getUserPermissions]);
-
-  // Initial session check
-  useEffect(() => {
-    let cancelled = false;
-
-    const getInitialSession = async () => {
+    const init = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (cancelled) return;
+        if (!mounted) return;
         if (session?.user) {
           setUser(session.user);
-          // Don't block loading on slow/failing API calls - use Promise.allSettled
-          await Promise.allSettled([
-            fetchUserProfile(session.user.id),
-            getUserPermissions(session.user.id),
-            checkLoginStatus(session.user.id),
-          ]);
+          await loadUserData(session.user.id);
         }
       } catch (error) {
         console.error("Initial session error:", error);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
-
-    getInitialSession();
-
-    // Safety: force loading off after 5s in case API calls hang
-    const timeout = setTimeout(() => {
-      cancelled = true;
-      setLoading(false);
-    }, 5000);
+    init();
 
     return () => {
-      cancelled = true;
-      clearTimeout(timeout);
+      mounted = false;
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
     };
-  }, [supabase.auth, fetchUserProfile, getUserPermissions, checkLoginStatus]);
+  }, [supabase, checkLoginStatus, fetchUserProfile, getUserPermissions]);
 
   const value: AuthContextType = {
     user,
