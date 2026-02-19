@@ -5,7 +5,6 @@ import { getAdminClient } from '@/lib/supabase/admin'
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json();
-    console.log("[API get-user-permissions] userId:", userId);
     const supabase = getAdminClient();
     if (!userId) {
       return NextResponse.json(
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
       check_user_id: userId,
     });
     if (error) {
-      console.error("[API get-user-permissions] RPC error:", error);
       return NextResponse.json(
         {
           success: false,
@@ -27,10 +25,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-    console.log("[API get-user-permissions] success");
     return NextResponse.json({ success: true, permissions: data });
   } catch (error) {
-    console.error("[API get-user-permissions] catch:", error);
     return NextResponse.json(
       { success: false, error: "שגיאה פנימית בשרת" },
       { status: 500 }
