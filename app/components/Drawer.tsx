@@ -119,7 +119,7 @@ const Drawer: React.FC<DrawerProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-gray-800 truncate">
-                      {profile?.full_name || profile?.username || 'משתמש'}
+                      {profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'משתמש'}
                     </h3>
                     {profile?.is_moderator && (
                       <div className="relative group">
@@ -131,7 +131,7 @@ const Drawer: React.FC<DrawerProps> = ({
                     )}
                   </div>
                   <p className="text-sm text-gray-600 truncate">
-                    @{profile?.username}
+                    @{profile?.username || user?.email?.split('@')[0] || ''}
                   </p>
                   <div className="flex items-center gap-1 mt-1">
                     <Award size={12} className="text-yellow-500" />

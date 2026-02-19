@@ -544,6 +544,46 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const DEBUG_AUTH =
     typeof window !== "undefined" && window.location.search.includes("debug=auth");
 
+  // Load profile + permissions in background (non-blocking)
+  const loadUserDataInBackground = useCallback(
+    (userId: string) => {
+      const load = async () => {
+        try {
+          const loginStatus = await Promise.race([
+            checkLoginStatus(userId),
+            new Promise<LoginStatusResult>((_, rej) =>
+              setTimeout(() => rej(new Error("timeout")), 6000)
+            ),
+          ]);
+          if (!loginStatus.can_login) {
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+            setUserPermissions(null);
+            return;
+          }
+          await Promise.race([
+            Promise.all([
+              fetchUserProfile(userId),
+              getUserPermissions(userId),
+            ]),
+            new Promise((_, rej) => setTimeout(rej, 8000)),
+          ]);
+        } catch (e) {
+          console.error("[Auth] Background load error:", e);
+          try {
+            await fetchUserProfile(userId);
+            await getUserPermissions(userId);
+          } catch (e2) {
+            console.error("[Auth] Fallback load failed:", e2);
+          }
+        }
+      };
+      load();
+    },
+    [checkLoginStatus, fetchUserProfile, getUserPermissions, supabase]
+  );
+
   // Handle auth state changes
   useEffect(() => {
     const {
@@ -553,26 +593,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (DEBUG_AUTH) console.log("[Auth] onAuthStateChange", event, session?.user?.id ?? "no session");
         if (session?.user) {
           setUser(session.user);
-          try {
-            if (DEBUG_AUTH) console.log("[Auth] checkLoginStatus", session.user.id);
-            const loginStatus = await checkLoginStatus(session.user.id);
-            if (DEBUG_AUTH) console.log("[Auth] loginStatus", loginStatus);
-            if (loginStatus.can_login) {
-              if (DEBUG_AUTH) console.log("[Auth] fetchUserProfile", session.user.id);
-              await fetchUserProfile(session.user.id);
-              if (DEBUG_AUTH) console.log("[Auth] getUserPermissions", session.user.id);
-              await getUserPermissions(session.user.id);
-            } else {
-              await supabase.auth.signOut();
-              setUser(null);
-              setProfile(null);
-              setUserPermissions(null);
-            }
-          } catch (error) {
-            console.error("[Auth] Auth state change error:", error);
-            await fetchUserProfile(session.user.id);
-            await getUserPermissions(session.user.id);
-          }
+          loadUserDataInBackground(session.user.id);
         } else {
           setUser(null);
           setProfile(null);
@@ -585,16 +606,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase, checkLoginStatus, fetchUserProfile, getUserPermissions]);
+  }, [supabase, loadUserDataInBackground]);
 
-  // Initial session check
+  // Initial session check - set loading=false as soon as we know session state
   useEffect(() => {
     let cancelled = false;
     const timeout = setTimeout(() => {
       if (cancelled) return;
-      if (DEBUG_AUTH) console.log("[Auth] Safety timeout fired (10s)");
+      if (DEBUG_AUTH) console.log("[Auth] Safety timeout (5s)");
       setLoading(false);
-    }, 10000); // Safety: stop loading after 10s if something hangs
+    }, 5000);
 
     const getInitialSession = async () => {
       try {
@@ -602,23 +623,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (DEBUG_AUTH) console.log("[Auth] getSession result", session?.user?.id ?? "no session");
+        if (DEBUG_AUTH) console.log("[Auth] getSession", session?.user?.id ?? "none");
         if (cancelled) return;
         if (session?.user) {
           setUser(session.user);
-          if (DEBUG_AUTH) console.log("[Auth] fetchUserProfile", session.user.id);
-          await fetchUserProfile(session.user.id);
-          if (cancelled) return;
-          if (DEBUG_AUTH) console.log("[Auth] getUserPermissions", session.user.id);
-          await getUserPermissions(session.user.id);
-          if (cancelled) return;
-          await checkLoginStatus(session.user.id);
+          loadUserDataInBackground(session.user.id);
         }
       } catch (error) {
         console.error("[Auth] Initial session error:", error);
       } finally {
         if (!cancelled) setLoading(false);
-        if (DEBUG_AUTH) console.log("[Auth] getInitialSession done, loading=false");
+        if (DEBUG_AUTH) console.log("[Auth] getInitialSession done");
       }
     };
 
@@ -628,7 +643,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [supabase, fetchUserProfile, getUserPermissions, checkLoginStatus]);
+  }, [supabase, loadUserDataInBackground]);
 
   const value: AuthContextType = {
     user,

@@ -246,7 +246,7 @@ export default function QuestionDetailPage() {
                       </div>
                     )}
                     <span className="text-sm font-medium text-gray-700">
-                      {profile?.username || 'משתמש'}
+                      {profile?.username || user?.email?.split('@')[0] || 'משתמש'}
                     </span>
                   </div>
                 </div>

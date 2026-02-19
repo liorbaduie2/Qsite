@@ -206,7 +206,7 @@ export default function ForumHomepage() {
                       {profile?.avatar_url ? (
                         <Image
                           src={profile.avatar_url}
-                          alt={profile.username || 'משתמש'}
+                          alt={profile?.username || user?.email?.split('@')[0] || 'משתמש'}
                           width={28}
                           height={28}
                           className="w-7 h-7 rounded-full object-cover"
@@ -217,7 +217,7 @@ export default function ForumHomepage() {
                         </div>
                       )}
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {profile?.username || 'משתמש'}
+                        {profile?.username || user?.email?.split('@')[0] || 'משתמש'}
                       </span>
                     </div>
                     <button
