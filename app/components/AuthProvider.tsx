@@ -540,86 +540,79 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     [user?.id, supabase, refreshProfile, setError, setLoading],
   );
 
-  // Handle auth state changes + initial session (single source of truth)
+  // Handle auth state changes
   useEffect(() => {
-    let mounted = true;
-    const loadingTimeout = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 8000); // Safety: stop loading after 8s if something hangs
-
-    const loadUserData = async (userId: string) => {
-      try {
-        const loginStatus = await Promise.race([
-          checkLoginStatus(userId),
-          new Promise<LoginStatusResult>((_, reject) =>
-            setTimeout(() => reject(new Error("timeout")), 5000)
-          ),
-        ]);
-        if (!loginStatus.can_login) {
-          await supabase.auth.signOut();
-          setUser(null);
-          setProfile(null);
-          setUserPermissions(null);
-          return;
-        }
-        await Promise.all([
-          fetchUserProfile(userId),
-          getUserPermissions(userId),
-        ]);
-      } catch (err) {
-        console.error("Load user data error:", err);
-        // Still try to load profile/permissions on timeout or error
-        try {
-          await fetchUserProfile(userId);
-          await getUserPermissions(userId);
-        } catch (e) {
-          console.error("Fallback load failed:", e);
-        }
-      }
-    };
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        if (!mounted) return;
         if (session?.user) {
           setUser(session.user);
-          await loadUserData(session.user.id);
+          try {
+            const loginStatus = await checkLoginStatus(session.user.id);
+            if (loginStatus.can_login) {
+              await fetchUserProfile(session.user.id);
+              await getUserPermissions(session.user.id);
+            } else {
+              await supabase.auth.signOut();
+              setUser(null);
+              setProfile(null);
+              setUserPermissions(null);
+            }
+          } catch (error) {
+            console.error("Auth state change error:", error);
+            await fetchUserProfile(session.user.id);
+            await getUserPermissions(session.user.id);
+          }
         } else {
           setUser(null);
           setProfile(null);
           setUserPermissions(null);
           setLoginStatus(null);
         }
-        if (mounted) setLoading(false);
+        setLoading(false);
       },
     );
 
-    const init = async () => {
+    return () => subscription.unsubscribe();
+  }, [supabase, checkLoginStatus, fetchUserProfile, getUserPermissions]);
+
+  // Initial session check
+  useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
+      setLoading(false);
+    }, 10000); // Safety: stop loading after 10s if something hangs
+
+    const getInitialSession = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (!mounted) return;
+        if (cancelled) return;
         if (session?.user) {
           setUser(session.user);
-          await loadUserData(session.user.id);
+          await fetchUserProfile(session.user.id);
+          if (cancelled) return;
+          await getUserPermissions(session.user.id);
+          if (cancelled) return;
+          await checkLoginStatus(session.user.id);
         }
       } catch (error) {
         console.error("Initial session error:", error);
       } finally {
-        if (mounted) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    init();
+
+    getInitialSession();
 
     return () => {
-      mounted = false;
-      clearTimeout(loadingTimeout);
-      subscription.unsubscribe();
+      cancelled = true;
+      clearTimeout(timeout);
     };
-  }, [supabase, checkLoginStatus, fetchUserProfile, getUserPermissions]);
+  }, [supabase, fetchUserProfile, getUserPermissions, checkLoginStatus]);
 
   const value: AuthContextType = {
     user,
