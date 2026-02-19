@@ -552,11 +552,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(session.user);
 
           try {
-            // Try to check login status, but don't block if it fails
             const loginStatus = await checkLoginStatus(session.user.id);
             if (loginStatus.can_login) {
-              await fetchUserProfile(session.user.id);
-              await getUserPermissions(session.user.id);
+              await Promise.allSettled([
+                fetchUserProfile(session.user.id),
+                getUserPermissions(session.user.id),
+              ]);
             } else {
               await supabase.auth.signOut();
               setUser(null);
@@ -565,9 +566,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             }
           } catch (error) {
             console.error("Auth state change error:", error);
-            // Still fetch profile even if login status check fails
-            await fetchUserProfile(session.user.id);
-            await getUserPermissions(session.user.id);
+            await Promise.allSettled([
+              fetchUserProfile(session.user.id),
+              getUserPermissions(session.user.id),
+            ]);
           }
         } else {
           setUser(null);
@@ -585,25 +587,42 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Initial session check
   useEffect(() => {
+    let cancelled = false;
+
     const getInitialSession = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
+        if (cancelled) return;
         if (session?.user) {
           setUser(session.user);
-          await fetchUserProfile(session.user.id);
-          await getUserPermissions(session.user.id);
-          await checkLoginStatus(session.user.id);
+          // Don't block loading on slow/failing API calls - use Promise.allSettled
+          await Promise.allSettled([
+            fetchUserProfile(session.user.id),
+            getUserPermissions(session.user.id),
+            checkLoginStatus(session.user.id),
+          ]);
         }
       } catch (error) {
         console.error("Initial session error:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     getInitialSession();
+
+    // Safety: force loading off after 5s in case API calls hang
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      setLoading(false);
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [supabase.auth, fetchUserProfile, getUserPermissions, checkLoginStatus]);
 
   const value: AuthContextType = {
