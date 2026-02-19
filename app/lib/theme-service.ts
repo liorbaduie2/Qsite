@@ -1,17 +1,13 @@
 // lib/theme-service.ts
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@/lib/supabase/client';
 import type { SimpleUserPreferences, SimpleThemeMode } from '../types/theme';
-
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!
-);
 
 export class ThemeService {
   /**
    * Fetches user preferences. If they don't exist, it creates default preferences.
    */
   static async getUserPreferences(): Promise<SimpleUserPreferences | null> {
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -46,6 +42,7 @@ export class ThemeService {
    * the `onConflict` column to prevent duplicate key errors.
    */
   static async updateTheme(themeMode: SimpleThemeMode): Promise<{ success: boolean; error?: string }> {
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return { success: false, error: 'User not authenticated' };
