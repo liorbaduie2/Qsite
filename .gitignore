@@ -34,6 +34,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# sensitive credentials - never commit
+Access Tokens.txt
+
 # vercel
 .vercel
 
