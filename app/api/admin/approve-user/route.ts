@@ -1,14 +1,7 @@
 // app/api/admin/approve-user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { Resend } from 'resend';
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -68,7 +61,7 @@ async function sendRejectionEmail(email: string, username: string, reason?: stri
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getAdminClient();
     const { userId, action, notes, adminId } = await request.json();
 
     if (!userId || !action || !adminId) {

@@ -1,14 +1,10 @@
 // app/api/permissions/get-user-permissions/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getAdminClient()
     const { userId } = await request.json()
 
     if (!userId) {

@@ -1,18 +1,6 @@
 // app/api/auth/register/route.ts - COMPLETE FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Create Supabase admin client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { getAdminClient } from '@/lib/supabase/admin';
 
 // Helper function to calculate age
 const calculateAge = (dateOfBirth: string): number => {
@@ -30,6 +18,7 @@ export async function POST(request: NextRequest) {
   console.log('=== Complete Fixed Hebrew Registration API Called ===');
 
   try {
+    const supabase = getAdminClient();
     const {
       phone,
       email,

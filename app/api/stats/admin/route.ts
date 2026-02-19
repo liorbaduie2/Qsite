@@ -1,22 +1,11 @@
 // app/api/admin/stats/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Create Supabase admin client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { getAdminClient } from '@/lib/supabase/admin';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getAdminClient();
     // For now, we'll get the current user from the session
     // In production, you should properly validate the admin token
     const { data: { session } } = await supabase.auth.getSession();
