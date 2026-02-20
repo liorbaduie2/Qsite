@@ -83,8 +83,8 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = "/auth/pending";
         const redirectResponse = NextResponse.redirect(url);
-        supabaseResponse.cookies.getAll().forEach(({ name, value, options }) =>
-          redirectResponse.cookies.set(name, value, options)
+        supabaseResponse.cookies.getAll().forEach((cookie) =>
+          redirectResponse.cookies.set(cookie.name, cookie.value)
         );
         return redirectResponse;
       }
