@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, Plus, LogIn, LogOut, User, Search, Filter, Eye, MessageCircle, ArrowUp } from 'lucide-react';
+import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Search, Filter, Eye, MessageCircle, ArrowUp } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import LoginModal from './components/LoginModal';
 import HebrewRegistration from './components/HebrewRegistration';
@@ -142,14 +142,6 @@ export default function ForumHomepage() {
     }
   };
 
-  const handleNewQuestion = () => {
-    if (!user) {
-      handleLogin();
-      return;
-    }
-    console.log('Create new question');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
@@ -184,52 +176,7 @@ export default function ForumHomepage() {
             <div className="flex items-center gap-4">
               <SimpleThemeToggle />
               
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleNewQuestion}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
-                  >
-                    <Plus size={16} />
-                    שאלה חדשה
-                  </button>
-
-                  <a 
-  href="/settings"
-  className="text-sm px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
->
-  הגדרות
-</a>
-                  
-                  <div className="flex items-center gap-3 px-4 py-2 bg-white/60 dark:bg-gray-700/60 rounded-lg border border-gray-200/50 dark:border-gray-600/50">
-                    <div className="flex items-center gap-2">
-                      {profile?.avatar_url ? (
-                        <Image
-                          src={profile.avatar_url}
-                          alt={profile?.username || user?.email?.split('@')[0] || 'משתמש'}
-                          width={28}
-                          height={28}
-                          className="w-7 h-7 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                          <User size={14} className="text-white" />
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {profile?.username || user?.email?.split('@')[0] || 'משתמש'}
-                      </span>
-                    </div>
-                    <button
-                      onClick={handleSignOut}
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
-                      title="התנתק"
-                    >
-                      <LogOut size={16} className="text-gray-500 dark:text-gray-400" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              {!user && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleLogin}

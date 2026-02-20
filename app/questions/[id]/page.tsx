@@ -7,7 +7,7 @@ import Image from 'next/image';
 import {
   Menu, MessageSquare, Users, HelpCircle, BookOpen, Home,
   ArrowUp, ArrowDown, Star, User, LogIn, Eye, MessageCircle,
-  ChevronRight, Clock, Shield, Send, CheckCircle, Pencil, X, Plus
+  ChevronRight, Clock, Shield, Send, CheckCircle, Pencil, X, Plus, Reply
 } from 'lucide-react';
 import { useAuth } from '../../components/AuthProvider';
 import AuthModal from '../../components/AuthModal';
@@ -43,6 +43,8 @@ interface Answer {
   isAccepted: boolean;
   isEdited: boolean;
   createdAt: string;
+  parentAnswerId?: string | null;
+  replies?: Answer[];
   author: {
     id: string;
     username: string;
@@ -66,6 +68,41 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('he-IL');
 }
 
+function buildAnswerTree(flat: Answer[]): Answer[] {
+  const byId = new Map<string, Answer>();
+  const roots: Answer[] = [];
+  flat.forEach((a) => {
+    byId.set(a.id, { ...a, replies: [] });
+  });
+  flat.forEach((a) => {
+    const node = byId.get(a.id)!;
+    if (!a.parentAnswerId) {
+      roots.push(node);
+    } else {
+      const parent = byId.get(a.parentAnswerId);
+      if (parent) {
+        parent.replies = parent.replies || [];
+        parent.replies.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+  });
+  const sortByDate = (arr: Answer[]) =>
+    arr.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  sortByDate(roots);
+  function sortReplies(nodes: Answer[]) {
+    nodes.forEach((n) => {
+      if (n.replies?.length) {
+        sortByDate(n.replies);
+        sortReplies(n.replies);
+      }
+    });
+  }
+  sortReplies(roots);
+  return roots;
+}
+
 export default function QuestionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
@@ -79,6 +116,11 @@ export default function QuestionDetailPage() {
   const [answerError, setAnswerError] = useState<string | null>(null);
 
   const [isAnswerPanelOpen, setIsAnswerPanelOpen] = useState(false);
+
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -170,6 +212,38 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const answerTree = React.useMemo(() => buildAnswerTree(answers), [answers]);
+
+  const handleSubmitReply = async (e: React.FormEvent, parentAnswerId: string) => {
+    e.preventDefault();
+    if (!replyContent.trim()) return;
+    if (!user) {
+      handleAuthAction('login');
+      return;
+    }
+    setSubmittingReply(true);
+    setReplyError(null);
+    try {
+      const res = await fetch(`/api/questions/${id}/answers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: replyContent.trim(), parentAnswerId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReplyError(data.error || 'שגיאה בשליחת התגובה');
+        return;
+      }
+      setReplyContent('');
+      setReplyingToId(null);
+      fetchAnswers();
+    } catch {
+      setReplyError('שגיאה בחיבור לשרת');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
   const handleAuthAction = (mode: 'login' | 'register') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
@@ -229,28 +303,7 @@ export default function QuestionDetailPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {user ? (
-                <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg border border-gray-200/50">
-                  <div className="flex items-center gap-2">
-                    {profile?.avatar_url ? (
-                      <Image
-                        src={profile.avatar_url}
-                        alt={profile.username || 'משתמש'}
-                        width={28}
-                        height={28}
-                        className="w-7 h-7 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                        <User size={14} className="text-white" />
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-gray-700">
-                      {profile?.username || user?.email?.split('@')[0] || 'משתמש'}
-                    </span>
-                  </div>
-                </div>
-              ) : (
+              {!user && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleAuthAction('login')}
@@ -423,88 +476,177 @@ export default function QuestionDetailPage() {
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                 <MessageCircle size={22} className="text-indigo-500" />
-                תשובות ({answers.length})
+                תשובות ({answerTree.length})
+                {answers.length > answerTree.length && (
+                  <span className="text-sm font-normal text-gray-500">
+                    ({answers.length} כולל תגובות)
+                  </span>
+                )}
               </h2>
 
               {answersLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                 </div>
-              ) : answers.length > 0 ? (
+              ) : answerTree.length > 0 ? (
                 <div className="space-y-4">
-                  {answers.map((answer) => {
-                    const isOP = answer.author.id === question.author.id;
-                    return (
-                      <div
-                        key={answer.id}
-                        className={`rounded-xl border p-5 transition-all ${
-                          answer.isAccepted
-                            ? 'bg-green-50/60 border-green-200'
-                            : 'bg-white/60 border-gray-200/50'
-                        }`}
-                      >
-                        <div className="flex gap-4">
-                          {/* Vote column */}
-                          <div className="flex flex-col items-center gap-0.5 min-w-[40px]">
-                            <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                              <ArrowUp size={18} className="text-gray-400 hover:text-indigo-600" />
-                            </button>
-                            <span className="font-bold text-gray-700">{answer.votes}</span>
-                            <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                              <ArrowDown size={18} className="text-gray-400 hover:text-indigo-600" />
-                            </button>
-                            {answer.isAccepted && (
-                              <CheckCircle size={20} className="text-green-600 mt-1" fill="currentColor" />
-                            )}
-                          </div>
+                  {(() => {
+                    function renderAnswerNode(node: Answer, isTopLevel: boolean): React.ReactNode {
+                      const isOP = node.author.id === question.author.id;
+                      return (
+                        <div key={node.id} className={isTopLevel ? '' : 'mr-6 border-r-2 border-indigo-100 pr-4 mt-3'}>
+                          <div
+                            className={`rounded-xl border transition-all ${
+                              isTopLevel ? 'p-5' : 'p-4 rounded-r-lg bg-gray-50/60 border-gray-200/50'
+                            } ${
+                              node.isAccepted && isTopLevel
+                                ? 'bg-green-50/60 border-green-200'
+                                : isTopLevel
+                                  ? 'bg-white/60 border-gray-200/50'
+                                  : ''
+                            }`}
+                          >
+                            <div className="flex gap-4">
+                              {isTopLevel && (
+                                <div className="flex flex-col items-center gap-0.5 min-w-[40px]">
+                                  <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                    <ArrowUp size={18} className="text-gray-400 hover:text-indigo-600" />
+                                  </button>
+                                  <span className="font-bold text-gray-700">{node.votes}</span>
+                                  <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                    <ArrowDown size={18} className="text-gray-400 hover:text-indigo-600" />
+                                  </button>
+                                  {node.isAccepted && (
+                                    <CheckCircle size={20} className="text-green-600 mt-1" fill="currentColor" />
+                                  )}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div
+                                  className={`text-gray-700 leading-relaxed whitespace-pre-wrap mb-4 ${!isTopLevel ? 'text-sm' : ''}`}
+                                >
+                                  {node.content}
+                                </div>
 
-                          {/* Answer body */}
-                          <div className="flex-1 min-w-0">
-                            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap mb-4">
-                              {answer.content}
-                            </div>
-
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                              <div className="flex items-center gap-2">
-                                {answer.author.avatar_url ? (
-                                  <Image
-                                    src={answer.author.avatar_url}
-                                    alt={answer.author.username}
-                                    width={28}
-                                    height={28}
-                                    className="w-7 h-7 rounded-full object-cover border border-gray-200"
-                                  />
-                                ) : (
-                                  <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                                    <User size={12} className="text-white" />
+                                <div className="flex items-center justify-between pt-3 border-t border-gray-100 flex-wrap gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {node.author.avatar_url ? (
+                                      <Image
+                                        src={node.author.avatar_url}
+                                        alt={node.author.username}
+                                        width={isTopLevel ? 28 : 24}
+                                        height={isTopLevel ? 28 : 24}
+                                        className={`rounded-full object-cover border border-gray-200 ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                      />
+                                    ) : (
+                                      <div
+                                        className={`bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                      >
+                                        <User size={isTopLevel ? 12 : 10} className="text-white" />
+                                      </div>
+                                    )}
+                                    <span className={`font-semibold text-gray-800 ${isTopLevel ? 'text-sm' : 'text-sm'}`}>
+                                      {node.author.username}
+                                    </span>
+                                    {isOP && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                                        שואל השאלה
+                                      </span>
+                                    )}
+                                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                                      <Shield size={10} />
+                                      {node.author.reputation}
+                                    </span>
+                                    {node.isEdited && (
+                                      <span className="text-xs text-gray-400 flex items-center gap-0.5">
+                                        <Pencil size={10} />
+                                        נערך
+                                      </span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!user) {
+                                          handleAuthAction('login');
+                                          return;
+                                        }
+                                        setReplyingToId(node.id);
+                                        setReplyError(null);
+                                      }}
+                                      className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                                    >
+                                      <Reply size={isTopLevel ? 14 : 12} />
+                                      הגב
+                                    </button>
                                   </div>
-                                )}
-                                <span className="font-semibold text-gray-800 text-sm">
-                                  {answer.author.username}
-                                </span>
-                                {isOP && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
-                                    שואל השאלה
-                                  </span>
-                                )}
-                                <span className="text-xs text-gray-400 flex items-center gap-1">
-                                  <Shield size={10} />
-                                  {answer.author.reputation}
-                                </span>
-                                {answer.isEdited && (
-                                  <span className="text-xs text-gray-400 flex items-center gap-0.5">
-                                    <Pencil size={10} />
-                                    נערך
-                                  </span>
+                                  <span className="text-xs text-gray-400">{timeAgo(node.createdAt)}</span>
+                                </div>
+
+                                {replyingToId === node.id && (
+                                  <form
+                                    onSubmit={(e) => handleSubmitReply(e, node.id)}
+                                    className="mt-4 pt-4 border-t border-gray-100"
+                                  >
+                                    <textarea
+                                      value={replyContent}
+                                      onChange={(e) => setReplyContent(e.target.value)}
+                                      placeholder="כתוב תגובה... (לפחות 10 תווים)"
+                                      className="w-full min-h-[80px] p-3 text-sm bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+                                      autoFocus
+                                      required
+                                      minLength={10}
+                                    />
+                                    {replyError && (
+                                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                                        {replyError}
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <button
+                                        type="submit"
+                                        disabled={replyContent.trim().length < 10 || submittingReply}
+                                        className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {submittingReply ? (
+                                          <>
+                                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            שולח...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Send size={14} />
+                                            שלח תגובה
+                                          </>
+                                        )}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setReplyingToId(null);
+                                          setReplyContent('');
+                                          setReplyError(null);
+                                        }}
+                                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
+                                      >
+                                        ביטול
+                                      </button>
+                                    </div>
+                                  </form>
                                 )}
                               </div>
-                              <span className="text-xs text-gray-400">{timeAgo(answer.createdAt)}</span>
                             </div>
                           </div>
+
+                          {node.replies && node.replies.length > 0 && (
+                            <div className="space-y-1">
+                              {node.replies.map((reply) => renderAnswerNode(reply, false))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                    return answerTree.map((answer) => renderAnswerNode(answer, true));
+                  })()}
                 </div>
               ) : (
                 <div className="text-center py-6 text-gray-400">

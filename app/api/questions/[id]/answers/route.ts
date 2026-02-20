@@ -19,6 +19,7 @@ export async function GET(
         is_edited,
         created_at,
         author_id,
+        parent_answer_id,
         profiles!answers_author_id_fkey (
           id,
           username,
@@ -27,7 +28,7 @@ export async function GET(
         )
       `)
       .eq('question_id', id)
-      .is('parent_answer_id', null)
+      .order('parent_answer_id', { ascending: true, nullsFirst: true })
       .order('is_accepted', { ascending: false })
       .order('votes_count', { ascending: false })
       .order('created_at', { ascending: true });
@@ -45,6 +46,7 @@ export async function GET(
       isAccepted: a.is_accepted || false,
       isEdited: a.is_edited || false,
       createdAt: a.created_at,
+      parentAnswerId: a.parent_answer_id ?? null,
       author: {
         id: a.profiles?.id || a.author_id,
         username: a.profiles?.username || 'אנונימי',
@@ -74,7 +76,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { content } = body;
+    const { content, parentAnswerId } = body;
 
     if (!content?.trim() || content.trim().length < 10) {
       return NextResponse.json({ error: 'התשובה חייבת להכיל לפחות 10 תווים' }, { status: 400 });
@@ -90,12 +92,26 @@ export async function POST(
       return NextResponse.json({ error: 'השאלה לא נמצאה' }, { status: 404 });
     }
 
+    const isReply = !!parentAnswerId;
+    if (isReply) {
+      const { data: parentAnswer, error: parentError } = await supabase
+        .from('answers')
+        .select('id')
+        .eq('id', parentAnswerId)
+        .eq('question_id', questionId)
+        .single();
+      if (parentError || !parentAnswer) {
+        return NextResponse.json({ error: 'התגובה המקורית לא נמצאה' }, { status: 400 });
+      }
+    }
+
     const { data: answer, error: insertError } = await supabase
       .from('answers')
       .insert({
         content: content.trim(),
         question_id: questionId,
         author_id: user.id,
+        ...(isReply ? { parent_answer_id: parentAnswerId } : {}),
       })
       .select('id')
       .single();
@@ -105,19 +121,21 @@ export async function POST(
       return NextResponse.json({ error: 'שגיאה ביצירת התשובה' }, { status: 500 });
     }
 
-    const { data: currentQ } = await supabase
-      .from('questions')
-      .select('answers_count')
-      .eq('id', questionId)
-      .single();
+    if (!isReply) {
+      const { data: currentQ } = await supabase
+        .from('questions')
+        .select('answers_count')
+        .eq('id', questionId)
+        .single();
 
-    await supabase
-      .from('questions')
-      .update({
-        answers_count: (currentQ?.answers_count || 0) + 1,
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq('id', questionId);
+      await supabase
+        .from('questions')
+        .update({
+          answers_count: (currentQ?.answers_count || 0) + 1,
+          last_activity_at: new Date().toISOString(),
+        })
+        .eq('id', questionId);
+    }
 
     return NextResponse.json({ success: true, answerId: answer.id }, { status: 201 });
   } catch (error) {

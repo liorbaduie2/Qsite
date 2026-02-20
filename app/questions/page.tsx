@@ -173,28 +173,7 @@ const QuestionsPage = () => {
                 שאלה חדשה
               </button>
 
-              {user ? (
-                <div className="flex items-center gap-3 px-4 py-2 bg-white/60 rounded-lg border border-gray-200/50">
-                  <div className="flex items-center gap-2">
-                    {profile?.avatar_url ? (
-                      <Image
-                        src={profile.avatar_url}
-                        alt={profile.username || 'משתמש'}
-                        width={28}
-                        height={28}
-                        className="w-7 h-7 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                        <User size={14} className="text-white" />
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-gray-700">
-                      {profile?.username || user?.email?.split('@')[0] || 'משתמש'}
-                    </span>
-                  </div>
-                </div>
-              ) : (
+              {!user && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleAuthAction('login')}

@@ -18,7 +18,8 @@ import {
   BarChart3,
   CheckCircle,
   Clock,
-  Music
+  Music,
+  Star
 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import { useRouter } from 'next/navigation';
@@ -93,6 +94,8 @@ export default function ProfilePage() {
     joinedDate: '2024-01-15'
   });
 
+  const [sharedStatus, setSharedStatus] = useState<{ content: string; createdAt: string } | null>(null);
+
   const [userQuestions] = useState<Question[]>([
     {
       id: 1,
@@ -142,6 +145,22 @@ export default function ProfilePage() {
       });
     }
   }, [user, profile, loading, router]);
+
+  useEffect(() => {
+    if (!user) {
+      setSharedStatus(null);
+      return;
+    }
+    fetch('/api/status/me')
+      .then((res) => res.json())
+      .then((data) => {
+        const active = data.active?.sharedToProfile ? data.active : null;
+        const fromHistory = (data.history || []).find((s: { sharedToProfile: boolean }) => s.sharedToProfile);
+        const s = active || fromHistory;
+        setSharedStatus(s ? { content: s.content, createdAt: s.createdAt } : null);
+      })
+      .catch(() => setSharedStatus(null));
+  }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
     setEditForm(prev => ({ ...prev, [field]: value }));
@@ -281,6 +300,20 @@ export default function ProfilePage() {
                       <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
                           {profile.bio}
+                        </p>
+                      </div>
+                    )}
+                    {sharedStatus && (
+                      <div className="mt-3 p-4 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700/50">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium mb-2">
+                          <Star size={18} className="fill-current" />
+                          סטטוס ששותף לפרופיל
+                        </div>
+                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                          {sharedStatus.content}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          {new Date(sharedStatus.createdAt).toLocaleDateString('he-IL')}
                         </p>
                       </div>
                     )}

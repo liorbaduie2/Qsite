@@ -1,13 +1,10 @@
 'use client';
 
-import { useAuth } from '@/app/components/AuthProvider';
 import LoginStatusMessage from '@/app/components/LoginStatusMessage';
 import Link from 'next/link';
 import { Clock } from 'lucide-react';
 
 export default function PendingPage() {
-  const { signOut } = useAuth();
-
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10" dir="rtl">
       <div className="w-full max-w-md">
@@ -31,12 +28,6 @@ export default function PendingPage() {
           />
 
           <div className="space-y-4">
-            <button
-              onClick={() => signOut()}
-              className="w-full py-3 px-4 rounded-xl border-2 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-            >
-              התנתק
-            </button>
             <Link
               href="/"
               className="block w-full py-3 px-4 rounded-xl text-center border-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"

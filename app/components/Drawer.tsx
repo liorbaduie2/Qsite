@@ -1,6 +1,6 @@
 // /app/components/Drawer.tsx
 import React from 'react';
-import { X, LucideIcon, User, LogOut, Bell, Bookmark, Award, Shield } from 'lucide-react';
+import { X, LucideIcon, User, LogOut, Bell, Bookmark, Award, Shield, Settings } from 'lucide-react';
 import Image from 'next/image';
 
 interface MenuItem {
@@ -118,8 +118,12 @@ const Drawer: React.FC<DrawerProps> = ({
                 {/* Profile Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-800 truncate">
-                      {profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'משתמש'}
+                    <h3 className="font-semibold text-gray-800 truncate min-h-[1.25rem]">
+                      {profile
+                        ? (profile.full_name || profile.username)
+                        : (
+                          <span className="inline-block w-24 h-5 rounded bg-gray-200 animate-pulse" aria-hidden />
+                        )}
                     </h3>
                     {profile?.is_moderator && (
                       <div className="relative group">
@@ -130,9 +134,6 @@ const Drawer: React.FC<DrawerProps> = ({
                       </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 truncate">
-                    @{profile?.username || user?.email?.split('@')[0] || ''}
-                  </p>
                   <div className="flex items-center gap-1 mt-1">
                     <Award size={12} className="text-yellow-500" />
                     <span className="text-xs text-gray-600">
@@ -182,6 +183,13 @@ const Drawer: React.FC<DrawerProps> = ({
                   </button>
                 );
               })}
+              <button
+                onClick={() => handleMenuClick('/settings')}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-700 hover:bg-gray-100/60"
+              >
+                <Settings size={20} />
+                <span className="font-medium">הגדרות</span>
+              </button>
             </div>
           </nav>
 
