@@ -491,8 +491,9 @@ export default function QuestionDetailPage() {
               ) : answerTree.length > 0 ? (
                 <div className="space-y-4">
                   {(() => {
+                    const q = question!;
                     function renderAnswerNode(node: Answer, isTopLevel: boolean): React.ReactNode {
-                      const isOP = node.author.id === question.author.id;
+                      const isOP = node.author.id === q.author.id;
                       return (
                         <div key={node.id} className={isTopLevel ? '' : 'mr-6 border-r-2 border-indigo-100 pr-4 mt-3'}>
                           <div
