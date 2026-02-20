@@ -30,6 +30,7 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
   const [passwordVisible, setPasswordVisible] = useState({ password: false, confirmPassword: false });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [phoneVerificationSkipped, setPhoneVerificationSkipped] = useState(false);
 
   const totalSteps = 6;
   const verificationInputsRef = useRef<(HTMLInputElement | null)[]>([]);
@@ -91,7 +92,15 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ field, value })
       });
-      const data = await response.json();
+      const text = await response.text();
+      let data: { available?: boolean; error?: string; message?: string };
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setError(response.ok ? 'שגיאה בבדיקת זמינות' : 'שגיאת שרת - נסה שוב');
+        setFieldStates(prev => ({ ...prev, [field]: { isValid: false, isInvalid: true, isValidating: false } }));
+        return false;
+      }
       if (!response.ok) {
         setError(data.error || 'שגיאה בבדיקת זמינות');
         setFieldStates(prev => ({ ...prev, [field]: { isValid: false, isInvalid: true, isValidating: false } }));
@@ -101,7 +110,7 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
       if (!data.available) {
         setError(data.message || 'הערך כבר תפוס');
       }
-      return data.available;
+      return data.available ?? false;
     } catch (error) {
       console.error('Check availability error:', error);
       setError('שגיאת רשת');
@@ -271,7 +280,15 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
       }
       const isAvailable = await checkAvailability('phone', formData.phone);
       if (!isAvailable) return false;
-      return await sendVerification(formData.phone);
+      const sent = await sendVerification(formData.phone);
+      if (!sent) {
+        setPhoneVerificationSkipped(true);
+        setSuccess('אימות SMS לא זמין כרגע. ממשיכים לשלב הבא. הטלפון יישמר ברישום.');
+        setTimeout(() => setSuccess(''), 5000);
+      } else {
+        setPhoneVerificationSkipped(false);
+      }
+      return true;
     },
     2: async () => {
       const code = formData.verificationCode.join('');
@@ -448,7 +465,11 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
       const isValid = await validators[currentStep as keyof typeof validators]();
       if (isValid) {
         if (currentStep < totalSteps) {
-          setCurrentStep(prev => prev + 1);
+          if (currentStep === 1 && phoneVerificationSkipped) {
+            setCurrentStep(3);
+          } else {
+            setCurrentStep(prev => prev + 1);
+          }
         } else {
           setFormStage('APPLICATION');
         }
