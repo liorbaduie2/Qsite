@@ -17,7 +17,8 @@ export async function updateSession(request: NextRequest) {
   // variable. Always create a new one on each request.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
+    (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
     {
@@ -48,17 +49,46 @@ export async function updateSession(request: NextRequest) {
   // with the Supabase client, your users may be randomly logged out.
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
+  const userId = user?.sub as string | undefined;
 
+  // No session: redirect to login (except for public routes)
   if (
     request.nextUrl.pathname !== "/" &&
     !user &&
     !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
+    !request.nextUrl.pathname.startsWith("/auth") &&
+    !request.nextUrl.pathname.startsWith("/api/auth")
   ) {
-    // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
+  }
+
+  // Has session: enforce approval - block access until admin approves
+  if (userId && request.nextUrl.pathname !== "/auth/pending") {
+    const allowedWithoutApproval = [
+      "/auth/login",
+      "/auth/pending",
+      "/auth/forgot-password",
+      "/auth/error",
+    ].some((p) => request.nextUrl.pathname.startsWith(p));
+    if (!allowedWithoutApproval && !request.nextUrl.pathname.startsWith("/api/")) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("approval_status")
+        .eq("id", userId)
+        .single();
+      const status = profile?.approval_status;
+      if (status && status !== "approved") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/auth/pending";
+        const redirectResponse = NextResponse.redirect(url);
+        supabaseResponse.cookies.getAll().forEach(({ name, value, options }) =>
+          redirectResponse.cookies.set(name, value, options)
+        );
+        return redirectResponse;
+      }
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

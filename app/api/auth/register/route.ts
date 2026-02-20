@@ -1,4 +1,4 @@
-// app/api/auth/register/route.ts - COMPLETE FIXED VERSION
+// app/api/auth/register/route.ts - Based on working backup 27.09.2025
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 
@@ -15,7 +15,7 @@ const calculateAge = (dateOfBirth: string): number => {
 };
 
 export async function POST(request: NextRequest) {
-  console.log('=== Complete Fixed Hebrew Registration API Called ===');
+  console.log('=== Hebrew Registration API with DOB & Gender Called ===');
 
   try {
     const supabase = getAdminClient();
@@ -164,21 +164,31 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
 
     console.log('User created successfully:', authData.user.id);
 
-    // Create or update profile (trigger may have already created it)
-    console.log('Upserting profile...');
-    const { error: profileError } = await supabase
+    // Wait for trigger to create profile (from working backup)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Check if profile was created by trigger
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .upsert(
-        {
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (!existingProfile) {
+      // Create profile manually
+      console.log('Creating profile manually...');
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
           id: authData.user.id,
-          username: username,
+          username,
           full_name: fullName,
-          phone: phone,
-          email: email,
+          phone,
+          email,
           date_of_birth: dateOfBirth,
-          gender: gender,
+          gender,
           birth_gender: gender === 'other' ? birthGender : null,
-          age: age,
+          age,
           approval_status: 'pending',
           is_verified: false,
           is_moderator: false,
@@ -187,72 +197,41 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
           answers_count: 0,
           best_answers_count: 0,
           total_views: 0,
-          behavior_score: 100.00,
-          credibility_score: 100.00,
-          theme_role: 'user',
-          status: 'active',
           phone_verified_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        },
-        { onConflict: 'id' }
-      );
+        });
 
-    if (profileError) {
-      console.error('Profile upsert failed:', profileError);
-
-      // Clean up: delete the auth user if profile creation failed
-      await supabase.auth.admin.deleteUser(authData.user.id);
-
-      return NextResponse.json({
-        error: 'שגיאה ביצירת פרופיל משתמש',
-        error_code: 'PROFILE_CREATE_ERROR',
-        details: profileError.message
-      }, { status: 500 });
-    }
-
-    console.log('Profile upserted successfully');
-
-    // Create or update user role (trigger may have already created it)
-    console.log('Upserting user role...');
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .upsert(
-        {
-          user_id: authData.user.id,
-          role: 'user',
-          role_name_hebrew: 'משתמש',
-          granted_at: new Date().toISOString(),
-          is_hidden: false,
-          max_reputation_deduction: 0,
-          temporary_permissions: {},
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'user_id' }
-      );
-
-    if (roleError) {
-      console.error('Role upsert failed but continuing:', roleError);
+      if (profileError) {
+        console.error('Manual profile creation failed:', profileError);
+        // Continue anyway - could be handled later
+      } else {
+        console.log('Profile created manually');
+      }
     } else {
-      console.log('User role upserted successfully');
-    }
-
-    // Create or update user preferences (trigger may have already created it)
-    console.log('Upserting user preferences...');
-    const { error: preferencesError } = await supabase
-      .from('user_preferences')
-      .upsert(
-        {
-          user_id: authData.user.id,
-          theme_mode: 'system',
+      // Update existing profile with new data (from working backup)
+      console.log('Profile exists, updating with new data...');
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          phone,
+          email,
+          full_name: fullName,
+          date_of_birth: dateOfBirth,
+          gender,
+          birth_gender: gender === 'other' ? birthGender : null,
+          age,
+          phone_verified_at: new Date().toISOString(),
+          approval_status: 'pending',
           updated_at: new Date().toISOString()
-        },
-        { onConflict: 'user_id' }
-      );
+        })
+        .eq('id', authData.user.id);
 
-    if (preferencesError) {
-      console.error('User preferences upsert failed but continuing:', preferencesError);
-    } else {
-      console.log('User preferences upserted successfully');
+      if (updateError) {
+        console.error('Profile update error:', updateError);
+      } else {
+        console.log('Profile updated successfully');
+      }
     }
 
     // Create user application

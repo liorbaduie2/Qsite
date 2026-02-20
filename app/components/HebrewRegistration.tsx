@@ -132,7 +132,8 @@ export default function HebrewRegistration({ onComplete }: HebrewRegistrationPro
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || 'שגיאה בשליחת קוד אימות');
+        const msg = data.details ? `${data.error}: ${data.details}` : (data.error || 'שגיאה בשליחת קוד אימות');
+        setError(msg);
         return false;
       }
       if (data.demoCode) {

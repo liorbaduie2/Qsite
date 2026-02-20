@@ -166,17 +166,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
 
         const result = await response.json();
+        const apiResult = result.data;
         const loginResult: LoginStatusResult = {
-          can_login: result.data,
-          status: result.data ? "approved" : "pending",
-          message_hebrew: result.data ? "משתמש מאושר" : "משתמש לא מאושר",
+          can_login: apiResult?.can_login ?? false,
+          status: (apiResult?.status as LoginStatusResult["status"]) ?? "error",
+          message_hebrew: apiResult?.message_hebrew ?? "שגיאה בבדיקת סטטוס המשתמש",
+          user_id: apiResult?.user_id,
         };
 
         setLoginStatus(loginResult);
         return loginResult;
       } catch {
         const errorResult: LoginStatusResult = {
-          can_login: true, // Allow login by default if API fails
+          can_login: false,
           status: "error",
           message_hebrew: "שגיאה בבדיקת סטטוס המשתמש",
         };

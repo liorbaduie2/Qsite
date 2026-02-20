@@ -1,58 +1,61 @@
-import twilio from 'twilio';
+import twilio, { Twilio } from 'twilio';
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+let _client: Twilio | null = null;
 
-if (!accountSid || !authToken || !fromNumber) {
-  console.error('Missing Twilio configuration:', {
-    accountSid: accountSid ? 'Present' : 'Missing',
-    authToken: authToken ? 'Present' : 'Missing',
-    fromNumber: fromNumber ? 'Present' : 'Missing'
-  });
+function getClient(): Twilio | null {
+  if (_client) return _client;
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!accountSid || !authToken) {
+    console.error('Missing Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)');
+    return null;
+  }
+  _client = twilio(accountSid, authToken);
+  return _client;
 }
 
-const client = twilio(accountSid!, authToken!);
-
-export const sendSMS = async (to: string, body: string): Promise<{ success: boolean; error?: string }> => {
+export async function sendSMS(
+  to: string,
+  body: string
+): Promise<{ success: boolean; error?: string }> {
+  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+  if (!fromNumber) {
+    console.error('Missing TWILIO_PHONE_NUMBER');
+    return { success: false, error: 'שגיאת הגדרת שרת' };
+  }
+  const client = getClient();
+  if (!client) {
+    return { success: false, error: 'שגיאת הגדרת שרת' };
+  }
   try {
-    // Format Israeli phone number for international use
     let formattedPhone = to;
     if (to.startsWith('0')) {
       formattedPhone = '+972' + to.slice(1);
     }
-    
-    // Remove any dashes or spaces
     formattedPhone = formattedPhone.replace(/[-\s]/g, '');
-    
-    console.log(`Sending SMS to: ${formattedPhone}`);
-    
+
+    console.log('Sending SMS to:', formattedPhone);
+
     const message = await client.messages.create({
       body,
       from: fromNumber,
       to: formattedPhone,
     });
 
-    console.log(`SMS sent successfully. SID: ${message.sid}, Status: ${message.status}`);
+    console.log('SMS sent. SID:', message.sid);
     return { success: true };
-    
   } catch (error: unknown) {
-    console.error('SMS sending failed:', error);
-    
-    // Handle specific Twilio errors
+    const err = error as { code?: number; message?: string };
+    console.error('SMS failed:', err.code, err.message);
+
     let errorMessage = 'שגיאה בשליחת SMS';
-    const errCode = (error as { code?: number })?.code;
-    
-    if (errCode === 21211) {
-      errorMessage = 'מספר טלפון לא חוקי';
-    } else if (errCode === 21614) {
-      errorMessage = 'מספר טלפון לא חוקי למדינה';
-    } else if (errCode === 21610) {
-      errorMessage = 'הודעה נחסמה - מספר לא קיים';
-    } else if (errCode === 30007) {
-      errorMessage = 'הודעה לא נשלחה - נסה שוב';
-    }
-    
+    if (err.code === 21211) errorMessage = 'מספר טלפון לא חוקי';
+    else if (err.code === 21614) errorMessage = 'מספר טלפון לא חוקי למדינה';
+    else if (err.code === 21610)
+      errorMessage = 'חשבון Trial: יש לאמת את המספר ב-Twilio Console';
+    else if (err.code === 30007) errorMessage = 'הודעה לא נשלחה - נסה שוב';
+    else if (err.message) errorMessage = err.message;
+
     return { success: false, error: errorMessage };
   }
-};
+}
