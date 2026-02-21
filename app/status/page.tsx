@@ -9,6 +9,7 @@ import { useAuth } from '../components/AuthProvider';
 import AuthModal from '../components/AuthModal';
 import Drawer from '../components/Drawer';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 
 interface FeedItem {
   id: string;
@@ -127,6 +128,42 @@ export default function StatusPage() {
     fetchMe();
   }, [fetchMe]);
 
+  // Real-time: subscribe to user_statuses updates so star count syncs for all viewers
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('status-stars-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_statuses',
+        },
+        (payload) => {
+          const newRow = payload.new as { id?: string; stars_count?: number };
+          if (!newRow?.id || newRow.stars_count === undefined) return;
+          const id = newRow.id;
+          const starsCount = Number(newRow.stars_count);
+          setFeed((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, starsCount } : s))
+          );
+          setMyActive((prev) => (prev?.id === id ? { ...prev, starsCount } : prev));
+          setMyHistory((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, starsCount } : s))
+          );
+          setAdminStarsModal((prev) =>
+            prev?.statusId === id ? { ...prev, starsCount } : prev
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -181,9 +218,20 @@ export default function StatusPage() {
     setStarringId(statusId);
     try {
       const res = await fetch(`/api/status/${statusId}/star`, { method: 'POST' });
+      const data = await res.json();
       if (res.ok) {
-        fetchFeed();
-        fetchMe();
+        const starred = data.starred === true;
+        const delta = starred ? 1 : -1;
+        setFeed((prev) =>
+          prev.map((s) =>
+            s.id === statusId ? { ...s, starredByMe: starred, starsCount: Math.max(0, s.starsCount + delta) } : s
+          )
+        );
+        setMyActive((prev) => (prev?.id === statusId ? { ...prev, starsCount: Math.max(0, prev.starsCount + delta) } : prev));
+        setMyHistory((prev) =>
+          prev.map((s) => (s.id === statusId ? { ...s, starsCount: Math.max(0, s.starsCount + delta) } : s))
+        );
+        setAdminStarsModal((prev) => (prev?.statusId === statusId ? { ...prev, starsCount: Math.max(0, prev.starsCount + delta) } : prev));
       }
     } finally {
       setStarringId(null);
