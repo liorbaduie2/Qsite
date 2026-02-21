@@ -26,6 +26,7 @@ type Conversation = {
   otherUser: { id: string; username: string; full_name: string | null; avatar_url: string | null };
   lastMessage: { content: string; created_at: string; sender_id: string } | null;
   created_at: string;
+  unread_count: number;
 };
 
 function timeAgo(dateStr: string): string {
@@ -59,7 +60,6 @@ export default function ChatPage() {
     { label: 'דיוני', icon: MessageSquare, href: '/discussions' },
     { label: 'שאלות', icon: HelpCircle, href: '/questions' },
     { label: 'סיפורי', icon: BookOpen, href: '/stories' },
-    { label: 'צ\'אט', icon: MessageSquare, href: '/chat', active: true },
   ];
 
   const fetchData = useCallback(async () => {
@@ -235,9 +235,16 @@ export default function ChatPage() {
                             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{c.lastMessage.content}</p>
                           )}
                         </div>
-                        {c.lastMessage && (
-                          <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{timeAgo(c.lastMessage.created_at)}</span>
-                        )}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {c.lastMessage && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">{timeAgo(c.lastMessage.created_at)}</span>
+                          )}
+                          {(c.unread_count ?? 0) > 0 && (
+                            <span className="bg-[#6633cc] text-white text-xs min-w-[1.25rem] h-5 px-2 flex items-center justify-center rounded-full font-medium">
+                              {c.unread_count > 99 ? '99+' : c.unread_count}
+                            </span>
+                          )}
+                        </div>
                       </Link>
                     </li>
                   ))}

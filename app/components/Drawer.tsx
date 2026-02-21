@@ -1,7 +1,10 @@
 // /app/components/Drawer.tsx
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, LucideIcon, User, LogOut, Bell, Bookmark, Award, Shield, Settings, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 
 interface MenuItem {
   label: string;
@@ -44,6 +47,47 @@ const Drawer: React.FC<DrawerProps> = ({
   profile,
   onSignOut 
 }) => {
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch('/api/chat/unread-count');
+      const data = await res.json();
+      if (res.ok && typeof data.count === 'number') setChatUnreadCount(data.count);
+    } catch {
+      // ignore
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setChatUnreadCount(0);
+      return;
+    }
+    fetchUnreadCount();
+  }, [user?.id, fetchUnreadCount]);
+
+  useEffect(() => {
+    if (user?.id && isDrawerOpen) fetchUnreadCount();
+  }, [user?.id, isDrawerOpen, fetchUnreadCount]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel('drawer-chat-unread')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        () => { fetchUnreadCount(); }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchUnreadCount]);
+
   const handleMenuClick = (href: string) => {
     setIsDrawerOpen(false);
     // Use Next.js navigation instead of window.location
@@ -190,6 +234,11 @@ const Drawer: React.FC<DrawerProps> = ({
               >
                 <MessageCircle size={20} />
                 <span className="font-medium">צ'אט</span>
+                {chatUnreadCount > 0 && (
+                  <span className="mr-auto bg-[#6633cc] text-white text-xs min-w-[1.25rem] h-5 px-2 flex items-center justify-center rounded-full font-medium">
+                    {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => handleMenuClick('/settings')}

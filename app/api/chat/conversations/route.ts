@@ -29,6 +29,7 @@ export async function GET() {
       otherUser: { id: string; username: string; full_name: string | null; avatar_url: string | null };
       lastMessage: { content: string; created_at: string; sender_id: string } | null;
       created_at: string;
+      unread_count: number;
     }> = [];
 
     for (const c of convs || []) {
@@ -47,11 +48,38 @@ export async function GET() {
         .limit(1)
         .maybeSingle();
 
+      const { data: readState } = await supabase
+        .from('chat_conversation_read_state')
+        .select('last_read_at')
+        .eq('user_id', user.id)
+        .eq('conversation_id', c.id)
+        .maybeSingle();
+
+      const lastReadAt = readState?.last_read_at ?? null;
+      let unread_count = 0;
+      if (lastReadAt) {
+        const { count } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', c.id)
+          .neq('sender_id', user.id)
+          .gt('created_at', lastReadAt);
+        unread_count = count ?? 0;
+      } else {
+        const { count } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', c.id)
+          .neq('sender_id', user.id);
+        unread_count = count ?? 0;
+      }
+
       list.push({
         id: c.id,
         otherUser: profile || { id: otherId, username: '', full_name: null, avatar_url: null },
         lastMessage: lastMsg ? { content: lastMsg.content, created_at: lastMsg.created_at, sender_id: lastMsg.sender_id } : null,
         created_at: c.created_at,
+        unread_count,
       });
     }
 

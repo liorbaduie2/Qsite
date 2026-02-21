@@ -84,6 +84,14 @@ export default function ChatThreadPage() {
     );
   }, [conversationId, user, router, fetchConversation, fetchMessages]);
 
+  // Mark conversation as read when loaded (user is participant)
+  useEffect(() => {
+    if (!conversationId || !user || !conversation || error) return;
+    fetch(`/api/chat/conversations/${conversationId}/read`, {
+      method: "POST",
+    }).catch(() => {});
+  }, [conversationId, user, conversation, error]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -216,38 +224,44 @@ export default function ChatThreadPage() {
       className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 flex flex-col"
       dir="rtl"
     >
-      <header className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-700/50">
-        <div
-          className="w-full flex justify-between items-center py-4 gap-20 ps-0 pe-0"
-          dir="rtl"
-        >
-          <Link
-            href="/chat"
-            className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex-shrink-0 py-2 pl-5 pr-7"
-          >
-            <ArrowRight size={20} /> חזרה
-          </Link>
-          <div className="flex items-center gap-3 min-w-0 flex-1 justify-end max-w-2xl mx-auto">
+      <header
+        className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-700/50 px-4"
+        dir="rtl"
+      >
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-4 py-2">
+          {/* Right: back button (start in RTL) */}
+          <div className="flex-1 min-w-0 flex justify-start">
+            <Link
+              href="/chat"
+              className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 py-2 ms-[1rem]"
+            >
+              <ArrowRight size={20} /> חזרה
+            </Link>
+          </div>
+          {/* Center: avatar + name (shifted left) */}
+          <div className="flex items-center justify-center gap-2 min-w-0 flex-shrink-0 ms-[35rem]">
             {otherUser.avatar_url ? (
               <Image
                 src={otherUser.avatar_url}
                 alt=""
                 width={36}
                 height={36}
-                className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow flex-shrink-0"
+                className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow"
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-gray-700 shadow">
+              <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center border-2 border-white dark:border-gray-700 shadow">
                 <User
                   size={18}
                   className="text-indigo-700 dark:text-indigo-300"
                 />
               </div>
             )}
-            <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
+            <span className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate max-w-[140px] sm:max-w-[200px]">
               {otherUser.full_name || otherUser.username || "צ'אט"}
             </span>
           </div>
+          {/* Left: spacer so center stays centered (end in RTL) */}
+          <div className="flex-1 min-w-0 flex justify-end" aria-hidden />
         </div>
       </header>
 
