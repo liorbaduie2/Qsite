@@ -19,7 +19,7 @@ export async function PATCH(
 
     const { data: status, error: fetchErr } = await supabase
       .from('user_statuses')
-      .select('id, user_id')
+      .select('id, user_id, stars_count')
       .eq('id', statusId)
       .single();
 
@@ -32,6 +32,18 @@ export async function PATCH(
         .from('user_statuses')
         .update({ shared_to_profile: false })
         .eq('user_id', user.id);
+    } else {
+      const { data: myStatuses } = await supabase
+        .from('user_statuses')
+        .select('id, stars_count')
+        .eq('user_id', user.id);
+      const maxStars = Math.max(0, ...(myStatuses || []).map((s: { stars_count?: number }) => s.stars_count || 0));
+      if (status.stars_count != null && status.stars_count >= maxStars && maxStars > 0) {
+        await supabase
+          .from('user_statuses')
+          .update({ is_legendary: true })
+          .eq('id', statusId);
+      }
     }
 
     await supabase

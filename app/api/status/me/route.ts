@@ -16,18 +16,18 @@ export async function GET() {
 
     const { data: activeRow } = await supabase
       .from('user_statuses')
-      .select('id, content, stars_count, shared_to_profile, created_at')
+      .select('id, content, stars_count, shared_to_profile, is_legendary, created_at')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .maybeSingle();
 
     const { data: historyRows } = await supabase
       .from('user_statuses')
-      .select('id, content, stars_count, shared_to_profile, created_at')
+      .select('id, content, stars_count, shared_to_profile, is_legendary, created_at')
       .eq('user_id', user.id)
       .eq('is_active', false)
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(20);
 
     const latest = activeRow || (historyRows && historyRows[0]) || null;
     const lastPostedAt = latest ? new Date(latest.created_at).getTime() : null;
@@ -41,6 +41,7 @@ export async function GET() {
       content: activeRow.content,
       starsCount: activeRow.stars_count || 0,
       sharedToProfile: activeRow.shared_to_profile || false,
+      isLegendary: activeRow.is_legendary || false,
       createdAt: activeRow.created_at,
     } : null;
 
@@ -49,6 +50,7 @@ export async function GET() {
       content: r.content,
       starsCount: r.stars_count || 0,
       sharedToProfile: r.shared_to_profile || false,
+      isLegendary: r.is_legendary || false,
       createdAt: r.created_at,
     }));
 

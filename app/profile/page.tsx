@@ -94,7 +94,8 @@ export default function ProfilePage() {
     joinedDate: '2024-01-15'
   });
 
-  const [sharedStatus, setSharedStatus] = useState<{ content: string; createdAt: string } | null>(null);
+  const [sharedStatus, setSharedStatus] = useState<{ id: string; content: string; createdAt: string } | null>(null);
+  const [removingShared, setRemovingShared] = useState(false);
 
   const [userQuestions] = useState<Question[]>([
     {
@@ -157,10 +158,25 @@ export default function ProfilePage() {
         const active = data.active?.sharedToProfile ? data.active : null;
         const fromHistory = (data.history || []).find((s: { sharedToProfile: boolean }) => s.sharedToProfile);
         const s = active || fromHistory;
-        setSharedStatus(s ? { content: s.content, createdAt: s.createdAt } : null);
+        setSharedStatus(s ? { id: s.id, content: s.content, createdAt: s.createdAt } : null);
       })
       .catch(() => setSharedStatus(null));
   }, [user]);
+
+  const removeSharedFromProfile = async () => {
+    if (!sharedStatus) return;
+    setRemovingShared(true);
+    try {
+      const res = await fetch(`/api/status/${sharedStatus.id}/share`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ share: false }),
+      });
+      if (res.ok) setSharedStatus(null);
+    } finally {
+      setRemovingShared(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setEditForm(prev => ({ ...prev, [field]: value }));
@@ -305,9 +321,19 @@ export default function ProfilePage() {
                     )}
                     {sharedStatus && (
                       <div className="mt-3 p-4 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700/50">
-                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium mb-2">
-                          <Star size={18} className="fill-current" />
-                          סטטוס ששותף לפרופיל
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium">
+                            <Star size={18} className="fill-current" />
+                            מוצג בפרופיל (Featured)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={removeSharedFromProfile}
+                            disabled={removingShared}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-50"
+                          >
+                            {removingShared ? 'מסיר...' : 'הסר מפרופיל'}
+                          </button>
                         </div>
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
                           {sharedStatus.content}

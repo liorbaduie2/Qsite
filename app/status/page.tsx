@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Menu, Users, MessageSquare, HelpCircle, BookOpen, Home, Send, Star, User, LogIn,
-  Clock, Share2, CheckCircle
+  Clock, Share2, CheckCircle, History, X, Shield
 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import AuthModal from '../components/AuthModal';
@@ -24,6 +24,7 @@ interface MyStatusItem {
   content: string;
   starsCount: number;
   sharedToProfile: boolean;
+  isLegendary?: boolean;
   createdAt: string;
 }
 
@@ -64,6 +65,9 @@ export default function StatusPage() {
   const [postError, setPostError] = useState<string | null>(null);
   const [starringId, setStarringId] = useState<string | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [adminStarsModal, setAdminStarsModal] = useState<{ statusId: string; users: { id: string; username: string; fullName?: string | null; avatar_url?: string | null; starredAt: string }[]; starsCount: number } | null>(null);
+  const [adminStarsLoading, setAdminStarsLoading] = useState(false);
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
 
@@ -177,29 +181,25 @@ export default function StatusPage() {
     setStarringId(statusId);
     try {
       const res = await fetch(`/api/status/${statusId}/star`, { method: 'POST' });
-      const data = await res.json();
       if (res.ok) {
-        setFeed((prev) =>
-          prev.map((s) =>
-            s.id === statusId
-              ? {
-                  ...s,
-                  starredByMe: data.starred,
-                  starsCount: s.starsCount + (data.starred ? 1 : -1),
-                }
-              : s
-          )
-        );
-        if (myActive?.id === statusId)
-          setMyActive((a) => (a ? { ...a, starsCount: a.starsCount + (data.starred ? 1 : -1) } : null));
-        setMyHistory((h) =>
-          h.map((s) =>
-            s.id === statusId ? { ...s, starsCount: s.starsCount + (data.starred ? 1 : -1) } : s
-          )
-        );
+        fetchFeed();
+        fetchMe();
       }
     } finally {
       setStarringId(null);
+    }
+  };
+
+  const openAdminStars = async (statusId: string) => {
+    if (!profile?.is_moderator) return;
+    setAdminStarsLoading(true);
+    setAdminStarsModal(null);
+    try {
+      const res = await fetch(`/api/admin/status/${statusId}/stars`);
+      const data = await res.json();
+      if (res.ok) setAdminStarsModal({ statusId, users: data.users || [], starsCount: data.starsCount ?? 0 });
+    } finally {
+      setAdminStarsLoading(false);
     }
   };
 
@@ -340,7 +340,7 @@ export default function StatusPage() {
                       )}
                       <span className="font-medium text-gray-700">{item.author.fullName || item.author.username}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-500">{timeAgo(item.createdAt)}</span>
                       <button
                         type="button"
@@ -353,6 +353,18 @@ export default function StatusPage() {
                         <Star size={16} className={item.starredByMe ? 'fill-current' : ''} />
                         {item.starsCount}
                       </button>
+                      {profile?.is_moderator && (
+                        <button
+                          type="button"
+                          onClick={() => openAdminStars(item.id)}
+                          disabled={adminStarsLoading}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50"
+                          title="צפה במי סימן בכוכב"
+                        >
+                          <Shield size={14} />
+                          מי סימן?
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -362,14 +374,40 @@ export default function StatusPage() {
         </div>
 
         {user && (myActive || myHistory.length > 0) && (
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">הסטטוסים שלי (היסטוריה)</h2>
-            <div className="space-y-3">
+          <div className="mt-8">
+            <button
+              type="button"
+              onClick={() => setHistoryModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-3 bg-white/80 hover:bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-all font-medium text-gray-800"
+            >
+              <History size={20} />
+              היסטוריית סטטוסים ({[myActive, ...myHistory].filter(Boolean).length})
+            </button>
+          </div>
+        )}
+      </main>
+
+      {/* History modal */}
+      {historyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setHistoryModalOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-l from-indigo-50 to-white">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <History size={22} />
+                היסטוריית הסטטוסים שלי
+              </h3>
+              <button onClick={() => setHistoryModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {myActive && (
-                <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+                <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/60 p-4">
+                  <span className="text-xs font-semibold text-indigo-700 mb-2 block">פעיל בפיד</span>
                   <p className="text-gray-800 whitespace-pre-wrap mb-3">{myActive.content}</p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs text-gray-500">{timeAgo(myActive.createdAt)} • פעיל בפיד</span>
+                    <span className="text-xs text-gray-500">{timeAgo(myActive.createdAt)}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-600">{myActive.starsCount} כוכבים</span>
                       <button
@@ -388,7 +426,12 @@ export default function StatusPage() {
                 </div>
               )}
               {myHistory.map((s) => (
-                <div key={s.id} className="rounded-xl border border-gray-200 bg-white/60 p-4">
+                <div key={s.id} className={`rounded-xl border p-4 ${s.isLegendary ? 'border-amber-300 bg-amber-50/60' : 'border-gray-200 bg-gray-50/60'}`}>
+                  {s.isLegendary && (
+                    <span className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1">
+                      <Star size={12} className="fill-current" /> אגדה
+                    </span>
+                  )}
                   <p className="text-gray-700 whitespace-pre-wrap text-sm mb-2">{s.content}</p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs text-gray-500">{timeAgo(s.createdAt)}</span>
@@ -411,8 +454,48 @@ export default function StatusPage() {
               ))}
             </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
+
+      {/* Admin: who starred modal */}
+      {adminStarsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setAdminStarsModal(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-indigo-50">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Shield size={20} />
+                מי סימן בכוכב ({adminStarsModal.starsCount})
+              </h3>
+              <button onClick={() => setAdminStarsModal(null)} className="p-2 hover:bg-white/60 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {adminStarsModal.users.length === 0 ? (
+                <p className="text-gray-500 text-sm">עדיין אין כוכבים.</p>
+              ) : (
+                adminStarsModal.users.map((u) => (
+                  <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                    {u.avatar_url ? (
+                      <Image src={u.avatar_url} alt="" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-indigo-200 flex items-center justify-center">
+                        <User size={18} className="text-indigo-700" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-gray-800">{u.fullName || u.username}</p>
+                      <p className="text-xs text-gray-500">@{u.username}</p>
+                    </div>
+                    <span className="mr-auto text-xs text-gray-400">{timeAgo(u.starredAt)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {isAuthModalOpen && (
         <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />

@@ -119,14 +119,15 @@ export async function POST(request: NextRequest) {
 
     const { data: history } = await supabase
       .from('user_statuses')
-      .select('id, created_at')
+      .select('id, created_at, is_legendary')
       .eq('user_id', user.id)
       .eq('is_active', false)
       .order('created_at', { ascending: true });
 
     const toKeep = 5;
-    if (history && history.length >= toKeep) {
-      const toDelete = history.slice(0, history.length - toKeep);
+    const nonLegendary = (history || []).filter((r: { is_legendary?: boolean }) => !r.is_legendary);
+    if (nonLegendary.length > toKeep) {
+      const toDelete = nonLegendary.slice(0, nonLegendary.length - toKeep);
       for (const row of toDelete) {
         await supabase.from('user_statuses').delete().eq('id', row.id);
       }
