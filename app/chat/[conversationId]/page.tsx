@@ -1,15 +1,12 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import {
-  MessageSquare, HelpCircle, BookOpen, Home, Users, User, Send, ArrowRight,
-} from 'lucide-react';
-import { useAuth } from '../../components/AuthProvider';
-import Drawer from '../../components/Drawer';
-import NavHeader from '../../components/NavHeader';
-import Image from 'next/image';
-import Link from 'next/link';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { User, Send, ArrowRight } from "lucide-react";
+import { useAuth } from "../../components/AuthProvider";
+import Image from "next/image";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 type Message = {
   id: string;
@@ -29,35 +26,29 @@ type OtherUser = {
 export default function ChatThreadPage() {
   const params = useParams();
   const router = useRouter();
-  const conversationId = typeof params?.conversationId === 'string' ? params.conversationId : '';
+  const conversationId =
+    typeof params?.conversationId === "string" ? params.conversationId : "";
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [conversation, setConversation] = useState<{ id: string; created_at: string } | null>(null);
+  const [conversation, setConversation] = useState<{
+    id: string;
+    created_at: string;
+  } | null>(null);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const { user, profile, loading: authLoading, signOut } = useAuth();
-
-  const menuItems = [
-    { label: 'ראשי', icon: Home, href: '/' },
-    { label: 'סטטוסי', icon: Users, href: '/status' },
-    { label: 'דיוני', icon: MessageSquare, href: '/discussions' },
-    { label: 'שאלות', icon: HelpCircle, href: '/questions' },
-    { label: 'סיפורי', icon: BookOpen, href: '/stories' },
-    { label: 'צ\'אט', icon: MessageSquare, href: '/chat', active: true },
-  ];
+  const { user, loading: authLoading } = useAuth();
 
   const fetchConversation = useCallback(async () => {
     if (!conversationId || !user) return;
     const res = await fetch(`/api/chat/conversations/${conversationId}`);
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error || 'שגיאה');
+      setError(data.error || "שגיאה");
       setConversation(null);
       setOtherUser(null);
       return;
@@ -69,7 +60,9 @@ export default function ChatThreadPage() {
 
   const fetchMessages = useCallback(async () => {
     if (!conversationId || !user) return;
-    const res = await fetch(`/api/chat/conversations/${conversationId}/messages?limit=100`);
+    const res = await fetch(
+      `/api/chat/conversations/${conversationId}/messages?limit=100`,
+    );
     const data = await res.json();
     if (res.ok) setMessages(data.messages || []);
   }, [conversationId, user]);
@@ -77,21 +70,68 @@ export default function ChatThreadPage() {
   useEffect(() => {
     if (!conversationId) {
       setLoading(false);
-      setError('שיחה לא נמצאה');
+      setError("שיחה לא נמצאה");
       return;
     }
     if (!user) {
       setLoading(false);
-      router.replace('/chat');
+      router.replace("/chat");
       return;
     }
     setLoading(true);
-    Promise.all([fetchConversation(), fetchMessages()]).finally(() => setLoading(false));
+    Promise.all([fetchConversation(), fetchMessages()]).finally(() =>
+      setLoading(false),
+    );
   }, [conversationId, user, router, fetchConversation, fetchMessages]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Real-time: subscribe to new messages in this conversation
+  useEffect(() => {
+    if (!conversationId || !user) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`chat-messages:${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            id: string;
+            conversation_id: string;
+            sender_id: string;
+            content: string;
+            created_at: string;
+          };
+          if (!row?.id) return;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === row.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: row.id,
+                conversation_id: row.conversation_id,
+                sender_id: row.sender_id,
+                content: row.content,
+                created_at: row.created_at,
+              },
+            ];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, user]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,15 +139,18 @@ export default function ChatThreadPage() {
     if (!text || !conversationId || !user || sending) return;
     setSending(true);
     try {
-      const res = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: text }),
-      });
+      const res = await fetch(
+        `/api/chat/conversations/${conversationId}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: text }),
+        },
+      );
       const data = await res.json();
       if (res.ok && data.message) {
         setMessages((prev) => [...prev, data.message]);
-        setContent('');
+        setContent("");
       }
     } finally {
       setSending(false);
@@ -116,25 +159,34 @@ export default function ChatThreadPage() {
 
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString("he-IL", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center" dir="rtl">
+      <div
+        className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center"
+        dir="rtl"
+      >
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400" />
       </div>
     );
   }
 
   if (!user) {
-    router.replace('/chat');
+    router.replace("/chat");
     return null;
   }
 
   if (loading && !otherUser) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center" dir="rtl">
+      <div
+        className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center"
+        dir="rtl"
+      >
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400" />
       </div>
     );
@@ -142,9 +194,17 @@ export default function ChatThreadPage() {
 
   if (error || !otherUser) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-4 px-4" dir="rtl">
-        <p className="text-gray-600 dark:text-gray-400">{error || 'שיחה לא נמצאה'}</p>
-        <Link href="/chat" className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:underline">
+      <div
+        className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-4 px-4"
+        dir="rtl"
+      >
+        <p className="text-gray-600 dark:text-gray-400">
+          {error || "שיחה לא נמצאה"}
+        </p>
+        <Link
+          href="/chat"
+          className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:underline"
+        >
           <ArrowRight size={18} /> חזרה לצ'אט
         </Link>
       </div>
@@ -152,58 +212,70 @@ export default function ChatThreadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 flex flex-col" dir="rtl">
-      <NavHeader
-        title={otherUser.full_name || otherUser.username || 'צ\'אט'}
-        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        rightContent={
-          <Link href="/chat" className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+    <div
+      className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 flex flex-col"
+      dir="rtl"
+    >
+      <header className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-700/50">
+        <div
+          className="w-full flex justify-between items-center py-4 gap-20 ps-0 pe-0"
+          dir="rtl"
+        >
+          <Link
+            href="/chat"
+            className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex-shrink-0 py-2 pl-5 pr-7"
+          >
             <ArrowRight size={20} /> חזרה
           </Link>
-        }
-      />
-
-      <Drawer isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} menuItems={menuItems} user={user} profile={profile} onSignOut={signOut} />
-
-      <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-3 px-4 py-3 bg-white/80 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-700">
-          <Link href={`/profile/${encodeURIComponent(otherUser.username)}`} className="flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1 justify-end max-w-2xl mx-auto">
             {otherUser.avatar_url ? (
-              <Image src={otherUser.avatar_url} alt="" width={40} height={40} className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600" />
+              <Image
+                src={otherUser.avatar_url}
+                alt=""
+                width={36}
+                height={36}
+                className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow flex-shrink-0"
+              />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center">
-                <User size={20} className="text-indigo-700 dark:text-indigo-300" />
+              <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-gray-700 shadow">
+                <User
+                  size={18}
+                  className="text-indigo-700 dark:text-indigo-300"
+                />
               </div>
             )}
-          </Link>
-          <div className="min-w-0">
-            <Link href={`/profile/${encodeURIComponent(otherUser.username)}`} className="font-medium text-gray-800 dark:text-gray-100 hover:underline block truncate">
-              {otherUser.full_name || otherUser.username}
-            </Link>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">@{otherUser.username}</p>
+            <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
+              {otherUser.full_name || otherUser.username || "צ'אט"}
+            </span>
           </div>
         </div>
+      </header>
 
+      <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full">
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-8">אין הודעות עדיין. התחל את השיחה.</p>
+            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+              אין הודעות עדיין. התחל את השיחה.
+            </p>
           )}
           {messages.map((m) => {
             const isMe = m.sender_id === user.id;
             return (
               <div
                 key={m.id}
-                className={`flex ${isMe ? 'justify-start' : 'justify-end'}`}
+                className={`flex ${isMe ? "justify-start" : "justify-end"}`}
               >
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                     isMe
-                      ? 'bg-indigo-600 text-white rounded-br-md'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-md'
+                      ? "bg-indigo-600 text-white rounded-br-md"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-md"
                   }`}
                 >
                   <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                  <p className={`text-xs mt-1 ${isMe ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <p
+                    className={`text-xs mt-1 ${isMe ? "text-indigo-200" : "text-gray-500 dark:text-gray-400"}`}
+                  >
                     {formatTime(m.created_at)}
                   </p>
                 </div>
@@ -213,7 +285,10 @@ export default function ChatThreadPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSend} className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/70">
+        <form
+          onSubmit={handleSend}
+          className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/70"
+        >
           <div className="flex gap-2">
             <input
               type="text"

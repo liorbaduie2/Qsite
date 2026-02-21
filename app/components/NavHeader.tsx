@@ -8,6 +8,8 @@ interface NavHeaderProps {
   onMenuClick: () => void;
   rightContent?: React.ReactNode;
   topContent?: React.ReactNode;
+  /** When provided, rendered in place of the title string (e.g. avatar + name) */
+  titleContent?: React.ReactNode;
   wide?: boolean;
 }
 
@@ -15,7 +17,7 @@ interface NavHeaderProps {
  * Shared navigation header matching the Status page design.
  * Use across all pages for consistent "תפריט ניווט" experience.
  */
-export default function NavHeader({ title, onMenuClick, rightContent, topContent, wide }: NavHeaderProps) {
+export default function NavHeader({ title, onMenuClick, rightContent, topContent, titleContent, wide }: NavHeaderProps) {
   return (
     <header className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl shadow-xl border-b border-gray-200/20 dark:border-gray-700/50">
       {topContent}
@@ -30,9 +32,15 @@ export default function NavHeader({ title, onMenuClick, rightContent, topContent
             >
               <Menu size={20} />
             </button>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              {title}
-            </h1>
+            {titleContent != null ? (
+              <div className="flex items-center gap-3 min-w-0">
+                {titleContent}
+              </div>
+            ) : (
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                {title}
+              </h1>
+            )}
           </div>
           {rightContent && <div className="flex items-center gap-4">{rightContent}</div>}
         </div>
