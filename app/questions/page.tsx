@@ -13,6 +13,7 @@ import NavHeader from '../components/NavHeader';
 import NewQuestionModal from '../components/NewQuestionModal';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Question {
   id: string;
@@ -59,6 +60,7 @@ const QuestionsPage = () => {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const { user, profile, loading, signOut } = useAuth();
+  const router = useRouter();
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -240,10 +242,13 @@ const QuestionsPage = () => {
             </div>
           ) : questions.length > 0 ? (
             questions.map((question) => (
-              <Link
+              <div
                 key={question.id}
-                href={`/questions/${question.id}`}
-                className="block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-5 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group"
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/questions/${question.id}`)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/questions/${question.id}`); } }}
+                className="block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-5 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group cursor-pointer"
               >
                 <div className="flex gap-5 items-center">
                   {/* Vote count */}
@@ -334,7 +339,7 @@ const QuestionsPage = () => {
                     <span className="text-xs text-gray-400 dark:text-gray-500 hidden md:inline">{timeAgo(question.createdAt)}</span>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))
           ) : (
             <div className="text-center py-12">

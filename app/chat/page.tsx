@@ -1,0 +1,256 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  MessageSquare, HelpCircle, BookOpen, Home, Users, User, LogIn,
+  CheckCircle, X, Shield, Settings
+} from 'lucide-react';
+import { useAuth } from '../components/AuthProvider';
+import AuthModal from '../components/AuthModal';
+import Drawer from '../components/Drawer';
+import NavHeader from '../components/NavHeader';
+import Image from 'next/image';
+import Link from 'next/link';
+
+type IncomingRequest = {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  status: string;
+  created_at: string;
+  sender: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+};
+
+type Conversation = {
+  id: string;
+  otherUser: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+  lastMessage: { content: string; created_at: string; sender_id: string } | null;
+  created_at: string;
+};
+
+function timeAgo(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffMins < 1) return 'הרגע';
+  if (diffMins < 60) return `לפני ${diffMins} דקות`;
+  if (diffHours < 24) return `לפני ${diffHours} שעות`;
+  if (diffDays < 30) return `לפני ${diffDays} ימים`;
+  return d.toLocaleDateString('he-IL');
+}
+
+export default function ChatPage() {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [incoming, setIncoming] = useState<IncomingRequest[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+
+  const menuItems = [
+    { label: 'ראשי', icon: Home, href: '/' },
+    { label: 'סטטוסי', icon: Users, href: '/status' },
+    { label: 'דיוני', icon: MessageSquare, href: '/discussions' },
+    { label: 'שאלות', icon: HelpCircle, href: '/questions' },
+    { label: 'סיפורי', icon: BookOpen, href: '/stories' },
+    { label: 'צ\'אט', icon: MessageSquare, href: '/chat', active: true },
+  ];
+
+  const fetchData = useCallback(async () => {
+    if (!user) {
+      setIncoming([]);
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [reqRes, convRes] = await Promise.all([
+        fetch('/api/chat/requests'),
+        fetch('/api/chat/conversations'),
+      ]);
+      const reqData = await reqRes.json();
+      const convData = await convRes.json();
+      if (reqRes.ok) setIncoming(reqData.incoming || []);
+      if (convRes.ok) setConversations(convData.conversations || []);
+    } catch {
+      setIncoming([]);
+      setConversations([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleRespond = async (requestId: string, action: 'accept' | 'decline' | 'block') => {
+    setRespondingId(requestId);
+    try {
+      const res = await fetch(`/api/chat/requests/${requestId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (res.ok) await fetchData();
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center" dir="rtl">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100" dir="rtl">
+      <NavHeader
+        title="צ'אט"
+        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+        rightContent={
+          !user && (
+            <button
+              onClick={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              <LogIn size={16} /> התחברות
+            </button>
+          )
+        }
+      />
+
+      <Drawer isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} menuItems={menuItems} user={user} profile={profile} onSignOut={signOut} />
+
+      <main className="max-w-2xl mx-auto px-4 py-8">
+        {!user ? (
+          <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+            <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
+            <p>התחבר כדי לראות בקשות צ\'אט ושיחות</p>
+            <button
+              onClick={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }}
+              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              התחברות
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 dark:border-indigo-400" />
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <section className="bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+              <h2 className="px-6 py-4 text-lg font-bold text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700">
+                בקשות ממתינות
+              </h2>
+              {incoming.length === 0 ? (
+                <p className="px-6 py-6 text-gray-500 dark:text-gray-400 text-center">אין בקשות חדשות</p>
+              ) : (
+                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {incoming.map((r) => (
+                    <li key={r.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <Link href={`/profile/${encodeURIComponent(r.sender.username)}`} className="flex-shrink-0">
+                        {r.sender.avatar_url ? (
+                          <Image src={r.sender.avatar_url} alt="" width={44} height={44} className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-600" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center">
+                            <User size={22} className="text-indigo-700 dark:text-indigo-300" />
+                          </div>
+                        )}
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/profile/${encodeURIComponent(r.sender.username)}`} className="font-medium text-gray-800 dark:text-gray-100 hover:underline">
+                          {r.sender.full_name || r.sender.username}
+                        </Link>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">@{r.sender.username}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{timeAgo(r.created_at)}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleRespond(r.id, 'accept')}
+                          disabled={respondingId === r.id}
+                          className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70 disabled:opacity-50"
+                          title="אישור"
+                        >
+                          <CheckCircle size={20} />
+                        </button>
+                        <button
+                          onClick={() => handleRespond(r.id, 'decline')}
+                          disabled={respondingId === r.id}
+                          className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+                          title="דחייה"
+                        >
+                          <X size={20} />
+                        </button>
+                        <button
+                          onClick={() => handleRespond(r.id, 'block')}
+                          disabled={respondingId === r.id}
+                          className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/70 disabled:opacity-50"
+                          title="חסימה"
+                        >
+                          <Shield size={20} />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+              <h2 className="px-6 py-4 text-lg font-bold text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700">
+                שיחות
+              </h2>
+              {conversations.length === 0 ? (
+                <p className="px-6 py-6 text-gray-500 dark:text-gray-400 text-center">אין שיחות פעילות. שלח בקשת צ\'אט מפרופיל של משתמש.</p>
+              ) : (
+                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {conversations.map((c) => (
+                    <li key={c.id}>
+                      <Link
+                        href={`/chat/${c.id}`}
+                        className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                      >
+                        {c.otherUser.avatar_url ? (
+                          <Image src={c.otherUser.avatar_url} alt="" width={44} height={44} className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-600 flex-shrink-0" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center flex-shrink-0">
+                            <User size={22} className="text-indigo-700 dark:text-indigo-300" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{c.otherUser.full_name || c.otherUser.username}</p>
+                          {c.lastMessage && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{c.lastMessage.content}</p>
+                          )}
+                        </div>
+                        {c.lastMessage && (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{timeAgo(c.lastMessage.created_at)}</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        )}
+      </main>
+
+      {isAuthModalOpen && (
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
+      )}
+    </div>
+  );
+}

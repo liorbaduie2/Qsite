@@ -11,6 +11,7 @@ import {
   Award,
   Star,
   Music,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../../components/AuthProvider';
 import Image from 'next/image';
@@ -52,6 +53,9 @@ export default function PublicProfilePage() {
   const [sharedStatus, setSharedStatus] = useState<SharedStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [chatStatus, setChatStatus] = useState<'none' | 'pending_sent' | 'pending_received' | 'accepted' | 'blocked_them' | 'blocked_by_them' | null>(null);
+  const [chatConversationId, setChatConversationId] = useState<string | null>(null);
+  const [chatRequesting, setChatRequesting] = useState(false);
 
   useEffect(() => {
     if (!username) {
@@ -87,6 +91,21 @@ export default function PublicProfilePage() {
       router.replace('/profile');
     }
   }, [authLoading, authProfile, profile, router]);
+
+  useEffect(() => {
+    if (!user || !profile || authProfile?.username === profile.username) {
+      setChatStatus(null);
+      setChatConversationId(null);
+      return;
+    }
+    fetch(`/api/chat/check?otherUsername=${encodeURIComponent(profile.username)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setChatStatus(data.status || 'none');
+        setChatConversationId(data.conversationId || null);
+      })
+      .catch(() => setChatStatus('none'));
+  }, [user, profile, authProfile?.username]);
 
   if (loading || authLoading) {
     return (
@@ -224,6 +243,61 @@ export default function PublicProfilePage() {
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">נקודות</div>
               </div>
+
+              {user && chatStatus !== null && (
+                <div className="mt-6 p-4 bg-white/60 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageCircle className="text-indigo-600 dark:text-indigo-400" size={20} />
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">צ'אט</span>
+                  </div>
+                  {chatStatus === 'none' && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setChatRequesting(true);
+                        try {
+                          const res = await fetch('/api/chat/request', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ receiverUsername: profile.username }),
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            setChatStatus('pending_sent');
+                          }
+                        } finally {
+                          setChatRequesting(false);
+                        }
+                      }}
+                      disabled={chatRequesting}
+                      className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {chatRequesting ? 'שולח...' : 'שלח בקשת צ\'אט'}
+                    </button>
+                  )}
+                  {chatStatus === 'pending_sent' && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">בקשת צ\'אט ממתינה לאישור</p>
+                  )}
+                  {chatStatus === 'pending_received' && (
+                    <Link href="/chat" className="block w-full py-2.5 px-4 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 font-medium text-center hover:bg-amber-200 dark:hover:bg-amber-900/70 transition-colors">
+                      יש לך בקשת צ\'אט — עבור לצ\'אט
+                    </Link>
+                  )}
+                  {chatStatus === 'accepted' && chatConversationId && (
+                    <Link href={`/chat/${chatConversationId}`} className="block w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-medium text-center hover:bg-indigo-700 transition-colors">
+                      היכנס לצ\'אט
+                    </Link>
+                  )}
+                  {chatStatus === 'blocked_by_them' && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">אין אפשרות לשלוח בקשת צ\'אט</p>
+                  )}
+                  {chatStatus === 'blocked_them' && (
+                    <Link href="/settings" className="block w-full py-2.5 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      הסר חסימה (הגדרות)
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

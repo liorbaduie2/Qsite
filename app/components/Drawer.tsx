@@ -1,6 +1,6 @@
 // /app/components/Drawer.tsx
 import React from 'react';
-import { X, LucideIcon, User, LogOut, Bell, Bookmark, Award, Shield, Settings } from 'lucide-react';
+import { X, LucideIcon, User, LogOut, Bell, Bookmark, Award, Shield, Settings, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 
 interface MenuItem {
@@ -184,6 +184,13 @@ const Drawer: React.FC<DrawerProps> = ({
                   </button>
                 );
               })}
+              <button
+                onClick={() => handleMenuClick('/chat')}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <MessageCircle size={20} />
+                <span className="font-medium">צ'אט</span>
+              </button>
               <button
                 onClick={() => handleMenuClick('/settings')}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
