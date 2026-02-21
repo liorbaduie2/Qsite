@@ -66,3 +66,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Optional: dark mode scrollbars so they are visible on dark backgrounds */
+.dark *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.dark *::-webkit-scrollbar-track {
+  background: hsl(0 0% 14.9%);
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 35%);
+  border-radius: 5px;
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 45%);
+}

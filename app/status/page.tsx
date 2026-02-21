@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Menu, Users, MessageSquare, HelpCircle, BookOpen, Home, Send, Star, User, LogIn,
+  Users, MessageSquare, HelpCircle, BookOpen, Home, Send, Star, User, LogIn,
   Clock, Share2, CheckCircle, History, X, Shield
 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
@@ -10,6 +10,7 @@ import AuthModal from '../components/AuthModal';
 import Drawer from '../components/Drawer';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import NavHeader from '../components/NavHeader';
 
 interface FeedItem {
   id: string;
@@ -290,51 +291,43 @@ export default function StatusPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative" dir="rtl" style={{ fontFamily: 'Assistant, system-ui, sans-serif', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', color: '#0f172a' }}>
-      <div className="fixed inset-0 -z-10" style={{ background: 'radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%)' }} />
+    <div className="min-h-screen relative bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100" dir="rtl" style={{ fontFamily: 'Assistant, system-ui, sans-serif' }}>
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
 
-      <header className="relative bg-white/80 backdrop-blur-xl shadow-xl border-b border-gray-200/20">
-        <div className="max-w-4xl mx-auto px-5">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setIsDrawerOpen(!isDrawerOpen)} className="p-2 rounded-lg hover:bg-gray-100/60 transition-all duration-300">
-                <Menu size={20} />
+      <NavHeader
+        title="סטטוסי"
+        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+        rightContent={
+          !user && (
+            <div className="flex items-center gap-2">
+              <button onClick={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 border border-indigo-200 dark:border-indigo-800">
+                <LogIn size={16} /> התחברות
               </button>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">סטטוסי</h1>
+              <button onClick={() => { setAuthModalMode('register'); setIsAuthModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg">
+                <User size={16} /> הרשמה
+              </button>
             </div>
-            <div className="flex items-center gap-4">
-              {!user && (
-                <div className="flex items-center gap-2">
-                  <button onClick={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white/60 rounded-lg hover:bg-white/80 border border-indigo-200">
-                    <LogIn size={16} /> התחברות
-                  </button>
-                  <button onClick={() => { setAuthModalMode('register'); setIsAuthModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg">
-                    <User size={16} /> הרשמה
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+          )
+        }
+      />
 
       <Drawer isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} menuItems={menuItems} user={user} profile={profile} onSignOut={handleSignOut} />
 
       <main className="max-w-4xl mx-auto px-5 py-8">
-        <p className="text-center text-gray-600 mb-6">סטטוס אחד פעיל לכל משתמש • המתנה של 5 דקות בין פרסומים • היסטוריה של 5 אחרונים</p>
+        <p className="text-center text-gray-600 dark:text-gray-300 mb-6">סטטוס אחד פעיל לכל משתמש • המתנה של 5 דקות בין פרסומים • היסטוריה של 5 אחרונים</p>
 
         {user && (
-          <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">פרסם סטטוס</h2>
+          <div className="mb-8 bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">פרסם סטטוס</h2>
             {!canPost && nextPostAt && (
-              <div className="mb-4 flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <div className="mb-4 flex items-center gap-2 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 rounded-xl px-4 py-3">
                 <Clock size={18} />
                 <span>ניתן לפרסם שוב בעוד {cooldownRemaining(nextPostAt)} דקות</span>
               </div>
@@ -344,11 +337,11 @@ export default function StatusPage() {
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
                 placeholder="מה קורה?"
-                className="w-full min-h-[100px] p-4 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+                className="w-full min-h-[100px] p-4 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                 maxLength={500}
                 disabled={!canPost || posting}
               />
-              {postError && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{postError}</div>}
+              {postError && <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">{postError}</div>}
               <button
                 type="submit"
                 disabled={!newContent.trim() || !canPost || posting}
@@ -362,14 +355,14 @@ export default function StatusPage() {
         )}
 
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Star size={22} className="text-amber-500" />
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <Star size={22} className="text-amber-500 dark:text-amber-400" />
             פיד סטטוסים
           </h2>
           {feedLoading ? (
-            <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" /></div>
+            <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 dark:border-indigo-400" /></div>
           ) : feed.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 bg-white/60 rounded-2xl border border-gray-200/50">אין עדיין סטטוסים. היה הראשון לפרסם.</div>
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-800/60 rounded-2xl border border-gray-200/50 dark:border-gray-700/50">אין עדיין סטטוסים. היה הראשון לפרסם.</div>
           ) : (
             <div className="space-y-4">
               {feed.map((item) => (
@@ -377,35 +370,35 @@ export default function StatusPage() {
                   key={item.id}
                   className={`rounded-2xl border p-5 transition-all ${
                     item.id === topStatusId
-                      ? 'bg-amber-50/80 border-amber-200 shadow-lg ring-2 ring-amber-200/50'
-                      : 'bg-white/80 border-gray-200/50'
+                      ? 'bg-amber-50/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50 shadow-lg ring-2 ring-amber-200/50 dark:ring-amber-700/30'
+                      : 'bg-white/80 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50'
                   }`}
                 >
                   {item.id === topStatusId && (
-                    <div className="flex items-center gap-2 text-amber-700 font-semibold mb-3">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-semibold mb-3">
                       <Star size={18} fill="currentColor" /> סטטוס מוביל
                     </div>
                   )}
-                  <p className="text-gray-800 whitespace-pre-wrap mb-4">{item.content}</p>
+                  <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap mb-4">{item.content}</p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
                       {item.author.avatar_url ? (
-                        <Image src={item.author.avatar_url} alt="" width={28} height={28} className="w-7 h-7 rounded-full object-cover border border-gray-200" />
+                        <Image src={item.author.avatar_url} alt="" width={28} height={28} className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600" />
                       ) : (
                         <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
                           <User size={14} className="text-white" />
                         </div>
                       )}
-                      <span className="font-medium text-gray-700">{item.author.fullName || item.author.username}</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-200">{item.author.fullName || item.author.username}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-gray-500">{timeAgo(item.createdAt)}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{timeAgo(item.createdAt)}</span>
                       <button
                         type="button"
                         onClick={() => toggleStar(item.id)}
                         disabled={starringId === item.id}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          item.starredByMe ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600 hover:bg-amber-50'
+                          item.starredByMe ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
                         }`}
                       >
                         <Star size={16} className={item.starredByMe ? 'fill-current' : ''} />
@@ -416,7 +409,7 @@ export default function StatusPage() {
                           type="button"
                           onClick={() => openAdminStars(item.id)}
                           disabled={adminStarsLoading}
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50"
                           title="צפה במי סימן בכוכב"
                         >
                           <Shield size={14} />
@@ -436,7 +429,7 @@ export default function StatusPage() {
             <button
               type="button"
               onClick={() => setHistoryModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 bg-white/80 hover:bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-all font-medium text-gray-800"
+              className="flex items-center gap-2 px-5 py-3 bg-white/80 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md hover:shadow-lg transition-all font-medium text-gray-800 dark:text-gray-100"
             >
               <History size={20} />
               היסטוריית סטטוסים ({[myActive, ...myHistory].filter(Boolean).length})
@@ -448,32 +441,32 @@ export default function StatusPage() {
       {/* History modal */}
       {historyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setHistoryModalOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-l from-indigo-50 to-white">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => setHistoryModalOpen(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-l from-indigo-50 to-white dark:from-indigo-900/30 dark:to-gray-800">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <History size={22} />
                 היסטוריית הסטטוסים שלי
               </h3>
-              <button onClick={() => setHistoryModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={() => setHistoryModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">
                 <X size={20} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {myActive && (
-                <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/60 p-4">
-                  <span className="text-xs font-semibold text-indigo-700 mb-2 block">פעיל בפיד</span>
-                  <p className="text-gray-800 whitespace-pre-wrap mb-3">{myActive.content}</p>
+                <div className="rounded-xl border-2 border-indigo-200 dark:border-indigo-700/50 bg-indigo-50/60 dark:bg-indigo-900/20 p-4">
+                  <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-2 block">פעיל בפיד</span>
+                  <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap mb-3">{myActive.content}</p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs text-gray-500">{timeAgo(myActive.createdAt)}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{timeAgo(myActive.createdAt)}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">{myActive.starsCount} כוכבים</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{myActive.starsCount} כוכבים</span>
                       <button
                         type="button"
                         onClick={() => toggleShare(myActive.id, myActive.sharedToProfile)}
                         disabled={sharingId === myActive.id}
                         className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                          myActive.sharedToProfile ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                          myActive.sharedToProfile ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                         }`}
                       >
                         {myActive.sharedToProfile ? <CheckCircle size={14} /> : <Share2 size={14} />}
@@ -484,23 +477,23 @@ export default function StatusPage() {
                 </div>
               )}
               {myHistory.map((s) => (
-                <div key={s.id} className={`rounded-xl border p-4 ${s.isLegendary ? 'border-amber-300 bg-amber-50/60' : 'border-gray-200 bg-gray-50/60'}`}>
+                <div key={s.id} className={`rounded-xl border p-4 ${s.isLegendary ? 'border-amber-300 dark:border-amber-700/50 bg-amber-50/60 dark:bg-amber-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-50/60 dark:bg-gray-700/50'}`}>
                   {s.isLegendary && (
-                    <span className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1">
+                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1">
                       <Star size={12} className="fill-current" /> אגדה
                     </span>
                   )}
-                  <p className="text-gray-700 whitespace-pre-wrap text-sm mb-2">{s.content}</p>
+                  <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap text-sm mb-2">{s.content}</p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs text-gray-500">{timeAgo(s.createdAt)}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{timeAgo(s.createdAt)}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">{s.starsCount} כוכבים</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{s.starsCount} כוכבים</span>
                       <button
                         type="button"
                         onClick={() => toggleShare(s.id, s.sharedToProfile)}
                         disabled={sharingId === s.id}
                         className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                          s.sharedToProfile ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                          s.sharedToProfile ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                         }`}
                       >
                         {s.sharedToProfile ? <CheckCircle size={14} /> : <Share2 size={14} />}
@@ -518,35 +511,35 @@ export default function StatusPage() {
       {/* Admin: who starred modal */}
       {adminStarsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setAdminStarsModal(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-indigo-50">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => setAdminStarsModal(null)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-50 dark:bg-indigo-900/30">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Shield size={20} />
                 מי סימן בכוכב ({adminStarsModal.starsCount})
               </h3>
-              <button onClick={() => setAdminStarsModal(null)} className="p-2 hover:bg-white/60 rounded-lg">
+              <button onClick={() => setAdminStarsModal(null)} className="p-2 hover:bg-white/60 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">
                 <X size={20} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {adminStarsModal.users.length === 0 ? (
-                <p className="text-gray-500 text-sm">עדיין אין כוכבים.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">עדיין אין כוכבים.</p>
               ) : (
                 adminStarsModal.users.map((u) => (
-                  <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                  <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                     {u.avatar_url ? (
                       <Image src={u.avatar_url} alt="" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-indigo-200 flex items-center justify-center">
-                        <User size={18} className="text-indigo-700" />
+                      <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center">
+                        <User size={18} className="text-indigo-700 dark:text-indigo-300" />
                       </div>
                     )}
                     <div>
-                      <p className="font-medium text-gray-800">{u.fullName || u.username}</p>
-                      <p className="text-xs text-gray-500">@{u.username}</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-100">{u.fullName || u.username}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">@{u.username}</p>
                     </div>
-                    <span className="mr-auto text-xs text-gray-400">{timeAgo(u.starredAt)}</span>
+                    <span className="mr-auto text-xs text-gray-400 dark:text-gray-500">{timeAgo(u.starredAt)}</span>
                   </div>
                 ))
               )}

@@ -2,11 +2,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Search, Filter, Eye, MessageCircle, ArrowUp } from 'lucide-react';
+import { Menu, MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Search, Filter, Eye, MessageCircle, ArrowUp } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import LoginModal from './components/LoginModal';
 import HebrewRegistration from './components/HebrewRegistration';
 import Drawer from './components/Drawer';
+import NavHeader from './components/NavHeader';
 import Image from 'next/image';
 import AuthStatusDisplay from './components/AuthStatusDisplay';
 import { SimpleThemeToggle } from './components/SimpleThemeToggle';
@@ -52,7 +53,7 @@ export default function ForumHomepage() {
   }, [isRegisterModalOpen, isLoginModalOpen]);
 
   const menuItems = [
-    { label: 'ראשי', icon: Home, href: '/' },
+    { label: 'ראשי', icon: Home, href: '/', active: true },
     { label: 'סטטוסי', icon: Users, href: '/status' },
     { label: 'דיוני', icon: MessageSquare, href: '/discussions' },
     { label: 'שאלות', icon: HelpCircle, href: '/questions' },
@@ -156,48 +157,27 @@ export default function ForumHomepage() {
       dir="rtl"
       style={{ fontFamily: "'Assistant', 'Heebo', system-ui, sans-serif" }}
     >
-      <header className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-lg border-b border-gray-200/20 dark:border-gray-700/40">
-        {!user && <AuthStatusDisplay className="bg-white/90 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700" showOnlyErrors={true} />}
-        
-        <div className="max-w-6xl mx-auto px-5">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-                className="p-2 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition-all duration-300 hover:scale-105"
-              >
-                {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Q&A פלטפורמה
-              </h1>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <SimpleThemeToggle />
-              
-              {!user && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleLogin}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300"
-                  >
-                    <LogIn size={16} />
-                    התחברות
-                  </button>
-                  <button
-                    onClick={handleRegister}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    <User size={16} />
-                    הרשמה
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <NavHeader
+        title="Q&A פלטפורמה"
+        wide
+        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+        topContent={!user ? <AuthStatusDisplay className="bg-white/90 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700" showOnlyErrors={true} /> : undefined}
+        rightContent={
+          <>
+            <SimpleThemeToggle />
+            {!user && (
+              <div className="flex items-center gap-2">
+                <button onClick={handleLogin} className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300">
+                  <LogIn size={16} /> התחברות
+                </button>
+                <button onClick={handleRegister} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+                  <User size={16} /> הרשמה
+                </button>
+              </div>
+            )}
+          </>
+        }
+      />
 
       <Drawer
         isDrawerOpen={isDrawerOpen}

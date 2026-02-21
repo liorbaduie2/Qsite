@@ -192,7 +192,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/70 flex items-center justify-center z-50 transition-opacity duration-300">
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[95vh] overflow-y-auto transform transition-all duration-300 scale-95 animate-in fade-in-0 zoom-in-95">
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700 text-center bg-slate-50 dark:bg-slate-900/50 rounded-t-xl">
                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">בחינת בקשה - {application.username}</h3>
@@ -427,7 +427,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
     const selectedPenalty = penaltyTypes.find(p => p.penalty_type === selectedPenaltyType);
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 transition-opacity duration-300" dir="rtl">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/70 flex items-center justify-center z-50 transition-opacity duration-300" dir="rtl">
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[95vh] flex flex-col transform transition-all duration-300 scale-95 animate-in fade-in-0 zoom-in-95">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-shrink-0">
