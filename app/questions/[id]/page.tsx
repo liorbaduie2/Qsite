@@ -406,26 +406,53 @@ export default function QuestionDetailPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
                     {/* Author */}
                     <div className="flex items-center gap-3">
-                      {question.author.avatar_url ? (
-                        <Image
-                          src={question.author.avatar_url}
-                          alt={question.author.username}
-                          width={36}
-                          height={36}
-                          className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                        />
+                      {question.author.username ? (
+                        <Link href={`/profile/${encodeURIComponent(question.author.username)}`} className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                          {question.author.avatar_url ? (
+                            <Image
+                              src={question.author.avatar_url}
+                              alt={question.author.username}
+                              width={36}
+                              height={36}
+                              className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                              <User size={16} className="text-white" />
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">{question.author.username}</span>
+                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                              <Shield size={11} />
+                              <span>{question.author.reputation} נקודות</span>
+                            </div>
+                          </div>
+                        </Link>
                       ) : (
-                        <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                          <User size={16} className="text-white" />
-                        </div>
+                        <>
+                          {question.author.avatar_url ? (
+                            <Image
+                              src={question.author.avatar_url}
+                              alt=""
+                              width={36}
+                              height={36}
+                              className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                              <User size={16} className="text-white" />
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">{question.author.username}</span>
+                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                              <Shield size={11} />
+                              <span>{question.author.reputation} נקודות</span>
+                            </div>
+                          </div>
+                        </>
                       )}
-                      <div>
-                        <span className="font-semibold text-gray-800 dark:text-gray-100">{question.author.username}</span>
-                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                          <Shield size={11} />
-                          <span>{question.author.reputation} נקודות</span>
-                        </div>
-                      </div>
                     </div>
 
                     {/* Stats */}
@@ -507,24 +534,49 @@ export default function QuestionDetailPage() {
 
                                 <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700 flex-wrap gap-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    {node.author.avatar_url ? (
-                                      <Image
-                                        src={node.author.avatar_url}
-                                        alt={node.author.username}
-                                        width={isTopLevel ? 28 : 24}
-                                        height={isTopLevel ? 28 : 24}
-                                        className={`rounded-full object-cover border border-gray-200 dark:border-gray-600 ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
-                                      />
+                                    {node.author.username ? (
+                                      <Link href={`/profile/${encodeURIComponent(node.author.username)}`} className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+                                        {node.author.avatar_url ? (
+                                          <Image
+                                            src={node.author.avatar_url}
+                                            alt={node.author.username}
+                                            width={isTopLevel ? 28 : 24}
+                                            height={isTopLevel ? 28 : 24}
+                                            className={`rounded-full object-cover border border-gray-200 dark:border-gray-600 ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                          />
+                                        ) : (
+                                          <div
+                                            className={`bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                          >
+                                            <User size={isTopLevel ? 12 : 10} className="text-white" />
+                                          </div>
+                                        )}
+                                        <span className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? 'text-sm' : 'text-sm'}`}>
+                                          {node.author.username}
+                                        </span>
+                                      </Link>
                                     ) : (
-                                      <div
-                                        className={`bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
-                                      >
-                                        <User size={isTopLevel ? 12 : 10} className="text-white" />
-                                      </div>
+                                      <>
+                                        {node.author.avatar_url ? (
+                                          <Image
+                                            src={node.author.avatar_url}
+                                            alt=""
+                                            width={isTopLevel ? 28 : 24}
+                                            height={isTopLevel ? 28 : 24}
+                                            className={`rounded-full object-cover border border-gray-200 dark:border-gray-600 ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                          />
+                                        ) : (
+                                          <div
+                                            className={`bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                          >
+                                            <User size={isTopLevel ? 12 : 10} className="text-white" />
+                                          </div>
+                                        )}
+                                        <span className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? 'text-sm' : 'text-sm'}`}>
+                                          {node.author.username}
+                                        </span>
+                                      </>
                                     )}
-                                    <span className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? 'text-sm' : 'text-sm'}`}>
-                                      {node.author.username}
-                                    </span>
                                     {isOP && (
                                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700">
                                         שואל השאלה

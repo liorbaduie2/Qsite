@@ -9,6 +9,7 @@ import { useAuth } from '../components/AuthProvider';
 import AuthModal from '../components/AuthModal';
 import Drawer from '../components/Drawer';
 import Image from 'next/image';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import NavHeader from '../components/NavHeader';
 
@@ -382,14 +383,29 @@ export default function StatusPage() {
                   <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap mb-4">{item.content}</p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
-                      {item.author.avatar_url ? (
-                        <Image src={item.author.avatar_url} alt="" width={28} height={28} className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600" />
+                      {item.author.username ? (
+                        <Link href={`/profile/${encodeURIComponent(item.author.username)}`} className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                          {item.author.avatar_url ? (
+                            <Image src={item.author.avatar_url} alt="" width={28} height={28} className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600" />
+                          ) : (
+                            <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                              <User size={14} className="text-white" />
+                            </div>
+                          )}
+                          <span className="font-medium text-gray-700 dark:text-gray-200">{item.author.fullName || item.author.username}</span>
+                        </Link>
                       ) : (
-                        <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                          <User size={14} className="text-white" />
-                        </div>
+                        <>
+                          {item.author.avatar_url ? (
+                            <Image src={item.author.avatar_url} alt="" width={28} height={28} className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600" />
+                          ) : (
+                            <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                              <User size={14} className="text-white" />
+                            </div>
+                          )}
+                          <span className="font-medium text-gray-700 dark:text-gray-200">{item.author.fullName || item.author.username}</span>
+                        </>
                       )}
-                      <span className="font-medium text-gray-700 dark:text-gray-200">{item.author.fullName || item.author.username}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-500 dark:text-gray-400">{timeAgo(item.createdAt)}</span>
@@ -528,18 +544,36 @@ export default function StatusPage() {
               ) : (
                 adminStarsModal.users.map((u) => (
                   <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                    {u.avatar_url ? (
-                      <Image src={u.avatar_url} alt="" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
+                    {u.username ? (
+                      <Link href={`/profile/${encodeURIComponent(u.username)}`} className="flex items-center gap-3 hover:opacity-90 transition-opacity flex-1 min-w-0">
+                        {u.avatar_url ? (
+                          <Image src={u.avatar_url} alt="" width={36} height={36} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center flex-shrink-0">
+                            <User size={18} className="text-indigo-700 dark:text-indigo-300" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-800 dark:text-gray-100">{u.fullName || u.username}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">@{u.username}</p>
+                        </div>
+                      </Link>
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center">
-                        <User size={18} className="text-indigo-700 dark:text-indigo-300" />
-                      </div>
+                      <>
+                        {u.avatar_url ? (
+                          <Image src={u.avatar_url} alt="" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center">
+                            <User size={18} className="text-indigo-700 dark:text-indigo-300" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-800 dark:text-gray-100">{u.fullName || u.username}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">@{u.username}</p>
+                        </div>
+                      </>
                     )}
-                    <div>
-                      <p className="font-medium text-gray-800 dark:text-gray-100">{u.fullName || u.username}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">@{u.username}</p>
-                    </div>
-                    <span className="mr-auto text-xs text-gray-400 dark:text-gray-500">{timeAgo(u.starredAt)}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{timeAgo(u.starredAt)}</span>
                   </div>
                 ))
               )}

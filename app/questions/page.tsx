@@ -283,20 +283,45 @@ const QuestionsPage = () => {
                   {/* Right meta */}
                   <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
                     <div className="flex items-center gap-3">
-                      {question.author.avatar_url ? (
-                        <Image
-                          src={question.author.avatar_url}
-                          alt={question.author.username}
-                          width={24}
-                          height={24}
-                          className="w-6 h-6 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                        />
+                      {question.author.username ? (
+                        <Link
+                          href={`/profile/${encodeURIComponent(question.author.username)}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+                        >
+                          {question.author.avatar_url ? (
+                            <Image
+                              src={question.author.avatar_url}
+                              alt={question.author.username}
+                              width={24}
+                              height={24}
+                              className="w-6 h-6 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                              <User size={12} className="text-white" />
+                            </div>
+                          )}
+                          <span className="font-medium text-gray-600 dark:text-gray-300 text-sm hidden sm:inline">{question.author.username}</span>
+                        </Link>
                       ) : (
-                        <div className="w-6 h-6 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                          <User size={12} className="text-white" />
-                        </div>
+                        <>
+                          {question.author.avatar_url ? (
+                            <Image
+                              src={question.author.avatar_url}
+                              alt=""
+                              width={24}
+                              height={24}
+                              className="w-6 h-6 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                              <User size={12} className="text-white" />
+                            </div>
+                          )}
+                          <span className="font-medium text-gray-600 dark:text-gray-300 text-sm hidden sm:inline">{question.author.username}</span>
+                        </>
                       )}
-                      <span className="font-medium text-gray-600 dark:text-gray-300 text-sm hidden sm:inline">{question.author.username}</span>
                     </div>
                     <div className="flex items-center gap-1" title="תגובות">
                       <MessageCircle size={15} />
