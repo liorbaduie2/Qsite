@@ -33,6 +33,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    if (data && (data as { success?: boolean }).success === false) {
+      const message = (data as { message_hebrew?: string }).message_hebrew || (data as { message?: string }).message || 'הפעולה נכשלה'
+      return NextResponse.json({ error: message }, { status: 403 })
+    }
+
     return NextResponse.json({ data })
   } catch (error) {
     console.error('Suspend user API error:', error)

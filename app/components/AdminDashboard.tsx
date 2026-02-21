@@ -350,7 +350,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
             setRoleReason('');
             setSuspensionReason('');
             setPenaltyReason('');
-            setActiveTab(userPermissions?.role === 'owner' ? 'role' : 'actions');
+            setActiveTab(userPermissions?.can_manage_user_ranks ? 'role' : 'actions');
             loadPenaltyTypes();
         }
     }, [isOpen, user, userPermissions]);
@@ -453,7 +453,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
 
                 {/* Tabs */}
                 <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
-                    {userPermissions?.role === 'owner' && (
+                    {userPermissions?.can_manage_user_ranks && (
                         <button onClick={() => setActiveTab('role')} className={`flex-1 py-3 px-4 font-semibold text-center transition-colors duration-200 flex items-center justify-center gap-2 ${activeTab === 'role' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500 bg-white dark:bg-slate-800' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}>
                             <Shield className="w-5 h-5" />
                             ניהול תפקיד
@@ -470,7 +470,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                 {/* Content */}
                 <div className="p-6 overflow-y-auto">
                     {/* Role Management Tab */}
-                    {activeTab === 'role' && userPermissions?.role === 'owner' && (
+                    {activeTab === 'role' && userPermissions?.can_manage_user_ranks && (
                         <div className="animate-in fade-in-0 duration-500">
                             <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">בחר תפקיד חדש</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
