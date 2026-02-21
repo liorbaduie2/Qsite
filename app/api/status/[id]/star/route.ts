@@ -33,15 +33,23 @@ export async function POST(
 
     if (existing) {
       await supabase.from('status_stars').delete().eq('id', existing.id);
-      return NextResponse.json({ starred: false });
+    } else {
+      await supabase.from('status_stars').insert({
+        status_id: statusId,
+        user_id: user.id,
+      });
     }
 
-    await supabase.from('status_stars').insert({
-      status_id: statusId,
-      user_id: user.id,
-    });
+    const { data: updated } = await supabase
+      .from('user_statuses')
+      .select('stars_count')
+      .eq('id', statusId)
+      .single();
 
-    return NextResponse.json({ starred: true });
+    return NextResponse.json({
+      starred: !existing,
+      starsCount: updated?.stars_count ?? 0,
+    });
   } catch (err) {
     console.error('Status star POST error:', err);
     return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });

@@ -60,7 +60,11 @@ export async function GET(request: NextRequest) {
       starredByMe: starredSet.has(r.id as string),
     }));
 
-    return NextResponse.json({ feed });
+    return NextResponse.json({ feed }, {
+      headers: {
+        'Cache-Control': 'private, no-store, max-age=0',
+      },
+    });
   } catch (err) {
     console.error('Status GET error:', err);
     return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });

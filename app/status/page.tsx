@@ -221,17 +221,27 @@ export default function StatusPage() {
       const data = await res.json();
       if (res.ok) {
         const starred = data.starred === true;
-        const delta = starred ? 1 : -1;
+        const authoritativeCount = typeof data.starsCount === 'number' ? data.starsCount : undefined;
         setFeed((prev) =>
           prev.map((s) =>
-            s.id === statusId ? { ...s, starredByMe: starred, starsCount: Math.max(0, s.starsCount + delta) } : s
+            s.id === statusId
+              ? { ...s, starredByMe: starred, starsCount: authoritativeCount ?? Math.max(0, s.starsCount + (starred ? 1 : -1)) }
+              : s
           )
         );
-        setMyActive((prev) => (prev?.id === statusId ? { ...prev, starsCount: Math.max(0, prev.starsCount + delta) } : prev));
-        setMyHistory((prev) =>
-          prev.map((s) => (s.id === statusId ? { ...s, starsCount: Math.max(0, s.starsCount + delta) } : s))
+        setMyActive((prev) =>
+          prev?.id === statusId
+            ? { ...prev, starsCount: authoritativeCount ?? Math.max(0, prev.starsCount + (starred ? 1 : -1)) }
+            : prev
         );
-        setAdminStarsModal((prev) => (prev?.statusId === statusId ? { ...prev, starsCount: Math.max(0, prev.starsCount + delta) } : prev));
+        setMyHistory((prev) =>
+          prev.map((s) =>
+            s.id === statusId ? { ...s, starsCount: authoritativeCount ?? Math.max(0, s.starsCount + (starred ? 1 : -1)) } : s
+          )
+        );
+        setAdminStarsModal((prev) =>
+          prev?.statusId === statusId ? { ...prev, starsCount: authoritativeCount ?? Math.max(0, prev.starsCount + (starred ? 1 : -1)) } : prev
+        );
       }
     } finally {
       setStarringId(null);
