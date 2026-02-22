@@ -309,9 +309,8 @@ export default function ProfilePage() {
                 ) : (
                   <>
                     <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
-                      {profile.username}
+                      {profile.full_name || profile.username}
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-2">@{profile.username}</p>
                     {profile.bio && (
                       <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">

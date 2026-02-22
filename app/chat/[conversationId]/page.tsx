@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { User, Send, ArrowRight } from "lucide-react";
+import { User, Send, ArrowRight, MoreVertical, Flag, Shield, UserCircle } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import Image from "next/image";
 import Link from "next/link";
@@ -40,6 +40,15 @@ export default function ChatThreadPage() {
   const [error, setError] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [blockSubmitting, setBlockSubmitting] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [blockError, setBlockError] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const { user, loading: authLoading } = useAuth();
 
@@ -95,6 +104,73 @@ export default function ChatThreadPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [menuOpen]);
+
+  const handleBlockConfirm = async () => {
+    if (!otherUser || blockSubmitting) return;
+    setBlockSubmitting(true);
+    try {
+      const res = await fetch(`/api/chat/blocked/${otherUser.id}`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setBlockModalOpen(false);
+        setBlockError("");
+        setMenuOpen(false);
+        router.push("/chat");
+      } else {
+        setBlockError(data.error || "שגיאה בחסימה");
+      }
+    } finally {
+      setBlockSubmitting(false);
+    }
+  };
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otherUser || reportSubmitting) return;
+    setReportSubmitting(true);
+    try {
+      const res = await fetch("/api/report/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportedUserId: otherUser.id,
+          reason: reportReason.trim() || undefined,
+          conversationId: conversationId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReportModalOpen(false);
+        setReportReason("");
+        setReportError("");
+        setMenuOpen(false);
+      } else {
+        setReportError(data.error || "שגיאה בשליחת הדיווח");
+      }
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   // Real-time: subscribe to new messages in this conversation
   useEffect(() => {
@@ -229,17 +305,18 @@ export default function ChatThreadPage() {
         dir="rtl"
       >
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-4 py-2">
-          {/* Right: back button (start in RTL) */}
           <div className="flex-1 min-w-0 flex justify-start">
             <Link
               href="/chat"
-              className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 py-2 ms-[1rem]"
+              className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 py-2"
             >
               <ArrowRight size={20} /> חזרה
             </Link>
           </div>
-          {/* Center: avatar + name (shifted left) */}
-          <div className="flex items-center justify-center gap-2 min-w-0 flex-shrink-0 ms-[35rem]">
+          <Link
+            href={`/profile/${encodeURIComponent(otherUser.username)}`}
+            className="flex items-center justify-center gap-2 min-w-0 flex-shrink-0 flex-1 cursor-pointer hover:opacity-90"
+          >
             {otherUser.avatar_url ? (
               <Image
                 src={otherUser.avatar_url}
@@ -256,12 +333,53 @@ export default function ChatThreadPage() {
                 />
               </div>
             )}
-            <span className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate max-w-[140px] sm:max-w-[200px]">
+            <span className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate max-w-[140px] sm:max-w-[200px] hover:underline">
               {otherUser.full_name || otherUser.username || "צ'אט"}
             </span>
+          </Link>
+          <div className="flex-1 min-w-0 flex justify-end relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
+              aria-label="אפשרויות"
+            >
+              <MoreVertical size={22} />
+            </button>
+            {menuOpen && (
+              <div className="absolute top-full end-0 mt-1 py-1 w-52 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg z-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportError("");
+                    setReportModalOpen(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Flag size={18} /> דווח על משתמש
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBlockError("");
+                    setBlockModalOpen(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Shield size={18} /> חסום משתמש
+                </button>
+                <Link
+                  href={`/profile/${encodeURIComponent(otherUser.username)}`}
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <UserCircle size={18} /> עבור לפרופיל
+                </Link>
+              </div>
+            )}
           </div>
-          {/* Left: spacer so center stays centered (end in RTL) */}
-          <div className="flex-1 min-w-0 flex justify-end" aria-hidden />
         </div>
       </header>
 
@@ -323,6 +441,73 @@ export default function ChatThreadPage() {
           </div>
         </form>
       </div>
+
+      {blockModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" dir="rtl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">חסימת משתמש</h3>
+            {blockError && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{blockError}</p>
+            )}
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+              לאחר חסימה לא תוכלו להחליף הודעות. השיחה תישאר במערכת לצורכי רישום ומנהלה. המשתמש יידע שנחסם.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setBlockModalOpen(false)}
+                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={handleBlockConfirm}
+                disabled={blockSubmitting}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {blockSubmitting ? "..." : "חסום"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" dir="rtl">
+          <form onSubmit={handleReportSubmit} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">דווח על משתמש</h3>
+            {reportError && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{reportError}</p>
+            )}
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">סיבה (לא חובה)</label>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+              rows={3}
+              maxLength={2000}
+              placeholder="תאר בקצרה אם תרצה..."
+            />
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => { setReportModalOpen(false); setReportReason(""); }}
+                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                ביטול
+              </button>
+              <button
+                type="submit"
+                disabled={reportSubmitting}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {reportSubmitting ? "..." : "שלח דיווח"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

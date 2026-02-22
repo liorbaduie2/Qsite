@@ -35,6 +35,32 @@ export async function GET(
     }
 
     const otherId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id;
+
+    const { data: blockedByThem } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('blocker_id', otherId)
+      .eq('blocked_id', user.id)
+      .maybeSingle();
+    if (blockedByThem) {
+      return NextResponse.json(
+        { error: 'השיחה לא זמינה — נחסמת או שהמשתמש חסם אותך' },
+        { status: 403 }
+      );
+    }
+    const { data: blockedByMe } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', otherId)
+      .maybeSingle();
+    if (blockedByMe) {
+      return NextResponse.json(
+        { error: 'השיחה לא זמינה — נחסמת או שהמשתמש חסם אותך' },
+        { status: 403 }
+      );
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, username, full_name, avatar_url')

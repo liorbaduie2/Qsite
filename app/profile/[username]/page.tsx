@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowRight,
   MapPin,
@@ -12,9 +12,9 @@ import {
   Star,
   Music,
   MessageCircle,
-} from 'lucide-react';
-import { useAuth } from '../../components/AuthProvider';
-import Image from 'next/image';
+} from "lucide-react";
+import { useAuth } from "../../components/AuthProvider";
+import Image from "next/image";
 
 interface PublicProfile {
   id: string;
@@ -37,24 +37,49 @@ interface SharedStatus {
 }
 
 const getPlaylistInfo = (url: string | undefined) => {
-  if (!url) return { icon: <Globe size={18} className="text-gray-400 dark:text-gray-500" />, text: '' };
-  if (url.includes('spotify.com')) return { icon: <Music size={18} className="text-green-500" />, text: 'פלייליסט ספוטיפיי' };
-  if (url.includes('music.apple.com')) return { icon: <Music size={18} className="text-pink-500" />, text: 'פלייליסט אפל מיוזיק' };
-  return { icon: <Globe size={18} className="text-gray-400 dark:text-gray-500" />, text: url };
+  if (!url)
+    return {
+      icon: <Globe size={18} className="text-gray-400 dark:text-gray-500" />,
+      text: "",
+    };
+  if (url.includes("spotify.com"))
+    return {
+      icon: <Music size={18} className="text-green-500" />,
+      text: "פלייליסט ספוטיפיי",
+    };
+  if (url.includes("music.apple.com"))
+    return {
+      icon: <Music size={18} className="text-pink-500" />,
+      text: "פלייליסט אפל מיוזיק",
+    };
+  return {
+    icon: <Globe size={18} className="text-gray-400 dark:text-gray-500" />,
+    text: url,
+  };
 };
 
 export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const username = typeof params?.username === 'string' ? params.username : '';
+  const username = typeof params?.username === "string" ? params.username : "";
   const { user, profile: authProfile, loading: authLoading } = useAuth();
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [sharedStatus, setSharedStatus] = useState<SharedStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [chatStatus, setChatStatus] = useState<'none' | 'pending_sent' | 'pending_received' | 'accepted' | 'blocked_them' | 'blocked_by_them' | null>(null);
-  const [chatConversationId, setChatConversationId] = useState<string | null>(null);
+  const [chatStatus, setChatStatus] = useState<
+    | "none"
+    | "pending_sent"
+    | "pending_received"
+    | "accepted"
+    | "blocked_them"
+    | "blocked_by_them"
+    | null
+  >(null);
+  const [chatConversationId, setChatConversationId] = useState<string | null>(
+    null,
+  );
   const [chatRequesting, setChatRequesting] = useState(false);
 
   useEffect(() => {
@@ -88,7 +113,7 @@ export default function PublicProfilePage() {
   useEffect(() => {
     if (authLoading || !profile || !authProfile) return;
     if (authProfile.username && authProfile.username === profile.username) {
-      router.replace('/profile');
+      router.replace("/profile");
     }
   }, [authLoading, authProfile, profile, router]);
 
@@ -98,13 +123,15 @@ export default function PublicProfilePage() {
       setChatConversationId(null);
       return;
     }
-    fetch(`/api/chat/check?otherUsername=${encodeURIComponent(profile.username)}`)
+    fetch(
+      `/api/chat/check?otherUsername=${encodeURIComponent(profile.username)}`,
+    )
       .then((res) => res.json())
       .then((data) => {
-        setChatStatus(data.status || 'none');
+        setChatStatus(data.status || "none");
         setChatConversationId(data.conversationId || null);
       })
-      .catch(() => setChatStatus('none'));
+      .catch(() => setChatStatus("none"));
   }, [user, profile, authProfile?.username]);
 
   if (loading || authLoading) {
@@ -149,9 +176,6 @@ export default function PublicProfilePage() {
               <ArrowRight size={20} />
               <span>חזור לעמוד הבית</span>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              פרופיל של {displayName}
-            </h1>
           </div>
         </div>
       </div>
@@ -181,7 +205,6 @@ export default function PublicProfilePage() {
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
                   {displayName}
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-2">@{profile.username}</p>
                 {profile.bio && (
                   <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                     <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
@@ -199,7 +222,9 @@ export default function PublicProfilePage() {
                       {sharedStatus.content}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      {new Date(sharedStatus.createdAt).toLocaleDateString('he-IL')}
+                      {new Date(sharedStatus.createdAt).toLocaleDateString(
+                        "he-IL",
+                      )}
                     </p>
                   </div>
                 )}
@@ -208,7 +233,10 @@ export default function PublicProfilePage() {
               <div className="space-y-3 mb-6">
                 {profile.location && (
                   <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                    <MapPin size={18} className="text-gray-400 dark:text-gray-500" />
+                    <MapPin
+                      size={18}
+                      className="text-gray-400 dark:text-gray-500"
+                    />
                     <span>{profile.location}</span>
                   </div>
                 )}
@@ -227,43 +255,63 @@ export default function PublicProfilePage() {
                 )}
                 {profile.created_at && (
                   <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                    <Calendar size={18} className="text-gray-400 dark:text-gray-500" />
-                    <span>הצטרף ב-{new Date(profile.created_at).toLocaleDateString('he-IL')}</span>
+                    <Calendar
+                      size={18}
+                      className="text-gray-400 dark:text-gray-500"
+                    />
+                    <span>
+                      הצטרף ב-
+                      {new Date(profile.created_at).toLocaleDateString("he-IL")}
+                    </span>
                   </div>
                 )}
               </div>
 
               <div className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
                 <div className="flex items-center gap-2 mb-2">
-                  <Award className="text-yellow-600 dark:text-yellow-500" size={20} />
-                  <span className="font-semibold text-gray-800 dark:text-gray-200">מוניטין</span>
+                  <Award
+                    className="text-yellow-600 dark:text-yellow-500"
+                    size={20}
+                  />
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">
+                    מוניטין
+                  </span>
                 </div>
                 <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
                   {profile.reputation}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">נקודות</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  נקודות
+                </div>
               </div>
 
               {user && chatStatus !== null && (
                 <div className="mt-6 p-4 bg-white/60 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
                   <div className="flex items-center gap-2 mb-3">
-                    <MessageCircle className="text-indigo-600 dark:text-indigo-400" size={20} />
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">צ'אט</span>
+                    <MessageCircle
+                      className="text-indigo-600 dark:text-indigo-400"
+                      size={20}
+                    />
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">
+                      צ'אט
+                    </span>
                   </div>
-                  {chatStatus === 'none' && (
+                  {chatStatus === "none" && (
                     <button
                       type="button"
                       onClick={async () => {
                         setChatRequesting(true);
                         try {
-                          const res = await fetch('/api/chat/request', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ receiverUsername: profile.username }),
+                          const res = await fetch("/api/chat/request", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              receiverUsername: profile.username,
+                            }),
                           });
                           const data = await res.json();
                           if (res.ok) {
-                            setChatStatus('pending_sent');
+                            setChatStatus("pending_sent");
                           }
                         } finally {
                           setChatRequesting(false);
@@ -272,27 +320,40 @@ export default function PublicProfilePage() {
                       disabled={chatRequesting}
                       className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
-                      {chatRequesting ? 'שולח...' : 'שלח בקשת צ\'אט'}
+                      {chatRequesting ? "שולח..." : "שלח בקשת צ'אט"}
                     </button>
                   )}
-                  {chatStatus === 'pending_sent' && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">בקשת צ\'אט ממתינה לאישור</p>
+                  {chatStatus === "pending_sent" && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      בקשת צ\'אט ממתינה לאישור
+                    </p>
                   )}
-                  {chatStatus === 'pending_received' && (
-                    <Link href="/chat" className="block w-full py-2.5 px-4 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 font-medium text-center hover:bg-amber-200 dark:hover:bg-amber-900/70 transition-colors">
+                  {chatStatus === "pending_received" && (
+                    <Link
+                      href="/chat"
+                      className="block w-full py-2.5 px-4 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 font-medium text-center hover:bg-amber-200 dark:hover:bg-amber-900/70 transition-colors"
+                    >
                       יש לך בקשת צ\'אט — עבור לצ\'אט
                     </Link>
                   )}
-                  {chatStatus === 'accepted' && chatConversationId && (
-                    <Link href={`/chat/${chatConversationId}`} className="block w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-medium text-center hover:bg-indigo-700 transition-colors">
-                      היכנס לצ\'אט
+                  {chatStatus === "accepted" && chatConversationId && (
+                    <Link
+                      href={`/chat/${chatConversationId}`}
+                      className="block w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-medium text-center hover:bg-indigo-700 transition-colors"
+                    >
+                      היכנס לצ'אט
                     </Link>
                   )}
-                  {chatStatus === 'blocked_by_them' && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">אין אפשרות לשלוח בקשת צ\'אט</p>
+                  {chatStatus === "blocked_by_them" && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      אין אפשרות לשלוח בקשת צ\'אט
+                    </p>
                   )}
-                  {chatStatus === 'blocked_them' && (
-                    <Link href="/settings" className="block w-full py-2.5 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  {chatStatus === "blocked_them" && (
+                    <Link
+                      href="/settings"
+                      className="block w-full py-2.5 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
                       הסר חסימה (הגדרות)
                     </Link>
                   )}

@@ -31,6 +31,26 @@ export async function GET(
       return NextResponse.json({ error: 'שיחה לא נמצאה או שאין הרשאה' }, { status: 403 });
     }
 
+    const otherId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id;
+    const { data: blockedByThem } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('blocker_id', otherId)
+      .eq('blocked_id', user.id)
+      .maybeSingle();
+    const { data: blockedByMe } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', otherId)
+      .maybeSingle();
+    if (blockedByThem || blockedByMe) {
+      return NextResponse.json(
+        { error: 'השיחה לא זמינה — נחסמת או שהמשתמש חסם אותך' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 100);
     const before = searchParams.get('before');
@@ -90,6 +110,26 @@ export async function POST(
 
     if (!conv || (conv.user1_id !== user.id && conv.user2_id !== user.id)) {
       return NextResponse.json({ error: 'שיחה לא נמצאה או שאין הרשאה' }, { status: 403 });
+    }
+
+    const otherId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id;
+    const { data: blockedByThem } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('blocker_id', otherId)
+      .eq('blocked_id', user.id)
+      .maybeSingle();
+    const { data: blockedByMe } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', otherId)
+      .maybeSingle();
+    if (blockedByThem || blockedByMe) {
+      return NextResponse.json(
+        { error: 'השיחה לא זמינה — נחסמת או שהמשתמש חסם אותך' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json().catch(() => ({}));
