@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { User, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { User, Shield, ArrowRight } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import { SimpleThemeToggle } from '../components/SimpleThemeToggle';
 
@@ -53,8 +54,15 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="flex justify-between items-center mb-8">
-          <div>
+        <div className="flex justify-between items-center mb-8 gap-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors flex-shrink-0"
+          >
+            <ArrowRight size={20} />
+            <span>חזור</span>
+          </Link>
+          <div className="min-w-0">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">הגדרות</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">נהל את ההעדפות שלך</p>
           </div>
