@@ -16,14 +16,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
   onClose, 
   onSwitchToRegister 
 }) => {
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(email, password);
-    // Status will automatically be displayed by AuthStatusDisplay
+    const result = await signIn(email, password);
+
+    // Close modal only on successful authentication
+    if (!result.error && result.data.user) {
+      handleClose();
+    }
+
+    // Any errors or approval issues are shown via AuthStatusDisplay
   };
 
   const handleClose = () => {
@@ -37,7 +43,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
     onSwitchToRegister();
   };
 
-  if (!isOpen) return null;
+  // Never render the login modal for an already authenticated user
+  if (!isOpen || user) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">

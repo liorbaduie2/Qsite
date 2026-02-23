@@ -21,9 +21,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
 
-  if (!isOpen) return null;
+  // Never render the auth modal for an already authenticated user
+  if (!isOpen || user) return null;
 
   const resetForm = () => {
     setEmail('');

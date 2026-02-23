@@ -9,6 +9,10 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const tag = searchParams.get('tag') || '';
     const sortBy = searchParams.get('sort') || 'newest';
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+
+    let weekStartIso: string | null = null;
 
     let query = supabase
       .from('questions')
@@ -43,6 +47,10 @@ export async function GET(request: NextRequest) {
       case 'votes':
         query = query.order('votes_count', { ascending: false });
         break;
+      case 'weekly_top':
+        // Base ordering by votes; we'll apply weekly priority in application code
+        query = query.order('votes_count', { ascending: false });
+        break;
       case 'replies':
         query = query.order('replies_count', { ascending: false });
         break;
@@ -56,6 +64,10 @@ export async function GET(request: NextRequest) {
         query = query.order('created_at', { ascending: false });
     }
 
+    if (limit && Number.isFinite(limit) && limit > 0 && sortBy !== 'weekly_top') {
+      query = query.limit(limit);
+    }
+
     const { data: questions, error } = await query;
 
     if (error) {
@@ -63,8 +75,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'שגיאה בטעינת השאלות' }, { status: 500 });
     }
 
+    let processed = questions || [];
+
+    if (sortBy === 'weekly_top') {
+      const now = new Date();
+      const day = now.getDay(); // 0 (Sunday) - 6 (Saturday)
+      const diffToMonday = (day + 6) % 7; // days since Monday
+      const startOfWeek = new Date(now);
+      startOfWeek.setHours(0, 0, 0, 0);
+      startOfWeek.setDate(now.getDate() - diffToMonday);
+      weekStartIso = startOfWeek.toISOString();
+
+      const weekly = processed.filter((q) => q.created_at >= weekStartIso!);
+      const older = processed.filter((q) => q.created_at < weekStartIso!);
+      processed = [...weekly, ...older];
+
+      if (limit && Number.isFinite(limit) && limit > 0) {
+        processed = processed.slice(0, limit);
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const formatted = (questions || []).map((q: any) => ({
+    const formatted = (processed || []).map((q: any, index: number) => ({
       id: q.id,
       title: q.title,
       content: q.content,
@@ -82,6 +114,11 @@ export async function GET(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((qt: any) => qt.tags?.name)
         .filter(Boolean),
+      isTopOfWeek:
+        sortBy === 'weekly_top' &&
+        index === 0 &&
+        weekStartIso !== null &&
+        q.created_at >= weekStartIso,
     }));
 
     if (tag && tag !== 'הכל') {

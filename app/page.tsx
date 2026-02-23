@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Menu, MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Search, Filter, Eye, MessageCircle, ArrowUp } from 'lucide-react';
+import { MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Eye, MessageCircle, ArrowUp, ArrowDown, Star } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import LoginModal from './components/LoginModal';
 import HebrewRegistration from './components/HebrewRegistration';
@@ -11,6 +11,8 @@ import NavHeader from './components/NavHeader';
 import Image from 'next/image';
 import AuthStatusDisplay from './components/AuthStatusDisplay';
 import { SimpleThemeToggle } from './components/SimpleThemeToggle';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // Development-only ProfileTestComponent
 function ProfileTestComponent() {
@@ -34,15 +36,50 @@ function ProfileTestComponent() {
   );
 }
 
+interface TopQuestion {
+  id: string;
+  title: string;
+  content: string;
+  votes: number;
+  replies: number;
+  views: number;
+  createdAt: string;
+  isAnswered?: boolean;
+  author: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+  };
+  tags: string[];
+}
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'הרגע';
+  if (diffMins < 60) return `לפני ${diffMins} דקות`;
+  if (diffHours < 24) return `לפני ${diffHours} שעות`;
+  if (diffDays < 30) return `לפני ${diffDays} ימים`;
+  return date.toLocaleDateString('he-IL');
+}
+
 export default function ForumHomepage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterTag, setFilterTag] = useState('הכל');
-  const [sortBy, setSortBy] = useState('newest');
+  const [topQuestions, setTopQuestions] = useState<TopQuestion[]>([]);
+  const [loadingTopQuestions, setLoadingTopQuestions] = useState(true);
+  const [topQuestionsError, setTopQuestionsError] = useState<string | null>(null);
 
   const { user, profile, loading, signOut } = useAuth();
+  const router = useRouter();
+  const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
+  const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isRegisterModalOpen || isLoginModalOpen) {
@@ -60,78 +97,64 @@ export default function ForumHomepage() {
     { label: 'סיפורי', icon: BookOpen, href: '/stories' },
   ];
 
-  const questions = [
-    {
-      id: 1,
-      title: 'למה בעצם נשים מתקשות בחיים הרבה יותר מגברים?',
-      content: 'אני רואה שבחברה שלנו נשים מתמודדות עם קשיים רבים יותר. מה הסיבות לכך?',
-      author: 'נועה24242',
-      authorAvatar: 'https://i.pravatar.cc/40?img=1',
-      replies: 12,
-      votes: 8,
-      views: 156,
-      time: 'לפני 1 דקה',
-      tags: ['חברה', 'פמיניזם', 'דיון'],
-      isAnswered: false
-    },
-    {
-      id: 2,
-      title: 'איך אני יכול ללמוד תכנות בצורה יעילה?',
-      content: 'אני רוצה להתחיל ללמוד תכנות אבל לא יודע מאיפה להתחיל. יש המלצות?',
-      author: 'דני כהן',
-      authorAvatar: 'https://i.pravatar.cc/40?img=2',
-      replies: 15,
-      votes: 12,
-      views: 234,
-      time: 'לפני 2 שעות',
-      tags: ['תכנות', 'למידה', 'קריירה'],
-      isAnswered: true
-    },
-    {
-      id: 3,
-      title: 'מה ההבדל בין React ל-Vue?',
-      content: 'אני מתלבט איזה פריימוורק ללמוד. מה היתרונות והחסרונות של כל אחד?',
-      author: 'מיכל לוי',
-      authorAvatar: 'https://i.pravatar.cc/40?img=3',
-      replies: 8,
-      votes: 15,
-      views: 189,
-      time: 'לפני 3 שעות',
-      tags: ['React', 'Vue', 'JavaScript'],
-      isAnswered: true
-    },
-    {
-      id: 4,
-      title: 'איך להכין קפה טוב בבית?',
-      content: 'מחפש טיפים להכנת קפה איכותי בבית בלי מכונת אספרסו יקרה',
-      author: 'עומר כספי',
-      authorAvatar: 'https://i.pravatar.cc/40?img=4',
-      replies: 6,
-      votes: 4,
-      views: 92,
-      time: 'לפני 5 שעות',
-      tags: ['קפה', 'בישול', 'טיפים'],
-      isAnswered: false
+  useEffect(() => {
+    async function loadTopQuestions() {
+      setLoadingTopQuestions(true);
+      setTopQuestionsError(null);
+      try {
+        const res = await fetch('/api/questions?sort=votes&limit=5');
+        const data = await res.json();
+
+        if (!res.ok) {
+          setTopQuestionsError(data.error || 'שגיאה בטעינת השאלות המובילות');
+          return;
+        }
+
+        setTopQuestions(data.questions || []);
+      } catch {
+        setTopQuestionsError('שגיאה בטעינת השאלות המובילות');
+      } finally {
+        setLoadingTopQuestions(false);
+      }
     }
-  ];
 
-  const allTags = ['הכל', 'תכנות', 'עיצוב', 'קריירה', 'לימודים', 'טכנולוגיה', 'פיתוח', 'React', 'Vue', 'JavaScript', 'CSS', 'HTML'];
-
-  const filteredQuestions = questions
-    .filter(q =>
-      q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.content.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter(q => filterTag === 'הכל' || q.tags.includes(filterTag))
-    .sort((a, b) => {
-      if (sortBy === 'votes') return b.votes - a.votes;
-      if (sortBy === 'replies') return b.replies - a.replies;
-      if (sortBy === 'views') return b.views - a.views;
-      return b.id - a.id; // newest first
-    });
+    loadTopQuestions();
+  }, []);
 
   const handleLogin = () => setIsLoginModalOpen(true);
   const handleRegister = () => setIsRegisterModalOpen(true);
+
+  const handleVote = async (
+    event: React.MouseEvent,
+    questionId: string,
+    voteType: 1 | -1
+  ) => {
+    event.stopPropagation();
+    if (!user) {
+      handleLogin();
+      return;
+    }
+    setUpdatingVoteId(questionId);
+    try {
+      const res = await fetch(`/api/questions/${questionId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voteType }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      setTopQuestions((prev) =>
+        prev.map((q) =>
+          q.id === questionId ? { ...q, votes: data.votes ?? q.votes } : q
+        )
+      );
+      setUserVotes((prev) => ({ ...prev, [questionId]: voteType }));
+    } catch {
+      // leave as-is
+    } finally {
+      setUpdatingVoteId(null);
+    }
+  };
   const closeLoginModal = () => setIsLoginModalOpen(false);
   const closeRegisterModal = () => setIsRegisterModalOpen(false);
 
@@ -198,131 +221,191 @@ export default function ForumHomepage() {
           </p>
         </div>
 
-        <div className="mb-8">
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
-                <input
-                  type="text"
-                  placeholder="חפש שאלות..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pr-11 pl-4 py-3 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Filter size={20} className="text-gray-500 dark:text-gray-400" />
-                <select
-                  value={filterTag}
-                  onChange={(e) => setFilterTag(e.target.value)}
-                  className="px-4 py-3 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 text-gray-800 dark:text-gray-200"
-                >
-                  {allTags.map(tag => (
-                    <option key={tag} value={tag}>{tag}</option>
-                  ))}
-                </select>
-              </div>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 text-gray-800 dark:text-gray-200"
-              >
-                <option value="newest">החדשות ביותר</option>
-                <option value="votes">הכי מצוינות</option>
-                <option value="replies">הכי פופולריות</option>
-                <option value="views">הכי נצפות</option>
-              </select>
-            </div>
+        <section className="mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+              השאלות המדורגות ביותר
+            </h3>
+            <Link
+              href="/questions"
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+            >
+              צפה בכל השאלות
+            </Link>
           </div>
-        </div>
 
-        <div className="space-y-6">
-          {filteredQuestions.length > 0 ? (
-            filteredQuestions.map((question) => (
-              <div
-                key={question.id}
-                className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    <Image
-                      src={question.authorAvatar}
-                      alt={question.author}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-600 shadow-md group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      {question.isAnswered && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
-                          נענתה
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+            {loadingTopQuestions ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
+              </div>
+            ) : topQuestionsError ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-red-500 dark:text-red-400 mb-2">
+                  {topQuestionsError}
+                </p>
+              </div>
+            ) : topQuestions.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  עדיין אין שאלות, תהיה הראשון לשאול שאלה!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topQuestions.map((question) => (
+                  <div
+                    key={question.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/questions/${question.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        router.push(`/questions/${question.id}`);
+                      }
+                    }}
+                    className="block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group cursor-pointer"
+                  >
+                    <div className="flex flex-row min-h-[120px]" style={{ direction: 'ltr' }}>
+                      {/* Left: vertical voting column */}
+                      <div className="flex flex-col items-center justify-center gap-0.5 min-w-[64px] py-4 px-3 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50">
+                        <button
+                          type="button"
+                          onClick={(e) => handleVote(e, question.id, 1)}
+                          disabled={updatingVoteId === question.id}
+                          className="p-1.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                        >
+                          <ArrowUp
+                            size={20}
+                            className={
+                              (userVotes[question.id] === 1
+                                ? 'text-indigo-600 dark:text-indigo-400'
+                                : 'text-gray-400 dark:text-gray-500') +
+                              ' group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors'
+                            }
+                          />
+                        </button>
+                        <span className="font-bold text-lg text-gray-800 dark:text-gray-100 py-0.5 select-none">
+                          {question.votes}
                         </span>
-                      )}
-                      <span className="text-sm text-gray-600 dark:text-gray-400">{question.time}</span>
-                    </div>
-
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-tight">
-                      {question.title}
-                    </h3>
-
-                    <p className="text-gray-600 dark:text-gray-300 mb-4 leading-relaxed line-clamp-2">
-                      {question.content}
-                    </p>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{question.author}</span>
-                        
-                        <div className="flex items-center gap-1">
-                          <ArrowUp size={16} />
-                          <span>{question.votes}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MessageCircle size={16} />
-                          <span>{question.replies}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Eye size={16} />
-                          <span>{question.views}</span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => handleVote(e, question.id, -1)}
+                          disabled={updatingVoteId === question.id}
+                          className="p-1.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                        >
+                          <ArrowDown
+                            size={20}
+                            className={
+                              (userVotes[question.id] === -1
+                                ? 'text-indigo-600 dark:text-indigo-400'
+                                : 'text-gray-400 dark:text-gray-500') +
+                              ' group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors'
+                            }
+                          />
+                        </button>
                       </div>
 
-                      <div className="flex gap-2">
-                        {question.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-200 dark:hover:bg-indigo-900/80 transition-colors cursor-pointer"
-                            onClick={() => setFilterTag(tag)}
-                          >
-                            {tag}
+                      {/* Right: main content area */}
+                      <div
+                        className="flex-1 min-w-0 flex flex-col justify-between pr-6 pl-4 py-4 text-right"
+                        style={{ direction: 'rtl' }}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            {question.isAnswered && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
+                                <Star size={12} className="ml-1" fill="currentColor" />
+                                נענתה
+                              </span>
+                            )}
+                            {question.tags.length > 0 && question.tags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {question.tags.length > 3 && (
+                              <span className="text-xs text-gray-400 dark:text-gray-500">+{question.tags.length - 3}</span>
+                            )}
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-snug">
+                            {question.title}
+                          </h3>
+                        </div>
+
+                        <div className="flex items-center justify-start gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1 pt-1.5 border-t border-gray-100 dark:border-gray-700/70">
+                          {question.author.username ? (
+                            <Link
+                              href={`/profile/${encodeURIComponent(question.author.username)}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-2 hover:opacity-90 transition-opacity flex-shrink-0"
+                            >
+                              {question.author.avatar_url ? (
+                                <Image
+                                  src={question.author.avatar_url}
+                                  alt={question.author.username}
+                                  width={40}
+                                  height={40}
+                                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                                  <User size={20} className="text-white" />
+                                </div>
+                              )}
+                            </Link>
+                          ) : (
+                            <>
+                              {question.author.avatar_url ? (
+                                <Image
+                                  src={question.author.avatar_url}
+                                  alt=""
+                                  width={40}
+                                  height={40}
+                                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600 flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User size={20} className="text-white" />
+                                </div>
+                              )}
+                            </>
+                          )}
+                          <span className="font-medium text-gray-600 dark:text-gray-300">
+                            {question.author.username ? (
+                              <Link
+                                href={`/profile/${encodeURIComponent(question.author.username)}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:underline"
+                              >
+                                {question.author.username}
+                              </Link>
+                            ) : (
+                              'אנונימי'
+                            )}
                           </span>
-                        ))}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{timeAgo(question.createdAt)}</span>
+                          <div className="flex items-center gap-1" title="תגובות">
+                            <MessageCircle size={14} />
+                            <span>{question.replies}</span>
+                          </div>
+                          <div className="flex items-center gap-1" title="צפיות">
+                            <Eye size={14} />
+                            <span>{question.views}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-gray-400 dark:text-gray-500 mb-4">
-                <MessageSquare size={48} className="mx-auto" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">
-                לא נמצאו שאלות
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                נסה לשנות את הפילטרים או החיפוש
-              </p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </section>
       </main>
 
       <LoginModal 

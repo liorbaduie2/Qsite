@@ -406,8 +406,11 @@ export default function QuestionDetailPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
                     {/* Author */}
                     <div className="flex items-center gap-3">
-                      {question.author.username ? (
-                        <Link href={`/profile/${encodeURIComponent(question.author.username)}`} className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                      {(question.author.username || user?.id === question.author.id) ? (
+                        <Link
+                          href={user?.id === question.author.id ? '/profile' : `/profile/${encodeURIComponent(question.author.username)}`}
+                          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+                        >
                           {question.author.avatar_url ? (
                             <Image
                               src={question.author.avatar_url}
@@ -422,7 +425,7 @@ export default function QuestionDetailPage() {
                             </div>
                           )}
                           <div>
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">{question.author.username}</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">{question.author.username || profile?.username}</span>
                             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                               <Shield size={11} />
                               <span>{question.author.reputation} נקודות</span>
@@ -534,8 +537,11 @@ export default function QuestionDetailPage() {
 
                                 <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700 flex-wrap gap-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    {node.author.username ? (
-                                      <Link href={`/profile/${encodeURIComponent(node.author.username)}`} className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+                                    {(node.author.username || user?.id === node.author.id) ? (
+                                      <Link
+                                        href={user?.id === node.author.id ? '/profile' : `/profile/${encodeURIComponent(node.author.username)}`}
+                                        className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+                                      >
                                         {node.author.avatar_url ? (
                                           <Image
                                             src={node.author.avatar_url}
@@ -552,7 +558,7 @@ export default function QuestionDetailPage() {
                                           </div>
                                         )}
                                         <span className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? 'text-sm' : 'text-sm'}`}>
-                                          {node.author.username}
+                                          {node.author.username || (user?.id === node.author.id ? profile?.username : null)}
                                         </span>
                                       </Link>
                                     ) : (
