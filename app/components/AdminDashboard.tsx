@@ -30,7 +30,8 @@ import {
     ShieldCheck,
     Wrench,
     Save,
-    EyeOff
+    EyeOff,
+    PlusCircle
 } from 'lucide-react';
 
 const supabase = createBrowserClient(
@@ -310,6 +311,10 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
     const [penaltyReason, setPenaltyReason] = useState('');
     const [usePenaltyType, setUsePenaltyType] = useState(true);
 
+    // Reputation grant state (owner only)
+    const [grantAmount, setGrantAmount] = useState(1);
+    const [grantReason, setGrantReason] = useState('');
+
     // Role management state
     const [selectedRole, setSelectedRole] = useState('user');
     const [roleReason, setRoleReason] = useState('');
@@ -421,6 +426,53 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
             onAction(`התפקיד "${roleName}" הוענק ל-${user.username} בהצלחה`, false);
         } catch (err: unknown) {
             onAction(err instanceof Error ? err.message : 'שגיאה במתן תפקיד', true);
+        }
+    };
+
+    const handleGrantReputation = async () => {
+        if (!grantReason.trim()) {
+            onAction('נדרש לציין סיבה למתן נקודות מוניטין', true);
+            return;
+        }
+
+        if (grantAmount <= 0) {
+            onAction('כמות הנקודות חייבת להיות חיובית', true);
+            return;
+        }
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('לא מחובר למערכת');
+
+            const response = await fetch('/api/admin/grant-reputation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    targetUserId: user.id,
+                    amount: grantAmount,
+                    reason: grantReason
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                const msg = result.details || result.error || 'שגיאה במתן נקודות מוניטין';
+                throw new Error(msg);
+            }
+
+            const applied = typeof result.applied_delta === 'number'
+                ? result.applied_delta
+                : grantAmount;
+
+            onAction(`נוספו ${applied} נקודות מוניטין ל-${user.username}`, false);
+        } catch (err: unknown) {
+            onAction(
+                err instanceof Error ? err.message : 'שגיאה במתן נקודות מוניטין',
+                true
+            );
         }
     };
 
@@ -563,6 +615,53 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                                     </div>
                                     <button onClick={handleApplyPenalty} disabled={loading || !penaltyReason.trim() || (!usePenaltyType && customAmount > (userPermissions.max_reputation_deduction || 0))} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-all shadow-sm disabled:opacity-50">
                                         {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'החל עונש'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Reputation Grant Card - owner only */}
+                            {userPermissions?.role === 'owner' && (
+                                <div className="bg-slate-50 dark:bg-slate-900/50 border border-emerald-200 dark:border-emerald-700 rounded-xl p-5 space-y-4">
+                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 text-lg">
+                                        <PlusCircle className="w-6 h-6 text-emerald-500" />
+                                        הענקת מוניטין
+                                    </h4>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                        כבעלים, באפשרותך להחזיר למשתמשים נקודות מוניטין (למשל לשחרור מחשבון חסום).
+                                        המערכת תכבד את מגבלות היומיות והמקסימום המוגדרות בבסיס הנתונים.
+                                    </p>
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">כמות נקודות</label>
+                                        <input
+                                            type="number"
+                                            value={grantAmount}
+                                            onChange={e => setGrantAmount(Number(e.target.value))}
+                                            min="1"
+                                            className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            סיבה <span className="text-red-500">*</span>
+                                        </label>
+                                        <textarea
+                                            value={grantReason}
+                                            onChange={e => setGrantReason(e.target.value)}
+                                            className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            rows={3}
+                                            placeholder="הסבר מדוע ניתנות נקודות המוניטין (למשל תיקון טעות, החזרת חשבון פעיל)..."
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleGrantReputation}
+                                        disabled={loading || !grantReason.trim() || grantAmount <= 0}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50"
+                                    >
+                                        {loading ? (
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            'הענק נקודות מוניטין'
+                                        )}
                                     </button>
                                 </div>
                             )}
