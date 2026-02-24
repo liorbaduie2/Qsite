@@ -292,6 +292,19 @@ export default function PublicProfilePage() {
                       תג כבוד – מוניטין 100
                     </p>
                     <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
+                      משתמש זה הגיע לרמת האמון הגבוהה ביותר בקהילה.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {profile.reputation === 100 && (
+                <div className="mt-3 p-3 bg-emerald-50/90 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl flex items-start gap-3">
+                  <Star size={18} className="text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                      תג כבוד – מוניטין 100
+                    </p>
+                    <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
                       משתמש זה הגיע לרמת המוניטין הגבוהה ביותר בקהילה.
                     </p>
                   </div>

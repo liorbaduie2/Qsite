@@ -3,7 +3,15 @@ import React from 'react';
 import { AlertCircle, Clock, XCircle, CheckCircle, Shield, Mail, Phone } from 'lucide-react';
 
 export interface LoginStatusMessageProps {
-  status: 'pending' | 'rejected' | 'suspended' | 'approved' | 'error' | null;
+  status:
+    | 'pending'
+    | 'rejected'
+    | 'suspended'
+    | 'approved'
+    | 'banned'
+    | 'reputation_blocked'
+    | 'error'
+    | null;
   message: string;
   onDismiss?: () => void;
   className?: string;
@@ -45,6 +53,16 @@ const LoginStatusMessage: React.FC<LoginStatusMessageProps> = ({
           iconColor: 'text-gray-600',
           title: 'החשבון הושעה',
           titleColor: 'text-gray-900'
+        };
+      case 'banned':
+      case 'reputation_blocked':
+        return {
+          icon: Shield,
+          bgColor: 'bg-red-50 border-red-200',
+          textColor: 'text-red-800',
+          iconColor: 'text-red-600',
+          title: 'החשבון נחסם',
+          titleColor: 'text-red-900'
         };
       case 'approved':
         return {

@@ -26,6 +26,10 @@ interface Profile {
   location?: string;
   website?: string;
   reputation: number;
+  questions_count?: number;
+  answers_count?: number;
+  best_answers_count?: number;
+  total_views?: number;
   email?: string;
   phone?: string;
   phone_verified_at?: string;
