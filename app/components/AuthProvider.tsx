@@ -45,10 +45,6 @@ interface Profile {
   rejection_reason?: string;
   is_moderator: boolean;
   is_verified: boolean;
-  questions_count?: number;
-  answers_count?: number;
-  best_answers_count?: number;
-  total_views?: number;
   created_at?: string;
   updated_at?: string;
 }
