@@ -25,15 +25,6 @@ import { useAuth } from '../components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-interface UserStats {
-  questionsAsked: number;
-  answersGiven: number;
-  bestAnswers: number;
-  totalViews: number;
-  reputation: number;
-  joinedDate: string;
-}
-
 interface Question {
   id: number;
   title: string;
@@ -82,16 +73,6 @@ export default function ProfilePage() {
     location: '',
     website: '',
     avatar_url: ''
-  });
-
-  // Mock data - replace with real data from Supabase
-  const [userStats] = useState<UserStats>({
-    questionsAsked: 12,
-    answersGiven: 34,
-    bestAnswers: 8,
-    totalViews: 1250,
-    reputation: profile?.reputation || 156,
-    joinedDate: '2024-01-15'
   });
 
   const [sharedStatus, setSharedStatus] = useState<{ id: string; content: string; createdAt: string } | null>(null);
@@ -236,6 +217,13 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const joinedDate = profile.created_at || new Date().toISOString();
+  const reputation = profile.reputation ?? 0;
+  const questionsAsked = profile.questions_count ?? 0;
+  const answersGiven = profile.answers_count ?? 0;
+  const bestAnswers = profile.best_answers_count ?? 0;
+  const totalViews = profile.total_views ?? 0;
 
   const playlistInfo = getPlaylistInfo(isEditing ? editForm.website : profile.website);
 
@@ -411,7 +399,7 @@ export default function ProfilePage() {
 
                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                   <Calendar size={18} className="text-gray-400 dark:text-gray-500" />
-                  <span>הצטרף ב-{new Date(userStats.joinedDate).toLocaleDateString('he-IL')}</span>
+                  <span>הצטרף ב-{new Date(joinedDate).toLocaleDateString('he-IL')}</span>
                 </div>
               </div>
 
@@ -422,10 +410,23 @@ export default function ProfilePage() {
                   <span className="font-semibold text-gray-800 dark:text-gray-200">מוניטין</span>
                 </div>
                 <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
-                  {userStats.reputation}
+                  {reputation}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">נקודות</div>
               </div>
+              {reputation === 100 && (
+                <div className="mt-3 p-3 bg-emerald-50/90 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl flex items-start gap-3">
+                  <Star size={18} className="text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                      תג כבוד – מוניטין 100
+                    </p>
+                    <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
+                      הגעת לרמת האמון הגבוהה ביותר בקהילה. תודה על התרומה שלך!
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -465,7 +466,7 @@ export default function ProfilePage() {
                           <HelpCircle className="text-blue-600 dark:text-blue-400" size={20} />
                           <span className="font-semibold text-blue-800 dark:text-blue-200">שאלות</span>
                         </div>
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{userStats.questionsAsked}</div>
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{questionsAsked}</div>
                       </div>
 
                       <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-200 dark:border-green-700/50">
@@ -473,7 +474,7 @@ export default function ProfilePage() {
                           <MessageSquare className="text-green-600 dark:text-green-400" size={20} />
                           <span className="font-semibold text-green-800 dark:text-green-200">תשובות</span>
                         </div>
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{userStats.answersGiven}</div>
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{answersGiven}</div>
                       </div>
 
                       <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
@@ -481,7 +482,7 @@ export default function ProfilePage() {
                           <CheckCircle className="text-yellow-600 dark:text-yellow-500" size={20} />
                           <span className="font-semibold text-yellow-800 dark:text-yellow-200">תשובות מקובלות</span>
                         </div>
-                        <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">{userStats.bestAnswers}</div>
+                        <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">{bestAnswers}</div>
                       </div>
 
                       <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50">
@@ -489,7 +490,7 @@ export default function ProfilePage() {
                           <Eye className="text-purple-600 dark:text-purple-400" size={20} />
                           <span className="font-semibold text-purple-800 dark:text-purple-200">צפיות</span>
                         </div>
-                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{userStats.totalViews}</div>
+                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{totalViews}</div>
                       </div>
                     </div>
 

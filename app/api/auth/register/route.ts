@@ -192,7 +192,6 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
           approval_status: 'pending',
           is_verified: false,
           is_moderator: false,
-          reputation: 0,
           questions_count: 0,
           answers_count: 0,
           best_answers_count: 0,

@@ -9,6 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { useRouter } from "next/navigation";
 import type {
   User,
   AuthError,
@@ -28,12 +29,22 @@ interface Profile {
   email?: string;
   phone?: string;
   phone_verified_at?: string;
-  approval_status: "pending" | "approved" | "rejected" | "suspended";
+  approval_status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "suspended"
+    | "banned"
+    | "reputation_blocked";
   approved_at?: string;
   approved_by?: string;
   rejection_reason?: string;
   is_moderator: boolean;
   is_verified: boolean;
+  questions_count?: number;
+  answers_count?: number;
+  best_answers_count?: number;
+  total_views?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -62,7 +73,14 @@ interface UserPermissions {
 
 interface LoginStatusResult {
   can_login: boolean;
-  status: "pending" | "approved" | "rejected" | "suspended" | "error";
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "suspended"
+    | "banned"
+    | "reputation_blocked"
+    | "error";
   message_hebrew: string;
   user_id?: string;
 }
@@ -121,6 +139,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -263,7 +283,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           id, username, full_name, avatar_url, bio, location, website,
           reputation, phone, phone_verified_at, approval_status,
           approved_at, approved_by, rejection_reason, is_moderator,
-          is_verified, created_at, updated_at, email
+          is_verified, created_at, updated_at, email,
+          questions_count, answers_count, best_answers_count, total_views
         `,
           )
           .eq("id", userId)
@@ -293,7 +314,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             | "pending"
             | "approved"
             | "rejected"
-            | "suspended",
+            | "suspended"
+            | "banned"
+            | "reputation_blocked",
           approved_at: data.approved_at ? String(data.approved_at) : undefined,
           approved_by: data.approved_by ? String(data.approved_by) : undefined,
           rejection_reason: data.rejection_reason
@@ -303,6 +326,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           is_verified: Boolean(data.is_verified),
           created_at: data.created_at ? String(data.created_at) : undefined,
           updated_at: data.updated_at ? String(data.updated_at) : undefined,
+          questions_count:
+            typeof data.questions_count === "number"
+              ? data.questions_count
+              : undefined,
+          answers_count:
+            typeof data.answers_count === "number"
+              ? data.answers_count
+              : undefined,
+          best_answers_count:
+            typeof data.best_answers_count === "number"
+              ? data.best_answers_count
+              : undefined,
+          total_views:
+            typeof data.total_views === "number"
+              ? data.total_views
+              : undefined,
         };
 
         setProfile(profile);
@@ -370,7 +409,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Try to get login status, but don't block if it fails
         try {
           const status = await checkLoginStatus(data.user.id);
-          if (!status.can_login) {
+          if (status.status === "reputation_blocked") {
+            // Authenticated but blocked due to reputation=0: keep session and route to blocked page.
+            await fetchUserProfile(data.user.id);
+            await getUserPermissions(data.user.id);
+            router.push("/account/blocked");
+          } else if (!status.can_login) {
             await supabase.auth.signOut();
             setError(status.message_hebrew);
             setLoginStatus(status);
@@ -383,14 +427,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 status_code: status.status,
               } as unknown as AuthError,
             };
+          } else {
+            // Approved/allowed login path
+            await fetchUserProfile(data.user.id);
+            await getUserPermissions(data.user.id);
           }
         } catch {
-          // Allow login if status check fails
+          // Allow login if status check fails, but still try to hydrate profile & permissions
+          await fetchUserProfile(data.user.id);
+          await getUserPermissions(data.user.id);
         }
-
-        // Fetch profile and permissions
-        await fetchUserProfile(data.user.id);
-        await getUserPermissions(data.user.id);
       }
 
       return { data, error };
@@ -540,7 +586,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               setTimeout(() => rej(new Error("timeout")), 6000)
             ),
           ]);
-          if (!loginStatus.can_login) {
+          if (loginStatus.status === "reputation_blocked") {
+            // Keep user logged in but force them onto the blocked account screen
+            router.replace("/account/blocked");
+          } else if (!loginStatus.can_login) {
             await supabase.auth.signOut();
             setUser(null);
             setProfile(null);
@@ -565,7 +614,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       };
       load();
     },
-    [checkLoginStatus, fetchUserProfile, getUserPermissions, supabase]
+    [checkLoginStatus, fetchUserProfile, getUserPermissions, supabase, router]
   );
 
   // Handle auth state changes
@@ -701,6 +750,37 @@ export function AdminRoute({ children }: { children: ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  return <>{children}</>;
+}
+
+// Guard component: blocks access for reputation‑blocked users and redirects them
+interface RequireNotBlockedProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+export function RequireNotBlocked({
+  children,
+  fallback = null,
+}: RequireNotBlockedProps) {
+  const { profile, loginStatus, loading } = useAuth();
+  const router = useRouter();
+
+  const isBlocked =
+    loginStatus?.status === "reputation_blocked" ||
+    (profile && profile.reputation === 0);
+
+  useEffect(() => {
+    if (loading) return;
+    if (isBlocked) {
+      router.replace("/account/blocked");
+    }
+  }, [loading, isBlocked, router]);
+
+  if (isBlocked) {
+    return <>{fallback}</>;
   }
 
   return <>{children}</>;
