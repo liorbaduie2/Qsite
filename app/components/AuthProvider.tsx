@@ -406,15 +406,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data.user) {
         setUser(data.user);
 
-        // Try to get login status, but don't block if it fails
+        // Check login status; block any disallowed status (including reputation_blocked)
         try {
           const status = await checkLoginStatus(data.user.id);
-          if (status.status === "reputation_blocked") {
-            // Authenticated but blocked due to reputation=0: keep session and route to blocked page.
-            await fetchUserProfile(data.user.id);
-            await getUserPermissions(data.user.id);
-            router.push("/account/blocked");
-          } else if (!status.can_login) {
+          if (!status.can_login) {
             await supabase.auth.signOut();
             setError(status.message_hebrew);
             setLoginStatus(status);
@@ -427,11 +422,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 status_code: status.status,
               } as unknown as AuthError,
             };
-          } else {
-            // Approved/allowed login path
-            await fetchUserProfile(data.user.id);
-            await getUserPermissions(data.user.id);
           }
+
+          // Approved/allowed login path
+          await fetchUserProfile(data.user.id);
+          await getUserPermissions(data.user.id);
         } catch {
           // Allow login if status check fails, but still try to hydrate profile & permissions
           await fetchUserProfile(data.user.id);
@@ -586,10 +581,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               setTimeout(() => rej(new Error("timeout")), 6000)
             ),
           ]);
-          if (loginStatus.status === "reputation_blocked") {
-            // Keep user logged in but force them onto the blocked account screen
-            router.replace("/account/blocked");
-          } else if (!loginStatus.can_login) {
+          if (!loginStatus.can_login) {
             await supabase.auth.signOut();
             setUser(null);
             setProfile(null);

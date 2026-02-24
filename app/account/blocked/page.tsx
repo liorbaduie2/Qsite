@@ -12,23 +12,14 @@ export default function BlockedAccountPage() {
   useEffect(() => {
     if (loading) return;
 
-    // If user is not signed in, send them to login.
-    if (!user) {
+    // If user is not signed in or cannot login, send them to login.
+    if (!user || (loginStatus && !loginStatus.can_login)) {
       router.replace("/auth/login");
       return;
     }
+  }, [loading, user, loginStatus, router]);
 
-    const isReputationBlocked =
-      loginStatus?.status === "reputation_blocked" ||
-      (profile && profile.reputation === 0);
-
-    // If user is no longer reputation‑blocked, don't keep them here.
-    if (profile && !isReputationBlocked) {
-      router.replace("/");
-    }
-  }, [loading, user, profile, loginStatus, router]);
-
-  if (loading || !user) {
+  if (loading || !user || (loginStatus && !loginStatus.can_login)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
         <div className="text-center">
@@ -75,12 +66,12 @@ export default function BlockedAccountPage() {
           </div>
 
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-50 text-center mb-3">
-            החשבון נחסם עקב מוניטין נמוך
+            החשבון שלך הושעה בגלל מוניטין 0
           </h1>
           <p className="text-sm text-slate-700 dark:text-slate-300 text-center mb-6 leading-relaxed">
-            כדי להגן על הקהילה, חשבונות שמגיעים למוניטין 0 נחסמים מלהשתמש
-            בפיצ&apos;רים המרכזיים של האתר. אפשר להתחבר ולצפות במידע בסיסי,
-            אבל לא להשתתף בדיונים, לשאול שאלות או לענות.
+            כדי להגן על הקהילה, חשבונות שמגיעים למוניטין 0 מושעים באופן מלא:
+            אי אפשר להתחבר, לשאול שאלות, לענות, להגיב או לבצע כל פעולה
+            אינטראקטיבית באתר עד שהמוניטין יעלה מחדש על ידי מנהל.
           </p>
 
           <div className="rounded-2xl border border-amber-200/80 dark:border-amber-700/60 bg-amber-50/80 dark:bg-amber-900/20 p-4 mb-6">
