@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import AuthModal from '../components/AuthModal';
+import { useForcedAuthModal } from '../components/useForcedAuthModal';
 import Drawer from '../components/Drawer';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -31,6 +32,35 @@ interface MyStatusItem {
   createdAt: string;
 }
 
+const MOCK_FEED: FeedItem[] = [
+  {
+    id: "mock-status-1",
+    content: "כאן תראה עדכוני סטטוס אמיתיים לאחר שתתחבר למערכת.",
+    starsCount: 3,
+    createdAt: new Date().toISOString(),
+    author: {
+      id: "mock-user-1",
+      username: "community_member",
+      fullName: "משתמש לדוגמה",
+      avatar_url: undefined,
+    },
+    starredByMe: false,
+  },
+  {
+    id: "mock-status-2",
+    content: "סטטוס לדוגמה נוסף שמדגים את הפורמט של הפיד.",
+    starsCount: 1,
+    createdAt: new Date().toISOString(),
+    author: {
+      id: "mock-user-2",
+      username: "another_member",
+      fullName: "חבר קהילה",
+      avatar_url: undefined,
+    },
+    starredByMe: false,
+  },
+];
+
 function timeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -54,8 +84,6 @@ function cooldownRemaining(nextPostAt: string): string {
 
 export default function StatusPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [myActive, setMyActive] = useState<MyStatusItem | null>(null);
@@ -73,6 +101,11 @@ export default function StatusPage() {
   const [adminStarsLoading, setAdminStarsLoading] = useState(false);
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
+  const isGuest = !user;
+  const {
+    modalProps: authModalProps,
+    handleAuthAction,
+  } = useForcedAuthModal({ isGuest, authLoading });
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -83,9 +116,21 @@ export default function StatusPage() {
   ];
 
   const fetchFeed = useCallback(async () => {
+    // For guests, do not hit the real API – show mock feed only
+    if (!user && !authLoading) {
+      setFeed(MOCK_FEED);
+      setFeedLoading(false);
+      return;
+    }
+
+    // While auth state is resolving, wait
+    if (!user) {
+      return;
+    }
+
     setFeedLoading(true);
     try {
-      const res = await fetch('/api/status');
+      const res = await fetch("/api/status");
       const data = await res.json();
       if (res.ok) setFeed(data.feed || []);
     } catch {
@@ -93,7 +138,7 @@ export default function StatusPage() {
     } finally {
       setFeedLoading(false);
     }
-  }, []);
+  }, [user, authLoading]);
 
   const fetchMe = useCallback(async () => {
     if (!user) {
@@ -132,15 +177,16 @@ export default function StatusPage() {
 
   // Real-time: subscribe to user_statuses updates so star count syncs for all viewers
   useEffect(() => {
+    if (!user) return;
     const supabase = createClient();
     const channel = supabase
-      .channel('status-stars-realtime')
+      .channel("status-stars-realtime")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'user_statuses',
+          event: "UPDATE",
+          schema: "public",
+          table: "user_statuses",
         },
         (payload) => {
           const newRow = payload.new as { id?: string; stars_count?: number };
@@ -148,23 +194,25 @@ export default function StatusPage() {
           const id = newRow.id;
           const starsCount = Number(newRow.stars_count);
           setFeed((prev) =>
-            prev.map((s) => (s.id === id ? { ...s, starsCount } : s))
+            prev.map((s) => (s.id === id ? { ...s, starsCount } : s)),
           );
-          setMyActive((prev) => (prev?.id === id ? { ...prev, starsCount } : prev));
+          setMyActive((prev) =>
+            prev?.id === id ? { ...prev, starsCount } : prev,
+          );
           setMyHistory((prev) =>
-            prev.map((s) => (s.id === id ? { ...s, starsCount } : s))
+            prev.map((s) => (s.id === id ? { ...s, starsCount } : s)),
           );
           setAdminStarsModal((prev) =>
-            prev?.statusId === id ? { ...prev, starsCount } : prev
+            prev?.statusId === id ? { ...prev, starsCount } : prev,
           );
-        }
+        },
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
@@ -177,7 +225,11 @@ export default function StatusPage() {
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
     const content = newContent.trim();
-    if (!content || !user) return;
+    if (!content) return;
+    if (!user) {
+      handleAuthAction('login');
+      return;
+    }
     if (!canPost) {
       setPostError('המתן לסיום זמן ההמתנה בין פרסומים');
       return;
@@ -213,8 +265,7 @@ export default function StatusPage() {
 
   const toggleStar = async (statusId: string) => {
     if (!user) {
-      setAuthModalMode('login');
-      setIsAuthModalOpen(true);
+      handleAuthAction('login');
       return;
     }
     setStarringId(statusId);
@@ -264,7 +315,10 @@ export default function StatusPage() {
   };
 
   const toggleShare = async (statusId: string, current: boolean) => {
-    if (!user) return;
+    if (!user) {
+      handleAuthAction('login');
+      return;
+    }
     setSharingId(statusId);
     try {
       const res = await fetch(`/api/status/${statusId}/share`, {
@@ -308,10 +362,10 @@ export default function StatusPage() {
         rightContent={
           !user && (
             <div className="flex items-center gap-2">
-              <button onClick={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 border border-indigo-200 dark:border-indigo-800">
+              <button onClick={() => handleAuthAction('login')} className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 border border-indigo-200 dark:border-indigo-800">
                 <LogIn size={16} /> התחברות
               </button>
-              <button onClick={() => { setAuthModalMode('register'); setIsAuthModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg">
+              <button onClick={() => handleAuthAction('register')} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg">
                 <User size={16} /> הרשמה
               </button>
             </div>
@@ -582,9 +636,7 @@ export default function StatusPage() {
         </div>
       )}
 
-      {isAuthModalOpen && (
-        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
-      )}
+      <AuthModal {...authModalProps} />
     </div>
   );
 }

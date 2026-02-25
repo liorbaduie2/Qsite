@@ -2,6 +2,33 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
+function isGuestAllowedPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+
+  if (
+    pathname.startsWith("/questions") ||
+    pathname.startsWith("/status") ||
+    pathname.startsWith("/discussions") ||
+    pathname.startsWith("/stories")
+  ) {
+    return true;
+  }
+
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/questions") ||
+    pathname.startsWith("/api/status") ||
+    pathname.startsWith("/api/discussions") ||
+    pathname.startsWith("/api/stories")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -51,14 +78,8 @@ export async function updateSession(request: NextRequest) {
   const user = data?.claims;
   const userId = user?.sub as string | undefined;
 
-  // No session: redirect to login (except for public routes)
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/api/auth")
-  ) {
+  // No session: allow selected public content routes, otherwise redirect to login
+  if (!user && !isGuestAllowedPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);

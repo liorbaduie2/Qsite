@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../components/AuthProvider";
 import AuthModal from "../components/AuthModal";
+import { useForcedAuthModal } from "../components/useForcedAuthModal";
 import Drawer from "../components/Drawer";
 import NavHeader from "../components/NavHeader";
 import NewQuestionModal from "../components/NewQuestionModal";
@@ -46,6 +47,42 @@ interface Question {
   isTopOfWeek?: boolean;
 }
 
+const MOCK_QUESTIONS: Question[] = [
+  {
+    id: "mock-1",
+    title: "כאן תופיע שאלה אמיתית לאחר התחברות",
+    content: "",
+    author: {
+      id: "mock-author-1",
+      username: "example_user",
+      avatar_url: null,
+    },
+    replies: 3,
+    votes: 12,
+    views: 120,
+    createdAt: new Date().toISOString(),
+    tags: ["JavaScript", "React"],
+    isAnswered: true,
+    isTopOfWeek: true,
+  },
+  {
+    id: "mock-2",
+    title: "שאלה לדוגמה על קריירה ופיתוח",
+    content: "",
+    author: {
+      id: "mock-author-2",
+      username: "dev_example",
+      avatar_url: null,
+    },
+    replies: 1,
+    votes: 5,
+    views: 42,
+    createdAt: new Date().toISOString(),
+    tags: ["קריירה", "פיתוח"],
+    isAnswered: false,
+  },
+];
+
 function timeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -63,11 +100,7 @@ function timeAgo(dateStr: string): string {
 
 const QuestionsPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isNewQuestionModalOpen, setIsNewQuestionModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<"login" | "register">(
-    "login",
-  );
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("weekly_top");
   const [filterTag, setFilterTag] = useState("הכל");
@@ -77,8 +110,14 @@ const QuestionsPage = () => {
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
   const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
 
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
+
+  const isGuest = !user;
+  const {
+    modalProps: authModalProps,
+    handleAuthAction,
+  } = useForcedAuthModal({ isGuest, authLoading });
 
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/" },
@@ -104,6 +143,19 @@ const QuestionsPage = () => {
   ];
 
   const fetchQuestions = useCallback(async () => {
+    // For guests, show only mock questions and do not hit the real API
+    if (!user && !authLoading) {
+      setFetchError(null);
+      setQuestions(MOCK_QUESTIONS);
+      setLoadingQuestions(false);
+      return;
+    }
+
+    // While auth state is still resolving, wait before deciding what to fetch
+    if (!user) {
+      return;
+    }
+
     setLoadingQuestions(true);
     setFetchError(null);
     try {
@@ -126,16 +178,11 @@ const QuestionsPage = () => {
     } finally {
       setLoadingQuestions(false);
     }
-  }, [searchTerm, filterTag, sortBy]);
+  }, [searchTerm, filterTag, sortBy, user, authLoading]);
 
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
-
-  const handleAuthAction = (mode: "login" | "register") => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
-  };
 
   const handleSignOut = async () => {
     try {
@@ -196,7 +243,7 @@ const QuestionsPage = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
@@ -535,13 +582,7 @@ const QuestionsPage = () => {
         </div>
       </main>
 
-      {isAuthModalOpen && (
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authModalMode}
-        />
-      )}
+      <AuthModal {...authModalProps} />
 
       {isNewQuestionModalOpen && (
         <NewQuestionModal

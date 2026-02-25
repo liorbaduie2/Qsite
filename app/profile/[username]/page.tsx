@@ -8,7 +8,6 @@ import {
   MapPin,
   Globe,
   Calendar,
-  Award,
   Star,
   Music,
   MessageCircle,
@@ -57,6 +56,98 @@ const getPlaylistInfo = (url: string | undefined) => {
     text: url,
   };
 };
+
+interface ReputationArcProps {
+  value: number;
+  max?: number;
+  size?: number;
+}
+
+function getReputationVisuals(value: number) {
+  if (value < 10) {
+    return {
+      textClass: "text-red-500 dark:text-red-400",
+      strokeColor: "#ef4444",
+    };
+  }
+  if (value < 30) {
+    return {
+      textClass: "text-yellow-500 dark:text-yellow-400",
+      strokeColor: "#eab308",
+    };
+  }
+  if (value < 40) {
+    return {
+      textClass: "text-orange-500 dark:text-orange-400",
+      strokeColor: "#f97316",
+    };
+  }
+  if (value < 80) {
+    return {
+      textClass: "text-green-500 dark:text-green-400",
+      strokeColor: "#22c55e",
+    };
+  }
+  return {
+    textClass: "text-fuchsia-500 dark:text-fuchsia-400",
+    strokeColor: "#d946ef",
+  };
+}
+
+function ReputationArc({ value, max = 100, size = 120 }: ReputationArcProps) {
+  const clamped = Math.max(0, Math.min(value, max));
+  const strokeWidth = 8;
+  const radius = (size - strokeWidth) / 2;
+  const center = size / 2;
+  const circumference = 2 * Math.PI * radius;
+  const arcFraction = 0.6; // ~110% of a half-circle
+  const arcLength = circumference * arcFraction;
+  const progress = clamped / max;
+  const progressLength = arcLength * progress;
+  const gapLength = circumference - arcLength;
+  const rotationDegrees = -15.5; // ~3% of a full circle
+  const { strokeColor } = getReputationVisuals(clamped);
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <defs>
+        <linearGradient
+          id="public-reputation-arc-gradient"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="0%"
+        >
+          <stop offset="0%" stopColor="#f59e0b" />
+          <stop offset="50%" stopColor="#f97316" />
+          <stop offset="100%" stopColor="#fb923c" />
+        </linearGradient>
+      </defs>
+      <g transform={`rotate(${rotationDegrees} ${center} ${center})`}>
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke="rgba(148, 163, 184, 0.35)"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${arcLength} ${gapLength}`}
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${progressLength} ${circumference - progressLength}`}
+        />
+      </g>
+    </svg>
+  );
+}
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -163,6 +254,9 @@ export default function PublicProfilePage() {
 
   const displayName = profile.full_name || profile.username;
   const playlistInfo = getPlaylistInfo(profile.website || undefined);
+  const { textClass: reputationTextClass } = getReputationVisuals(
+    profile.reputation,
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
@@ -184,25 +278,37 @@ export default function PublicProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 sticky top-8">
-              <div className="text-center mb-6">
-                <div className="relative inline-block mb-4">
-                  {profile.avatar_url ? (
-                    <Image
-                      src={profile.avatar_url}
-                      alt={profile.username}
-                      width={96}
-                      height={96}
-                      className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-600 shadow-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-500 dark:to-purple-600 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-600 shadow-lg">
-                      <span className="text-2xl font-bold text-white">
-                        {profile.username?.charAt(0).toUpperCase()}
-                      </span>
+              <div className="text-center mb-4">
+                <div className="flex flex-col items-center justify-center mb-2">
+                  <div className="relative" style={{ width: 124, height: 124 }}>
+                    <ReputationArc value={profile.reputation} size={124} />
+                    <div className="absolute inset-4 flex items-center justify-center">
+                      {profile.avatar_url ? (
+                        <Image
+                          src={profile.avatar_url}
+                          alt={profile.username}
+                          width={96}
+                          height={96}
+                          className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-600 shadow-lg"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-500 dark:to-purple-600 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-600 shadow-lg">
+                          <span className="text-2xl font-bold text-white">
+                            {profile.username?.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+                    מוניטין{" "}
+                    <span className={reputationTextClass}>
+                      {profile.reputation}
+                    </span>{" "}
+                    נקודות
+                  </div>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
+                <h2 className="text-[1.75rem] font-bold text-gray-800 dark:text-gray-100 mb-1">
                   {displayName}
                 </h2>
                 {profile.bio && (
@@ -267,45 +373,18 @@ export default function PublicProfilePage() {
                 )}
               </div>
 
-              <div className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Award
-                    className="text-yellow-600 dark:text-yellow-500"
-                    size={20}
-                  />
-                  <span className="font-semibold text-gray-800 dark:text-gray-200">
-                    מוניטין
-                  </span>
-                </div>
-                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
-                  {profile.reputation}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  נקודות
-                </div>
-              </div>
               {profile.reputation === 100 && (
                 <div className="mt-3 p-3 bg-emerald-50/90 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl flex items-start gap-3">
-                  <Star size={18} className="text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                  <Star
+                    size={18}
+                    className="text-emerald-600 dark:text-emerald-400 mt-0.5"
+                  />
                   <div>
                     <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
                       תג כבוד – מוניטין 100
                     </p>
                     <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
                       משתמש זה הגיע לרמת האמון הגבוהה ביותר בקהילה.
-                    </p>
-                  </div>
-                </div>
-              )}
-              {profile.reputation === 100 && (
-                <div className="mt-3 p-3 bg-emerald-50/90 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl flex items-start gap-3">
-                  <Star size={18} className="text-emerald-600 dark:text-emerald-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                      תג כבוד – מוניטין 100
-                    </p>
-                    <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
-                      משתמש זה הגיע לרמת המוניטין הגבוהה ביותר בקהילה.
                     </p>
                   </div>
                 </div>

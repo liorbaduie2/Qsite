@@ -80,6 +80,7 @@ export default function ForumHomepage() {
   const router = useRouter();
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
   const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
+  const isGuest = !user;
 
   useEffect(() => {
     if (isRegisterModalOpen || isLoginModalOpen) {
@@ -253,28 +254,30 @@ export default function ForumHomepage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {topQuestions.map((question) => (
+                {topQuestions.map((question) => {
+                  const isInteractive = !!user;
+                  return (
                   <div
                     key={question.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => router.push(`/questions/${question.id}`)}
-                    onKeyDown={(e) => {
+                    role={isInteractive ? 'button' : undefined}
+                    tabIndex={isInteractive ? 0 : -1}
+                    onClick={isInteractive ? () => router.push(`/questions/${question.id}`) : undefined}
+                    onKeyDown={isInteractive ? (e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         router.push(`/questions/${question.id}`);
                       }
-                    }}
-                    className="block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group cursor-pointer"
+                    } : undefined}
+                    className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 ${isInteractive ? 'hover:scale-[1.01] cursor-pointer' : 'cursor-default opacity-100'}`}
                   >
                     <div className="flex flex-row min-h-[120px]" style={{ direction: 'ltr' }}>
                       {/* Left: vertical voting column */}
                       <div className="flex flex-col items-center justify-center gap-0.5 min-w-[64px] py-4 px-3 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50">
                         <button
                           type="button"
-                          onClick={(e) => handleVote(e, question.id, 1)}
-                          disabled={updatingVoteId === question.id}
-                          className="p-1.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                          onClick={user ? (e) => handleVote(e, question.id, 1) : undefined}
+                          disabled={isGuest || updatingVoteId === question.id}
+                          className={`p-1.5 rounded-md transition-colors ${isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'}`}
                         >
                           <ArrowUp
                             size={20}
@@ -291,9 +294,9 @@ export default function ForumHomepage() {
                         </span>
                         <button
                           type="button"
-                          onClick={(e) => handleVote(e, question.id, -1)}
-                          disabled={updatingVoteId === question.id}
-                          className="p-1.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                          onClick={user ? (e) => handleVote(e, question.id, -1) : undefined}
+                          disabled={isGuest || updatingVoteId === question.id}
+                          className={`p-1.5 rounded-md transition-colors ${isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'}`}
                         >
                           <ArrowDown
                             size={20}
@@ -401,7 +404,7 @@ export default function ForumHomepage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>

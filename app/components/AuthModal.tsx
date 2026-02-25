@@ -9,9 +9,16 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialMode?: 'login' | 'register';
+  // When false, the user cannot manually close the modal (used for restricted pages)
+  canClose?: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
+export default function AuthModal({
+  isOpen,
+  onClose,
+  initialMode = 'login',
+  canClose = true,
+}: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -88,12 +95,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 dark:border-gray-700">
         {/* Header */}
         <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-          <button
-            onClick={handleClose}
-            className="absolute left-4 top-4 p-2 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <X size={20} />
-          </button>
+          {canClose && (
+            <button
+              onClick={handleClose}
+              className="absolute left-4 top-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+          )}
           <div className="text-center">
             <h2 className="text-2xl font-bold">
               {mode === 'login' ? 'התחברות' : 'הרשמה חדשה'}

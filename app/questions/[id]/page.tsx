@@ -54,6 +54,64 @@ interface Answer {
   };
 }
 
+const MOCK_QUESTION: QuestionDetail = {
+  id: "mock-question",
+  title: "שאלה לדוגמה – התחבר כדי לראות תוכן אמיתי",
+  content:
+    "לאחר ההתחברות תוכל לראות כאן את השאלה המלאה והתשובות האמיתיות מהקהילה.",
+  votes: 0,
+  replies: 2,
+  views: 0,
+  answers: 2,
+  isAnswered: false,
+  isPinned: false,
+  isClosed: false,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  lastActivityAt: new Date().toISOString(),
+  author: {
+    id: "mock-author",
+    username: "example_user",
+    avatar_url: null,
+    reputation: 0,
+  },
+  tags: ["דוגמה"],
+};
+
+const MOCK_ANSWERS: Answer[] = [
+  {
+    id: "mock-answer-1",
+    content:
+      "זו תשובה לדוגמה. אחרי שתתחבר תוכל לראות כאן תשובות אמיתיות של משתמשים.",
+    votes: 0,
+    isAccepted: false,
+    isEdited: false,
+    createdAt: new Date().toISOString(),
+    parentAnswerId: null,
+    author: {
+      id: "mock-user-1",
+      username: "helper_user",
+      avatar_url: null,
+      reputation: 0,
+    },
+  },
+  {
+    id: "mock-answer-2",
+    content: "תשובת דוגמה נוספת כדי להמחיש את מבנה הדיון.",
+    votes: 0,
+    isAccepted: false,
+    isEdited: false,
+    createdAt: new Date().toISOString(),
+    parentAnswerId: null,
+    author: {
+      id: "mock-user-2",
+      username: "another_helper",
+      avatar_url: null,
+      reputation: 0,
+    },
+  },
+];
+
 function timeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -128,6 +186,7 @@ export default function QuestionDetailPage() {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
+  const isGuest = !user;
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -139,28 +198,55 @@ export default function QuestionDetailPage() {
 
   useEffect(() => {
     async function fetchQuestion() {
+      if (!id) return;
+
+      // For guests, do not load the real question – show mock content only
+      if (!user && !authLoading) {
+        setError(null);
+        setQuestion(MOCK_QUESTION);
+        setLoading(false);
+        return;
+      }
+
+      // While auth state is still resolving, wait
+      if (!user) {
+        return;
+      }
+
       try {
         const res = await fetch(`/api/questions/${id}`);
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || 'שגיאה בטעינת השאלה');
+          setError(data.error || "שגיאה בטעינת השאלה");
           return;
         }
 
         setQuestion(data.question);
       } catch {
-        setError('שגיאה בחיבור לשרת');
+        setError("שגיאה בחיבור לשרת");
       } finally {
         setLoading(false);
       }
     }
 
-    if (id) fetchQuestion();
-  }, [id]);
+    fetchQuestion();
+  }, [id, user, authLoading]);
 
   const fetchAnswers = useCallback(async () => {
     if (!id) return;
+
+    // For guests, show only mock answers
+    if (!user && !authLoading) {
+      setAnswers(MOCK_ANSWERS);
+      setAnswersLoading(false);
+      return;
+    }
+
+    if (!user) {
+      return;
+    }
+
     setAnswersLoading(true);
     try {
       const res = await fetch(`/api/questions/${id}/answers`);
@@ -173,7 +259,7 @@ export default function QuestionDetailPage() {
     } finally {
       setAnswersLoading(false);
     }
-  }, [id]);
+  }, [id, user, authLoading]);
 
   useEffect(() => {
     fetchAnswers();
@@ -257,6 +343,15 @@ export default function QuestionDetailPage() {
       console.error('Error signing out:', err);
     }
   };
+
+  // If a non‑logged‑in user lands directly on a question page,
+  // immediately show the auth modal and treat the page as restricted.
+  useEffect(() => {
+    if (!authLoading && isGuest) {
+      setAuthModalMode('login');
+      setIsAuthModalOpen(true);
+    }
+  }, [authLoading, isGuest]);
 
   if (authLoading || loading) {
     return (
@@ -700,6 +795,9 @@ export default function QuestionDetailPage() {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           initialMode={authModalMode}
+          // On restricted question pages, the user must authenticate;
+          // do not allow manually closing the modal while still a guest.
+          canClose={!isGuest}
         />
       )}
 
