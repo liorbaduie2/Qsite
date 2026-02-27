@@ -102,17 +102,42 @@ function getReputationVisuals(value: number) {
 
 function ReputationArc({ value, max = 100, size = 120 }: ReputationArcProps) {
   const clamped = Math.max(0, Math.min(value, max));
+  const [animatedValue, setAnimatedValue] = useState(0);
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
   const circumference = 2 * Math.PI * radius;
   const arcFraction = 0.6; // ~110% of a half-circle
   const arcLength = circumference * arcFraction;
-  const progress = clamped / max;
+  const progress = animatedValue / max;
   const progressLength = arcLength * progress;
   const gapLength = circumference - arcLength;
   const rotationDegrees = -15.5; // ~3% of a full circle
   const { strokeColor } = getReputationVisuals(clamped);
+
+  useEffect(() => {
+    if (clamped === 0) {
+      setAnimatedValue(0);
+      return;
+    }
+
+    let frameId: number;
+    const start = performance.now();
+    const duration = 700; // ms
+
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setAnimatedValue(clamped * eased);
+      if (t < 1) {
+        frameId = window.requestAnimationFrame(animate);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [clamped]);
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
