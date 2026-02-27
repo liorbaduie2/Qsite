@@ -37,6 +37,8 @@ interface DrawerProps {
   user?: { id: string; email?: string } | null;
   profile?: Profile | null;
   onSignOut?: () => void;
+  /** When provided, "התחברות" opens this (e.g. index login popup). Otherwise navigates to /?modal=login */
+  onOpenLoginModal?: () => void;
 }
 
 const Drawer: React.FC<DrawerProps> = ({ 
@@ -45,7 +47,8 @@ const Drawer: React.FC<DrawerProps> = ({
   menuItems, 
   user, 
   profile,
-  onSignOut 
+  onSignOut,
+  onOpenLoginModal,
 }) => {
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
@@ -285,7 +288,16 @@ const Drawer: React.FC<DrawerProps> = ({
               </button>
             ) : (
               <button
-                onClick={() => handleMenuClick('/login')}
+                onClick={() => {
+                  setIsDrawerOpen(false);
+                  if (onOpenLoginModal) {
+                    onOpenLoginModal();
+                  } else {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/?modal=login';
+                    }
+                  }
+                }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-white rounded-xl transition-colors font-medium shadow-lg hover:opacity-95"
                 style={{ background: 'linear-gradient(to left, rgb(180, 100, 255), rgb(102, 51, 204))' }}
               >

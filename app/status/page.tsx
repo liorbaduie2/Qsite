@@ -20,7 +20,8 @@ import {
   Lock,
 } from "lucide-react";
 import { useAuth } from "../components/AuthProvider";
-import AuthModal from "../components/AuthModal";
+import LoginModal from "../components/LoginModal";
+import RegisterModal from "../components/RegisterModal";
 import { useForcedAuthModal } from "../components/useForcedAuthModal";
 import Drawer from "../components/Drawer";
 import Image from "next/image";
@@ -132,10 +133,23 @@ export default function StatusPage() {
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const isGuest = !user;
-  const { modalProps: authModalProps, handleAuthAction } = useForcedAuthModal({
-    isGuest,
-    authLoading,
-  });
+  const {
+    isLoginModalOpen,
+    isRegisterModalOpen,
+    setIsLoginModalOpen,
+    handleAuthAction,
+    closeLogin,
+    closeRegister,
+    canClose,
+  } = useForcedAuthModal({ isGuest, authLoading });
+
+  useEffect(() => {
+    if (isLoginModalOpen || isRegisterModalOpen) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+  }, [isLoginModalOpen, isRegisterModalOpen]);
 
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/" },
@@ -493,6 +507,10 @@ export default function StatusPage() {
         user={user}
         profile={profile}
         onSignOut={handleSignOut}
+        onOpenLoginModal={() => {
+          setIsDrawerOpen(false);
+          setIsLoginModalOpen(true);
+        }}
       />
 
       <main className="max-w-6xl mx-auto px-5 py-8">
@@ -921,7 +939,24 @@ export default function StatusPage() {
         </div>
       )}
 
-      <AuthModal {...authModalProps} />
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={closeLogin}
+        onSwitchToRegister={() => {
+          closeLogin();
+          handleAuthAction("register");
+        }}
+        canClose={canClose}
+      />
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={closeRegister}
+        onSwitchToLogin={() => {
+          closeRegister();
+          setIsLoginModalOpen(true);
+        }}
+        canClose={false}
+      />
     </div>
   );
 }

@@ -6,7 +6,8 @@ import {
   CheckCircle, X, Shield, UserPlus, Clock
 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
-import AuthModal from '../components/AuthModal';
+import LoginModal from '../components/LoginModal';
+import RegisterModal from '../components/RegisterModal';
 import Drawer from '../components/Drawer';
 import NavHeader from '../components/NavHeader';
 import Image from 'next/image';
@@ -54,9 +55,28 @@ function timeAgo(dateStr: string): string {
 
 export default function ChatPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [incoming, setIncoming] = useState<IncomingRequest[]>([]);
+
+  const handleAuthAction = (mode: 'login' | 'register') => {
+    if (mode === 'login') {
+      setIsRegisterModalOpen(false);
+      setIsLoginModalOpen(true);
+    } else {
+      setIsLoginModalOpen(false);
+      setIsRegisterModalOpen(true);
+    }
+  };
+
+  useEffect(() => {
+    if (isLoginModalOpen || isRegisterModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+  }, [isLoginModalOpen, isRegisterModalOpen]);
+
   const [sent, setSent] = useState<OutgoingRequest[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +158,7 @@ export default function ChatPage() {
         rightContent={
           !user && (
             <button
-              onClick={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }}
+              onClick={() => handleAuthAction('login')}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
             >
               <LogIn size={16} /> התחברות
@@ -147,7 +167,18 @@ export default function ChatPage() {
         }
       />
 
-      <Drawer isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} menuItems={menuItems} user={user} profile={profile} onSignOut={signOut} />
+      <Drawer
+        isDrawerOpen={isDrawerOpen}
+        setIsDrawerOpen={setIsDrawerOpen}
+        menuItems={menuItems}
+        user={user}
+        profile={profile}
+        onSignOut={signOut}
+        onOpenLoginModal={() => {
+          setIsDrawerOpen(false);
+          setIsLoginModalOpen(true);
+        }}
+      />
 
       <main className="max-w-6xl mx-auto px-5 py-8">
         {!user ? (
@@ -155,7 +186,7 @@ export default function ChatPage() {
             <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
             <p>התחבר כדי לראות בקשות צ\'אט ושיחות</p>
             <button
-              onClick={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }}
+              onClick={() => handleAuthAction('login')}
               className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
             >
               התחברות
@@ -343,9 +374,23 @@ export default function ChatPage() {
         )}
       </main>
 
-      {isAuthModalOpen && (
-        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
-      )}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSwitchToRegister={() => {
+          setIsLoginModalOpen(false);
+          setIsRegisterModalOpen(true);
+        }}
+      />
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onSwitchToLogin={() => {
+          setIsRegisterModalOpen(false);
+          setIsLoginModalOpen(true);
+        }}
+        canClose={false}
+      />
     </div>
   );
 }

@@ -10,39 +10,44 @@ interface UseForcedAuthModalOptions {
   autoOpen?: boolean;
 }
 
+/** Returns state for index-style LoginModal + RegisterModal (same layout as index). */
 export function useForcedAuthModal({
   isGuest,
   authLoading,
   autoOpen = true,
 }: UseForcedAuthModalOptions) {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<AuthMode>("login");
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && isGuest && autoOpen) {
-      setAuthModalMode("login");
-      setIsAuthModalOpen(true);
+      setIsLoginModalOpen(true);
+      setIsRegisterModalOpen(false);
     }
   }, [authLoading, isGuest, autoOpen]);
 
   const handleAuthAction = useCallback((mode: AuthMode) => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
+    if (mode === "login") {
+      setIsRegisterModalOpen(false);
+      setIsLoginModalOpen(true);
+    } else {
+      setIsLoginModalOpen(false);
+      setIsRegisterModalOpen(true);
+    }
   }, []);
 
-  const modalProps = {
-    isOpen: isAuthModalOpen,
-    onClose: () => setIsAuthModalOpen(false),
-    initialMode: authModalMode as AuthMode,
-    canClose: !isGuest,
-  };
+  const closeLogin = useCallback(() => setIsLoginModalOpen(false), []);
+  const closeRegister = useCallback(() => setIsRegisterModalOpen(false), []);
 
   return {
-    isAuthModalOpen,
-    authModalMode,
+    isLoginModalOpen,
+    isRegisterModalOpen,
+    setIsLoginModalOpen,
+    setIsRegisterModalOpen,
     handleAuthAction,
-    setIsAuthModalOpen,
-    modalProps,
+    closeLogin,
+    closeRegister,
+    canClose: !isGuest,
   };
 }
 

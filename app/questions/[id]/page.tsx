@@ -10,7 +10,8 @@ import {
   ChevronRight, Clock, Shield, Send, CheckCircle, Pencil, X, Plus, Reply
 } from 'lucide-react';
 import { useAuth } from '../../components/AuthProvider';
-import AuthModal from '../../components/AuthModal';
+import LoginModal from '../../components/LoginModal';
+import RegisterModal from '../../components/RegisterModal';
 import Drawer from '../../components/Drawer';
 import NavHeader from '../../components/NavHeader';
 
@@ -182,11 +183,19 @@ export default function QuestionDetailPage() {
   const [replyError, setReplyError] = useState<string | null>(null);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const isGuest = !user;
+
+  useEffect(() => {
+    if (isLoginModalOpen || isRegisterModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+  }, [isLoginModalOpen, isRegisterModalOpen]);
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -332,8 +341,13 @@ export default function QuestionDetailPage() {
   };
 
   const handleAuthAction = (mode: 'login' | 'register') => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
+    if (mode === 'login') {
+      setIsRegisterModalOpen(false);
+      setIsLoginModalOpen(true);
+    } else {
+      setIsLoginModalOpen(false);
+      setIsRegisterModalOpen(true);
+    }
   };
 
   const handleSignOut = async () => {
@@ -345,11 +359,11 @@ export default function QuestionDetailPage() {
   };
 
   // If a non‑logged‑in user lands directly on a question page,
-  // immediately show the auth modal and treat the page as restricted.
+  // immediately show the login modal and treat the page as restricted.
   useEffect(() => {
     if (!authLoading && isGuest) {
-      setAuthModalMode('login');
-      setIsAuthModalOpen(true);
+      setIsLoginModalOpen(true);
+      setIsRegisterModalOpen(false);
     }
   }, [authLoading, isGuest]);
 
@@ -404,6 +418,10 @@ export default function QuestionDetailPage() {
         user={user}
         profile={profile}
         onSignOut={handleSignOut}
+        onOpenLoginModal={() => {
+          setIsDrawerOpen(false);
+          setIsLoginModalOpen(true);
+        }}
       />
 
       {/* Main Content */}
@@ -790,16 +808,23 @@ export default function QuestionDetailPage() {
         ) : null}
       </main>
 
-      {isAuthModalOpen && (
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authModalMode}
-          // On restricted question pages, the user must authenticate;
-          // do not allow manually closing the modal while still a guest.
-          canClose={!isGuest}
-        />
-      )}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSwitchToRegister={() => {
+          setIsLoginModalOpen(false);
+          setIsRegisterModalOpen(true);
+        }}
+        canClose={!isGuest}
+      />
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onSwitchToLogin={() => {
+          setIsRegisterModalOpen(false);
+          setIsLoginModalOpen(true);
+        }}
+      />
 
       {/* Fixed "Write Answer" button on the right side */}
       {!isAnswerPanelOpen && question && (

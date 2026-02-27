@@ -5,14 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Eye, MessageCircle, ArrowUp, ArrowDown, Star } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import LoginModal from './components/LoginModal';
-import HebrewRegistration from './components/HebrewRegistration';
+import RegisterModal from './components/RegisterModal';
 import Drawer from './components/Drawer';
 import NavHeader from './components/NavHeader';
 import Image from 'next/image';
 import AuthStatusDisplay from './components/AuthStatusDisplay';
 import { SimpleThemeToggle } from './components/SimpleThemeToggle';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Development-only ProfileTestComponent
 function ProfileTestComponent() {
@@ -78,6 +78,7 @@ export default function ForumHomepage() {
 
   const { user, profile, loading, signOut } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
   const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
   const isGuest = !user;
@@ -89,6 +90,15 @@ export default function ForumHomepage() {
       document.body.classList.remove('modal-open');
     }
   }, [isRegisterModalOpen, isLoginModalOpen]);
+
+  // Open login popup when arriving with ?modal=login (e.g. from "התחברות" in תפריט ניווט on other pages)
+  useEffect(() => {
+    if (loading) return;
+    if (searchParams.get('modal') === 'login' && !user) {
+      setIsLoginModalOpen(true);
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, user, loading, router]);
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/', active: true },
@@ -194,7 +204,7 @@ export default function ForumHomepage() {
                 <button onClick={handleLogin} className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300">
                   <LogIn size={16} /> התחברות
                 </button>
-                <button onClick={handleRegister} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+                <button onClick={handleRegister} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-500 dark:to-purple-500 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 dark:hover:from-indigo-600 dark:hover:to-purple-600 transition-all duration-300 shadow-lg hover:shadow-xl">
                   <User size={16} /> הרשמה
                 </button>
               </div>
@@ -210,6 +220,10 @@ export default function ForumHomepage() {
         user={user}
         profile={profile}
         onSignOut={handleSignOut}
+        onOpenLoginModal={() => {
+          setIsDrawerOpen(false);
+          setIsLoginModalOpen(true);
+        }}
       />
 
       <main className="max-w-6xl mx-auto px-5 py-8">
@@ -409,70 +423,14 @@ export default function ForumHomepage() {
         }}
       />
 
-      {isRegisterModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-          <div className="w-full max-w-2xl max-h-[95vh] overflow-y-auto relative modal-scroll">
-            <button
-              onClick={closeRegisterModal}
-              className="absolute top-2 right-2 z-20 bg-white/90 dark:bg-gray-700/90 backdrop-blur-sm rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-white dark:hover:bg-gray-600 hover:shadow-xl transition-all duration-200 group"
-              style={{ direction: 'ltr' }}
-            >
-              <svg className="w-6 h-6 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-gray-700/20">
-              <div 
-                className="text-center p-8 text-white relative overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)' }}
-              >
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
-                  <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
-                </div>
-                
-                <div className="relative z-10">
-                  <h2 className="text-4xl font-bold mb-3 drop-shadow-lg">הצטרפות לקהילה</h2>
-                  <p className="text-white/90 text-lg font-medium">
-                    רישום לפלטפורמת השאלות והתשובות של המפתחים הישראלים
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-8 bg-gray-50/50 dark:bg-gray-900/50">
-                <HebrewRegistration onComplete={closeRegisterModal} />
-                
-                <div className="mt-8 text-center">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300/60 dark:border-gray-600/60"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-gray-50/50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 font-medium">
-                        או
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <p className="mt-6 text-sm text-gray-600 dark:text-gray-400" dir="rtl">
-                    יש לך כבר חשבון?{' '}
-                    <button 
-                      onClick={() => {
-                        closeRegisterModal();
-                        setIsLoginModalOpen(true);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-colors duration-200 hover:underline"
-                    >
-                      התחבר כאן
-                    </button>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={closeRegisterModal}
+        onSwitchToLogin={() => {
+          closeRegisterModal();
+          setIsLoginModalOpen(true);
+        }}
+      />
       
       <ProfileTestComponent />
 
@@ -485,20 +443,6 @@ export default function ForumHomepage() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-
-        .modal-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
-        }
-        
-        .modal-scroll::-webkit-scrollbar { width: 6px; }
-        .modal-scroll::-webkit-scrollbar-track { background: transparent; }
-        .modal-scroll::-webkit-scrollbar-thumb {
-          background-color: rgba(99, 102, 241, 0.3);
-          border-radius: 3px;
-        }
-
-        body.modal-open { overflow: hidden; }
       `}</style>
     </div>
   );
