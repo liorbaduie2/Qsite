@@ -23,6 +23,12 @@ import {
 import { useAuth } from "../components/AuthProvider";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useDelayedSkeleton } from "../hooks/useDelayedSkeleton";
+import {
+  SkeletonBlock,
+  SkeletonCircle,
+  SkeletonText,
+} from "../components/ui/Skeleton";
 
 interface Question {
   id: number;
@@ -289,19 +295,11 @@ export default function ProfilePage() {
     }
     setIsEditing(false);
   };
+  const isProfileLoading = loading && !profile;
+  const showSkeleton = useDelayedSkeleton(isProfileLoading);
+  const isSkeleton = showSkeleton && isProfileLoading;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">טוען פרופיל...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user || !profile) {
+  if (!loading && (!user || !profile)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -319,16 +317,16 @@ export default function ProfilePage() {
     );
   }
 
-  const joinedDate = profile.created_at || new Date().toISOString();
-  const reputation = profile.reputation ?? 0;
+  const joinedDate = profile?.created_at || new Date().toISOString();
+  const reputation = profile?.reputation ?? 0;
   const { textClass: reputationTextClass } = getReputationVisuals(reputation);
-  const questionsAsked = profile.questions_count ?? 0;
-  const answersGiven = profile.answers_count ?? 0;
-  const bestAnswers = profile.best_answers_count ?? 0;
-  const totalViews = profile.total_views ?? 0;
+  const questionsAsked = profile?.questions_count ?? 0;
+  const answersGiven = profile?.answers_count ?? 0;
+  const bestAnswers = profile?.best_answers_count ?? 0;
+  const totalViews = profile?.total_views ?? 0;
 
   const playlistInfo = getPlaylistInfo(
-    isEditing ? editForm.website : profile.website,
+    isEditing ? editForm.website : profile?.website,
   );
 
   return (
@@ -360,40 +358,77 @@ export default function ProfilePage() {
               <div className="text-center mb-4">
                 <div className="flex flex-col items-center justify-center mb-3">
                   <div className="relative" style={{ width: 124, height: 124 }}>
-                    <ReputationArc value={reputation} size={124} />
-                    <div className="absolute inset-4 flex items-center justify-center">
-                      <div className="relative">
-                        {profile.avatar_url ? (
-                          <Image
-                            src={profile.avatar_url}
-                            alt={profile.username}
-                            width={96}
-                            height={96}
-                            className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-600 shadow-lg"
-                          />
-                        ) : (
-                          <div className="w-24 h-24 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-500 dark:to-purple-600 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-600 shadow-lg">
-                            <span className="text-2xl font-bold text-white">
-                              {profile.username?.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        {isEditing && (
-                          <button className="absolute bottom-0 right-0 w-8 h-8 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors">
-                            <Camera size={16} />
-                          </button>
-                        )}
+                    {isSkeleton ? (
+                      <div className="absolute inset-4 flex items-center justify-center">
+                        <SkeletonCircle className="w-24 h-24 border-4 border-white dark:border-gray-600 shadow-lg" />
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <ReputationArc value={reputation} size={124} />
+                        <div className="absolute inset-4 flex items-center justify-center">
+                          <div className="relative">
+                            {profile?.avatar_url ? (
+                              <Image
+                                src={profile.avatar_url}
+                                alt={profile?.username || ""}
+                                width={96}
+                                height={96}
+                                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-600 shadow-lg"
+                              />
+                            ) : (
+                              <div className="w-24 h-24 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-500 dark:to-purple-600 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-600 shadow-lg">
+                                <span className="text-2xl font-bold text-white">
+                                  {profile?.username
+                                    ? profile.username.charAt(0).toUpperCase()
+                                    : ""}
+                                </span>
+                              </div>
+                            )}
+                            {isEditing && (
+                              <button className="absolute bottom-0 right-0 w-8 h-8 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors">
+                                <Camera size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="mt-2 text-sm font-medium text-gray-800 dark:text-gray-200">
-                    מוניטין{" "}
-                    <span className={reputationTextClass}>{reputation}</span>{" "}
-                    נקודות
+                    {isSkeleton ? (
+                      <SkeletonText className="w-32 mx-auto" />
+                    ) : (
+                      <>
+                        מוניטין{" "}
+                        <span className={reputationTextClass}>{reputation}</span>{" "}
+                        נקודות
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {isEditing ? (
+                {isSkeleton ? (
+                  <div className="space-y-3 mt-2">
+                    <SkeletonText className="w-40 mx-auto h-6" />
+                    <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="space-y-2">
+                        <SkeletonText className="w-full" />
+                        <SkeletonText className="w-5/6" />
+                        <SkeletonText className="w-4/6" />
+                      </div>
+                    </div>
+                    <div className="mt-3 p-4 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700/50">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <SkeletonText className="w-32 h-4" />
+                        <SkeletonBlock className="w-20 h-6 rounded-lg" />
+                      </div>
+                      <div className="space-y-2">
+                        <SkeletonText className="w-full" />
+                        <SkeletonText className="w-3/4" />
+                      </div>
+                    </div>
+                  </div>
+                ) : isEditing ? (
                   <div className="space-y-3">
                     <input
                       type="text"
@@ -415,9 +450,9 @@ export default function ProfilePage() {
                 ) : (
                   <>
                     <h2 className="text-[1.75rem] font-bold text-gray-800 dark:text-gray-100 mb-1">
-                      {profile.full_name || profile.username}
+                      {profile?.full_name || profile?.username || ""}
                     </h2>
-                    {profile.bio && (
+                    {profile?.bio && (
                       <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
                           {profile.bio}
@@ -456,91 +491,129 @@ export default function ProfilePage() {
 
               {/* Profile Actions */}
               <div className="flex gap-2 mb-6">
-                <button
-                  onClick={handleEditToggle}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                    isEditing
-                      ? "bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600"
-                      : "bg-indigo-600 dark:bg-indigo-500 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600"
-                  }`}
-                >
-                  {isEditing ? <Save size={16} /> : <Edit3 size={16} />}
-                  {isEditing ? "שמור" : "ערוך פרופיל"}
-                </button>
-                {isEditing && (
-                  <button
-                    onClick={handleCancelEdit}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
+                {isSkeleton ? (
+                  <>
+                    <SkeletonBlock className="flex-1 h-10 rounded-lg" />
+                    <SkeletonBlock className="w-10 h-10 rounded-lg" />
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleEditToggle}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                        isEditing
+                          ? "bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600"
+                          : "bg-indigo-600 dark:bg-indigo-500 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600"
+                      }`}
+                    >
+                      {isEditing ? <Save size={16} /> : <Edit3 size={16} />}
+                      {isEditing ? "שמור" : "ערוך פרופיל"}
+                    </button>
+                    {isEditing && (
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
               {/* Profile Details */}
               <div className="space-y-3 mb-6">
-                {(profile.location || isEditing) && (
-                  <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                    <MapPin
-                      size={18}
-                      className="text-gray-400 dark:text-gray-500"
-                    />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editForm.location}
-                        onChange={(e) =>
-                          handleInputChange("location", e.target.value)
-                        }
-                        placeholder="מיקום (אופציונלי)"
-                        className="flex-1 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100"
+                {isSkeleton ? (
+                  <>
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                      <MapPin
+                        size={18}
+                        className="text-gray-400 dark:text-gray-500"
                       />
-                    ) : (
-                      <span>{profile.location}</span>
-                    )}
-                  </div>
-                )}
-
-                {(profile.website || isEditing) && (
-                  <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                    {playlistInfo.icon}
-                    {isEditing ? (
-                      <input
-                        type="url"
-                        value={editForm.website}
-                        onChange={(e) =>
-                          handleInputChange("website", e.target.value)
-                        }
-                        placeholder="פלייליסט ספוטיפיי/אפל מיוזיק"
-                        className="flex-1 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100"
+                      <SkeletonText className="w-32" />
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                      <Globe
+                        size={18}
+                        className="text-gray-400 dark:text-gray-500"
                       />
-                    ) : (
-                      profile.website && (
-                        <a
-                          href={profile.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-600 dark:text-indigo-400 hover:underline"
-                        >
-                          {playlistInfo.text}
-                        </a>
-                      )
+                      <SkeletonText className="w-40" />
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                      <Calendar
+                        size={18}
+                        className="text-gray-400 dark:text-gray-500"
+                      />
+                      <SkeletonText className="w-28" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {(profile?.location || isEditing) && (
+                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                        <MapPin
+                          size={18}
+                          className="text-gray-400 dark:text-gray-500"
+                        />
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.location}
+                            onChange={(e) =>
+                              handleInputChange("location", e.target.value)
+                            }
+                            placeholder="מיקום (אופציונלי)"
+                            className="flex-1 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100"
+                          />
+                        ) : (
+                          <span>{profile?.location}</span>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
 
-                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                  <Calendar
-                    size={18}
-                    className="text-gray-400 dark:text-gray-500"
-                  />
-                  <span>
-                    הצטרף ב-{new Date(joinedDate).toLocaleDateString("he-IL")}
-                  </span>
-                </div>
+                    {(profile?.website || isEditing) && (
+                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                        {playlistInfo.icon}
+                        {isEditing ? (
+                          <input
+                            type="url"
+                            value={editForm.website}
+                            onChange={(e) =>
+                              handleInputChange("website", e.target.value)
+                            }
+                            placeholder="פלייליסט ספוטיפיי/אפל מיוזיק"
+                            className="flex-1 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100"
+                          />
+                        ) : (
+                          profile?.website && (
+                            <a
+                              href={profile.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                            >
+                              {playlistInfo.text}
+                            </a>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                      <Calendar
+                        size={18}
+                        className="text-gray-400 dark:text-gray-500"
+                      />
+                      <span>
+                        הצטרף ב-
+                        {new Date(joinedDate).toLocaleDateString("he-IL")}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {reputation === 100 && (
+              {reputation === 100 && !isSkeleton && (
                 <div className="mt-3 p-3 bg-emerald-50/90 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl flex items-start gap-3">
                   <Star
                     size={18}
@@ -579,188 +652,234 @@ export default function ProfilePage() {
                     }`}
                   >
                     <tab.icon size={18} />
-                    {tab.label}
+                    {isSkeleton ? (
+                      <SkeletonText className="w-16 h-4" />
+                    ) : (
+                      tab.label
+                    )}
                   </button>
                 ))}
               </div>
 
               {/* Tab Content */}
               <div className="p-6">
-                {activeTab === "overview" && (
+                {isSkeleton ? (
                   <div className="space-y-6">
-                    {/* Statistics Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <HelpCircle
-                            className="text-blue-600 dark:text-blue-400"
-                            size={20}
-                          />
-                          <span className="font-semibold text-blue-800 dark:text-blue-200">
-                            שאלות
-                          </span>
+                      {[0, 1, 2, 3].map((idx) => (
+                        <div
+                          key={idx}
+                          className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <SkeletonCircle className="w-5 h-5" />
+                            <SkeletonText className="w-20" />
+                          </div>
+                          <SkeletonText className="w-10 h-6" />
                         </div>
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          {questionsAsked}
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-200 dark:border-green-700/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <MessageSquare
-                            className="text-green-600 dark:text-green-400"
-                            size={20}
-                          />
-                          <span className="font-semibold text-green-800 dark:text-green-200">
-                            תשובות
-                          </span>
-                        </div>
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          {answersGiven}
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CheckCircle
-                            className="text-yellow-600 dark:text-yellow-500"
-                            size={20}
-                          />
-                          <span className="font-semibold text-yellow-800 dark:text-yellow-200">
-                            תשובות מקובלות
-                          </span>
-                        </div>
-                        <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
-                          {bestAnswers}
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Eye
-                            className="text-purple-600 dark:text-purple-400"
-                            size={20}
-                          />
-                          <span className="font-semibold text-purple-800 dark:text-purple-200">
-                            צפיות
-                          </span>
-                        </div>
-                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                          {totalViews}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-
-                    {/* Recent Activity */}
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                        פעילות אחרונה
-                      </h3>
+                      <SkeletonText className="w-32 h-5 mb-4" />
                       <div className="space-y-3">
-                        {userQuestions.slice(0, 3).map((question) => (
+                        {[0, 1, 2].map((idx) => (
                           <div
-                            key={question.id}
+                            key={idx}
                             className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
                           >
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
-                                {question.title}
-                              </h4>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                <span className="flex items-center gap-1">
-                                  <MessageSquare size={14} />
-                                  {question.answers}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Eye size={14} />
-                                  {question.views}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Clock size={14} />
-                                  {new Date(
-                                    question.createdAt,
-                                  ).toLocaleDateString("he-IL")}
-                                </span>
+                            <div className="flex-1 space-y-2">
+                              <SkeletonText className="w-3/4 h-4" />
+                              <div className="flex items-center gap-4">
+                                <SkeletonText className="w-12 h-3" />
+                                <SkeletonText className="w-12 h-3" />
+                                <SkeletonText className="w-20 h-3" />
                               </div>
                             </div>
-                            {question.isAnswered && (
-                              <CheckCircle
-                                className="text-green-600 dark:text-green-400"
-                                size={18}
-                              />
-                            )}
+                            <SkeletonCircle className="w-5 h-5" />
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
-                )}
-
-                {activeTab === "questions" && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                        השאלות שלי ({userQuestions.length})
-                      </h3>
-                    </div>
-                    <div className="space-y-4">
-                      {userQuestions.map((question) => (
-                        <div
-                          key={question.id}
-                          className="p-4 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-medium text-gray-800 dark:text-gray-200 flex-1">
-                              {question.title}
-                            </h4>
-                            {question.isAnswered && (
-                              <CheckCircle
-                                className="text-green-600 dark:text-green-400 ml-2"
-                                size={18}
+                ) : (
+                  <>
+                    {activeTab === "overview" && (
+                      <div className="space-y-6">
+                        {/* Statistics Cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <HelpCircle
+                                className="text-blue-600 dark:text-blue-400"
+                                size={20}
                               />
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                              <span className="flex items-center gap-1">
-                                <MessageSquare size={14} />
-                                {question.answers} תשובות
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Eye size={14} />
-                                {question.views} צפיות
+                              <span className="font-semibold text-blue-800 dark:text-blue-200">
+                                שאלות
                               </span>
                             </div>
-                            <div className="flex gap-1">
-                              {question.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs rounded-full"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                              {questionsAsked}
+                            </div>
+                          </div>
+
+                          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-200 dark:border-green-700/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <MessageSquare
+                                className="text-green-600 dark:text-green-400"
+                                size={20}
+                              />
+                              <span className="font-semibold text-green-800 dark:text-green-200">
+                                תשובות
+                              </span>
+                            </div>
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                              {answersGiven}
+                            </div>
+                          </div>
+
+                          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <CheckCircle
+                                className="text-yellow-600 dark:text-yellow-500"
+                                size={20}
+                              />
+                              <span className="font-semibold text-yellow-800 dark:text-yellow-200">
+                                תשובות מקובלות
+                              </span>
+                            </div>
+                            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
+                              {bestAnswers}
+                            </div>
+                          </div>
+
+                          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Eye
+                                className="text-purple-600 dark:text-purple-400"
+                                size={20}
+                              />
+                              <span className="font-semibold text-purple-800 dark:text-purple-200">
+                                צפיות
+                              </span>
+                            </div>
+                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                              {totalViews}
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {activeTab === "answers" && (
-                  <div className="text-center py-12">
-                    <MessageSquare
-                      className="mx-auto text-gray-400 dark:text-gray-500 mb-4"
-                      size={48}
-                    />
-                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                      אין תשובות עדיין
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-500">
-                      התחל לענות על שאלות כדי לראות אותן כאן
-                    </p>
-                  </div>
+                        {/* Recent Activity */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                            פעילות אחרונה
+                          </h3>
+                          <div className="space-y-3">
+                            {userQuestions.slice(0, 3).map((question) => (
+                              <div
+                                key={question.id}
+                                className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                              >
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                                    {question.title}
+                                  </h4>
+                                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                    <span className="flex items-center gap-1">
+                                      <MessageSquare size={14} />
+                                      {question.answers}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Eye size={14} />
+                                      {question.views}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Clock size={14} />
+                                      {new Date(
+                                        question.createdAt,
+                                      ).toLocaleDateString("he-IL")}
+                                    </span>
+                                  </div>
+                                </div>
+                                {question.isAnswered && (
+                                  <CheckCircle
+                                    className="text-green-600 dark:text-green-400"
+                                    size={18}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "questions" && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                            השאלות שלי ({userQuestions.length})
+                          </h3>
+                        </div>
+                        <div className="space-y-4">
+                          {userQuestions.map((question) => (
+                            <div
+                              key={question.id}
+                              className="p-4 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-medium text-gray-800 dark:text-gray-200 flex-1">
+                                  {question.title}
+                                </h4>
+                                {question.isAnswered && (
+                                  <CheckCircle
+                                    className="text-green-600 dark:text-green-400 ml-2"
+                                    size={18}
+                                  />
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                  <span className="flex items-center gap-1">
+                                    <MessageSquare size={14} />
+                                    {question.answers} תשובות
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Eye size={14} />
+                                    {question.views} צפיות
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  {question.tags.map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs rounded-full"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "answers" && (
+                      <div className="text-center py-12">
+                        <MessageSquare
+                          className="mx-auto text-gray-400 dark:text-gray-500 mb-4"
+                          size={48}
+                        />
+                        <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                          אין תשובות עדיין
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-500">
+                          התחל לענות על שאלות כדי לראות אותן כאן
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
