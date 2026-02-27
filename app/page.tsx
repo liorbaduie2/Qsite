@@ -1,7 +1,7 @@
 //app/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Eye, MessageCircle, ArrowUp, ArrowDown, Star } from 'lucide-react';
 import { useAuth } from './components/AuthProvider';
 import LoginModal from './components/LoginModal';
@@ -68,7 +68,7 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('he-IL');
 }
 
-export default function ForumHomepage() {
+function ForumHomepage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -445,5 +445,19 @@ export default function ForumHomepage() {
         }
       `}</style>
     </div>
+  );
+}
+
+const fallback = (
+  <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+  </div>
+);
+
+export default function Page() {
+  return (
+    <Suspense fallback={fallback}>
+      <ForumHomepage />
+    </Suspense>
   );
 }
