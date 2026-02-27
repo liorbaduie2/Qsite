@@ -492,7 +492,7 @@ export default function PublicProfilePage() {
                       צ'אט
                     </span>
                   </div>
-                  {isSkeleton ? (
+                  {isSkeleton || chatStatus === null ? (
                     <SkeletonBlock className="w-full h-10 rounded-lg" />
                   ) : (
                     <>

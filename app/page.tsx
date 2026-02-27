@@ -213,15 +213,6 @@ export default function ForumHomepage() {
       />
 
       <main className="max-w-6xl mx-auto px-5 py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-4 leading-tight">
-            ברוכים הבאים לפלטפורמת השאלות והתשובות
-          </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            מקום בו תוכלו לשאול שאלות, לקבל תשובות מהקהילה ולשתף את הידע שלכם
-          </p>
-        </div>
-
         <section className="mt-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -235,26 +226,25 @@ export default function ForumHomepage() {
             </Link>
           </div>
 
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-            {loadingTopQuestions ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
-              </div>
-            ) : topQuestionsError ? (
-              <div className="text-center py-6">
-                <p className="text-sm text-red-500 dark:text-red-400 mb-2">
-                  {topQuestionsError}
-                </p>
-              </div>
-            ) : topQuestions.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  עדיין אין שאלות, תהיה הראשון לשאול שאלה!
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {topQuestions.map((question) => {
+          {loadingTopQuestions ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
+            </div>
+          ) : topQuestionsError ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-red-500 dark:text-red-400 mb-2">
+                {topQuestionsError}
+              </p>
+            </div>
+          ) : topQuestions.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                עדיין אין שאלות, תהיה הראשון לשאול שאלה!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {topQuestions.map((question) => {
                   const isInteractive = !!user;
                   return (
                   <div
@@ -405,9 +395,8 @@ export default function ForumHomepage() {
                     </div>
                   </div>
                 )})}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       </main>
 

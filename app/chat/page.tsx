@@ -133,6 +133,7 @@ export default function ChatPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100" dir="rtl">
       <NavHeader
         title="צ'אט"
+        wide
         onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
         rightContent={
           !user && (
@@ -148,7 +149,7 @@ export default function ChatPage() {
 
       <Drawer isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} menuItems={menuItems} user={user} profile={profile} onSignOut={signOut} />
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-5 py-8">
         {!user ? (
           <div className="text-center py-12 text-gray-600 dark:text-gray-400">
             <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
