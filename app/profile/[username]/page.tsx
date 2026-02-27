@@ -14,12 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import Image from "next/image";
-import { useDelayedSkeleton } from "../../hooks/useDelayedSkeleton";
-import {
-  SkeletonBlock,
-  SkeletonCircle,
-  SkeletonText,
-} from "../../components/ui/Skeleton";
+import { SkeletonBlock, SkeletonCircle, SkeletonText } from "../../components/ui/Skeleton";
 
 interface PublicProfile {
   id: string;
@@ -255,9 +250,9 @@ export default function PublicProfilePage() {
       })
       .catch(() => setChatStatus("none"));
   }, [user, profile, authProfile?.username]);
+
   const isProfileLoading = loading || authLoading;
-  const showSkeleton = useDelayedSkeleton(isProfileLoading);
-  const isSkeleton = showSkeleton && isProfileLoading;
+  const isSkeleton = isProfileLoading;
 
   if (!isProfileLoading && (notFound || !profile)) {
     return (
