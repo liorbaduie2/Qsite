@@ -39,6 +39,8 @@ interface DrawerProps {
   onSignOut?: () => void;
   /** When provided, "התחברות" opens this (e.g. index login popup). Otherwise navigates to /?modal=login */
   onOpenLoginModal?: () => void;
+  /** Optional content rendered beside the "תפריט ניווט" title (e.g. theme toggle for phone) */
+  headerExtra?: React.ReactNode;
 }
 
 const Drawer: React.FC<DrawerProps> = ({ 
@@ -49,6 +51,7 @@ const Drawer: React.FC<DrawerProps> = ({
   profile,
   onSignOut,
   onOpenLoginModal,
+  headerExtra,
 }) => {
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
@@ -127,7 +130,10 @@ const Drawer: React.FC<DrawerProps> = ({
         <div className="p-6 h-full flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">תפריט ניווט</h2>
+            <div className="flex items-center gap-3 min-w-0">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">תפריט ניווט</h2>
+              {headerExtra}
+            </div>
             <button
               onClick={() => setIsDrawerOpen(false)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-800 dark:text-gray-100"

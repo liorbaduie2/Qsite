@@ -205,7 +205,9 @@ function ForumHomepage() {
         }
         rightContent={
           <>
-            <SimpleThemeToggle />
+            <div className="hidden sm:block">
+              <SimpleThemeToggle />
+            </div>
             {!user && (
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -237,6 +239,7 @@ function ForumHomepage() {
           setIsDrawerOpen(false);
           setIsLoginModalOpen(true);
         }}
+        headerExtra={<SimpleThemeToggle size="sm" className="shrink-0" />}
       />
 
       <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-5 sm:py-6 md:py-8">
