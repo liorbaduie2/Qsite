@@ -195,16 +195,29 @@ function ForumHomepage() {
         title="Q&A פלטפורמה"
         wide
         onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        topContent={!user ? <AuthStatusDisplay className="bg-white/90 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700" showOnlyErrors={true} /> : undefined}
+        topContent={
+          !user ? (
+            <AuthStatusDisplay
+              className="bg-white/90 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700"
+              showOnlyErrors={true}
+            />
+          ) : undefined
+        }
         rightContent={
           <>
             <SimpleThemeToggle />
             {!user && (
-              <div className="flex items-center gap-2">
-                <button onClick={handleLogin} className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleLogin}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300"
+                >
                   <LogIn size={16} /> התחברות
                 </button>
-                <button onClick={handleRegister} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-500 dark:to-purple-500 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 dark:hover:from-indigo-600 dark:hover:to-purple-600 transition-all duration-300 shadow-lg hover:shadow-xl">
+                <button
+                  onClick={handleRegister}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-500 dark:to-purple-500 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 dark:hover:from-indigo-600 dark:hover:to-purple-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
                   <User size={16} /> הרשמה
                 </button>
               </div>
@@ -226,9 +239,9 @@ function ForumHomepage() {
         }}
       />
 
-      <main className="max-w-6xl mx-auto px-5 py-8">
+      <main className="mx-auto max-w-full px-4 py-6 sm:max-w-3xl sm:px-5 md:max-w-6xl md:py-8">
         <section className="mt-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
             <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
               השאלות המדורגות ביותר
             </h3>
@@ -259,29 +272,37 @@ function ForumHomepage() {
           ) : (
             <div className="space-y-3">
               {topQuestions.map((question) => {
-                  const isInteractive = !!user;
-                  return (
+                const isInteractive = !!user;
+                return (
                   <div
                     key={question.id}
                     role={isInteractive ? 'button' : undefined}
                     tabIndex={isInteractive ? 0 : -1}
                     onClick={isInteractive ? () => router.push(`/questions/${question.id}`) : undefined}
-                    onKeyDown={isInteractive ? (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        router.push(`/questions/${question.id}`);
-                      }
-                    } : undefined}
-                    className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 ${isInteractive ? 'hover:scale-[1.01] cursor-pointer' : 'cursor-default opacity-100'}`}
+                    onKeyDown={
+                      isInteractive
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              router.push(`/questions/${question.id}`);
+                            }
+                          }
+                        : undefined
+                    }
+                    className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 ${
+                      isInteractive ? 'hover:scale-[1.01] cursor-pointer' : 'cursor-default opacity-100'
+                    }`}
                   >
-                    <div className="flex flex-row min-h-[120px]" style={{ direction: 'ltr' }}>
-                      {/* Left: vertical voting column */}
-                      <div className="flex flex-col items-center justify-center gap-0.5 min-w-[64px] py-4 px-3 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50">
+                    <div className="flex flex-col sm:flex-row min-h-[120px]" style={{ direction: 'ltr' }}>
+                      {/* Left: voting column (stacks on top on small screens) */}
+                      <div className="flex flex-col items-center justify-center gap-0.5 min-w-full sm:min-w-[64px] py-3 sm:py-4 px-3 border-b border-gray-200/80 dark:border-gray-600/80 sm:border-b-0 sm:border-r bg-gray-50/80 dark:bg-gray-900/50">
                         <button
                           type="button"
                           onClick={user ? (e) => handleVote(e, question.id, 1) : undefined}
                           disabled={isGuest || updatingVoteId === question.id}
-                          className={`p-1.5 rounded-md transition-colors ${isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'}`}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                          }`}
                         >
                           <ArrowUp
                             size={20}
@@ -300,7 +321,9 @@ function ForumHomepage() {
                           type="button"
                           onClick={user ? (e) => handleVote(e, question.id, -1) : undefined}
                           disabled={isGuest || updatingVoteId === question.id}
-                          className={`p-1.5 rounded-md transition-colors ${isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'}`}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                          }`}
                         >
                           <ArrowDown
                             size={20}
@@ -316,7 +339,7 @@ function ForumHomepage() {
 
                       {/* Right: main content area */}
                       <div
-                        className="flex-1 min-w-0 flex flex-col justify-between pr-6 pl-4 py-4 text-right"
+                        className="flex-1 min-w-0 flex flex-col justify-between px-4 py-4 sm:pr-6 sm:pl-4 text-right"
                         style={{ direction: 'rtl' }}
                       >
                         <div>
@@ -327,24 +350,27 @@ function ForumHomepage() {
                                 נענתה
                               </span>
                             )}
-                            {question.tags.length > 0 && question.tags.slice(0, 3).map((tag) => (
-                              <span
-                                key={tag}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800"
-                              >
-                                {tag}
-                              </span>
-                            ))}
+                            {question.tags.length > 0 &&
+                              question.tags.slice(0, 3).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
                             {question.tags.length > 3 && (
-                              <span className="text-xs text-gray-400 dark:text-gray-500">+{question.tags.length - 3}</span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500">
+                                +{question.tags.length - 3}
+                              </span>
                             )}
                           </div>
-                          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-snug">
+                          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-snug line-clamp-2">
                             {question.title}
                           </h3>
                         </div>
 
-                        <div className="flex items-center justify-start gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1 pt-1.5 border-t border-gray-100 dark:border-gray-700/70">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/70">
                           {question.author.username ? (
                             <Link
                               href={`/profile/${encodeURIComponent(question.author.username)}`}
@@ -395,7 +421,9 @@ function ForumHomepage() {
                               'אנונימי'
                             )}
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{timeAgo(question.createdAt)}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            {timeAgo(question.createdAt)}
+                          </span>
                           <div className="flex items-center gap-1" title="תגובות">
                             <MessageCircle size={14} />
                             <span>{question.replies}</span>
@@ -408,7 +436,8 @@ function ForumHomepage() {
                       </div>
                     </div>
                   </div>
-                )})}
+                );
+              })}
             </div>
           )}
         </section>

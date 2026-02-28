@@ -23,7 +23,7 @@ export default function NavHeader({ title, onMenuClick, rightContent, topContent
       {topContent}
       <div className={`mx-auto px-5 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
         <div className="flex justify-between items-center py-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 justify-end">
             <button
               type="button"
               onClick={onMenuClick}
