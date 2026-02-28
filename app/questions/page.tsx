@@ -321,7 +321,7 @@ const QuestionsPage = () => {
       />
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-5 py-8">
+      <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-5 sm:py-6 md:py-8">
         <div className="mb-8 text-center">
           <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-4 leading-tight">
             שאלות ותשובות
@@ -420,7 +420,7 @@ const QuestionsPage = () => {
                 className="block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group cursor-pointer"
               >
                 {question.isTopOfWeek && (
-                  <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-300 px-4 pt-3 pb-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-300 px-4 pt-2 pb-0.5">
                     <Crown
                       size={14}
                       className="text-amber-500 dark:text-amber-300"
@@ -428,21 +428,18 @@ const QuestionsPage = () => {
                     <span>שאלת השבוע</span>
                   </div>
                 )}
-                {/* Card row: voting (left) | content (right) — use LTR so left/right match spec */}
-                <div
-                  className="flex flex-row min-h-[120px]"
-                  style={{ direction: "ltr" }}
-                >
-                  {/* Left: vertical voting column */}
-                  <div className="flex flex-col items-center justify-center gap-0.5 min-w-[64px] py-4 px-3 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50">
+                {/* Card row: voting (left) | content (right) — same layout as index */}
+                <div className="flex flex-row" style={{ direction: "ltr" }}>
+                  {/* Vote column */}
+                  <div className="flex flex-col items-center justify-center gap-0.5 w-10 min-w-[40px] sm:min-w-[48px] sm:w-12 px-1 sm:px-2 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0 self-stretch">
                     <button
                       type="button"
                       onClick={(e) => handleVote(e, question.id, 1)}
                       disabled={updatingVoteId === question.id}
-                      className="p-1.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
                     >
                       <ArrowUp
-                        size={20}
+                        size={25}
                         className={
                           (userVotes[question.id] === 1
                             ? "text-indigo-600 dark:text-indigo-400"
@@ -451,17 +448,17 @@ const QuestionsPage = () => {
                         }
                       />
                     </button>
-                    <span className="font-bold text-lg text-gray-800 dark:text-gray-100 py-0.5 select-none">
+                    <span className="font-bold text-base text-gray-800 dark:text-gray-100 py-0.5 select-none">
                       {question.votes}
                     </span>
                     <button
                       type="button"
                       onClick={(e) => handleVote(e, question.id, -1)}
                       disabled={updatingVoteId === question.id}
-                      className="p-1.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
                     >
                       <ArrowDown
-                        size={20}
+                        size={25}
                         className={
                           (userVotes[question.id] === -1
                             ? "text-indigo-600 dark:text-indigo-400"
@@ -472,14 +469,13 @@ const QuestionsPage = () => {
                     </button>
                   </div>
 
-                  {/* Right: main content area */}
+                  {/* Main content area */}
                   <div
-                    className="flex-1 min-w-0 flex flex-col justify-between pr-6 pl-4 py-4 text-right"
+                    className="flex-1 min-w-0 flex flex-col gap-2 px-3 pt-2 pb-0 overflow-hidden sm:px-4 sm:pt-3 sm:pb-2 sm:pr-6 text-right"
                     style={{ direction: "rtl" }}
                   >
-                    {/* Title + tags */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {question.isAnswered && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
                             <Star
@@ -505,18 +501,17 @@ const QuestionsPage = () => {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-snug">
+                      <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 line-clamp-2 transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
                         {question.title}
                       </h3>
                     </div>
 
-                    {/* Bottom: pfp, username, time (right), then comments, views */}
-                    <div className="flex items-center justify-start gap-3 text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/70">
+                    <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 text-[0.825rem] text-gray-500 dark:border-gray-700/70 dark:text-gray-400 sm:text-[0.9625rem]">
                       {question.author.username ? (
                         <Link
                           href={`/profile/${encodeURIComponent(question.author.username)}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 hover:opacity-90 transition-opacity flex-shrink-0"
+                          className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
                         >
                           {question.author.avatar_url ? (
                             <Image
@@ -524,11 +519,11 @@ const QuestionsPage = () => {
                               alt={question.author.username}
                               width={40}
                               height={40}
-                              className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                              className="h-9 w-9 rounded-full object-cover border border-gray-200 dark:border-gray-600 sm:h-11 sm:w-11"
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                              <User size={20} className="text-white" />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
+                              <User size={22} className="text-white" />
                             </div>
                           )}
                         </Link>
@@ -540,16 +535,16 @@ const QuestionsPage = () => {
                               alt=""
                               width={40}
                               height={40}
-                              className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600 flex-shrink-0"
+                              className="h-9 w-9 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-600 sm:h-11 sm:w-11"
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                              <User size={20} className="text-white" />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
+                              <User size={22} className="text-white" />
                             </div>
                           )}
                         </>
                       )}
-                      <span className="font-medium text-gray-600 dark:text-gray-300">
+                      <span className="text-[0.9075rem] font-medium text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
                         {question.author.username ? (
                           <Link
                             href={`/profile/${encodeURIComponent(question.author.username)}`}
@@ -562,15 +557,15 @@ const QuestionsPage = () => {
                           "אנונימי"
                         )}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      <span className="text-[0.825rem] text-gray-500 dark:text-gray-400 shrink-0 sm:text-[0.9625rem]">
                         {timeAgo(question.createdAt)}
                       </span>
-                      <div className="flex items-center gap-1" title="תגובות">
-                        <MessageCircle size={14} />
+                      <div className="flex items-center gap-2" title="תגובות">
+                        <MessageCircle size={15} />
                         <span>{question.replies}</span>
                       </div>
-                      <div className="flex items-center gap-1" title="צפיות">
-                        <Eye size={14} />
+                      <div className="flex items-center gap-2" title="צפיות">
+                        <Eye size={15} />
                         <span>{question.views}</span>
                       </div>
                     </div>
