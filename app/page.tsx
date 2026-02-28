@@ -1,36 +1,51 @@
 //app/page.tsx
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { MessageSquare, Users, HelpCircle, BookOpen, Home, LogIn, User, Eye, MessageCircle, ArrowUp, ArrowDown, Star } from 'lucide-react';
-import { useAuth } from './components/AuthProvider';
-import LoginModal from './components/LoginModal';
-import RegisterModal from './components/RegisterModal';
-import Drawer from './components/Drawer';
-import NavHeader from './components/NavHeader';
-import Image from 'next/image';
-import AuthStatusDisplay from './components/AuthStatusDisplay';
-import { SimpleThemeToggle } from './components/SimpleThemeToggle';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from "react";
+import {
+  MessageSquare,
+  Users,
+  HelpCircle,
+  BookOpen,
+  Home,
+  LogIn,
+  User,
+  Eye,
+  MessageCircle,
+  ArrowUp,
+  ArrowDown,
+  Star,
+} from "lucide-react";
+import { useAuth } from "./components/AuthProvider";
+import LoginModal from "./components/LoginModal";
+import RegisterModal from "./components/RegisterModal";
+import Drawer from "./components/Drawer";
+import NavHeader from "./components/NavHeader";
+import Image from "next/image";
+import AuthStatusDisplay from "./components/AuthStatusDisplay";
+import { SimpleThemeToggle } from "./components/SimpleThemeToggle";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Development-only ProfileTestComponent
 function ProfileTestComponent() {
   // Only show in development
-  if (process.env.NODE_ENV === 'production') return null;
+  if (process.env.NODE_ENV === "production") return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      background: 'rgba(0,0,0,0.9)',
-      color: 'white',
-      padding: '10px',
-      fontSize: '12px',
-      zIndex: 9999,
-      borderRadius: '0 5px 0 0'
-    }}>
+    <div
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        background: "rgba(0,0,0,0.9)",
+        color: "white",
+        padding: "10px",
+        fontSize: "12px",
+        zIndex: 9999,
+        borderRadius: "0 5px 0 0",
+      }}
+    >
       🧪 Dev Debug Mode
     </div>
   );
@@ -61,11 +76,11 @@ function timeAgo(dateStr: string): string {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'הרגע';
+  if (diffMins < 1) return "הרגע";
   if (diffMins < 60) return `לפני ${diffMins} דקות`;
   if (diffHours < 24) return `לפני ${diffHours} שעות`;
   if (diffDays < 30) return `לפני ${diffDays} ימים`;
-  return date.toLocaleDateString('he-IL');
+  return date.toLocaleDateString("he-IL");
 }
 
 function ForumHomepage() {
@@ -74,7 +89,9 @@ function ForumHomepage() {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [topQuestions, setTopQuestions] = useState<TopQuestion[]>([]);
   const [loadingTopQuestions, setLoadingTopQuestions] = useState(true);
-  const [topQuestionsError, setTopQuestionsError] = useState<string | null>(null);
+  const [topQuestionsError, setTopQuestionsError] = useState<string | null>(
+    null,
+  );
 
   const { user, profile, loading, signOut } = useAuth();
   const router = useRouter();
@@ -85,27 +102,27 @@ function ForumHomepage() {
 
   useEffect(() => {
     if (isRegisterModalOpen || isLoginModalOpen) {
-      document.body.classList.add('modal-open');
+      document.body.classList.add("modal-open");
     } else {
-      document.body.classList.remove('modal-open');
+      document.body.classList.remove("modal-open");
     }
   }, [isRegisterModalOpen, isLoginModalOpen]);
 
   // Open login popup when arriving with ?modal=login (e.g. from "התחברות" in תפריט ניווט on other pages)
   useEffect(() => {
     if (loading) return;
-    if (searchParams.get('modal') === 'login' && !user) {
+    if (searchParams.get("modal") === "login" && !user) {
       setIsLoginModalOpen(true);
-      router.replace('/', { scroll: false });
+      router.replace("/", { scroll: false });
     }
   }, [searchParams, user, loading, router]);
 
   const menuItems = [
-    { label: 'ראשי', icon: Home, href: '/', active: true },
-    { label: 'סטטוסי', icon: Users, href: '/status' },
-    { label: 'דיוני', icon: MessageSquare, href: '/discussions' },
-    { label: 'שאלות', icon: HelpCircle, href: '/questions' },
-    { label: 'סיפורי', icon: BookOpen, href: '/stories' },
+    { label: "ראשי", icon: Home, href: "/", active: true },
+    { label: "סטטוסי", icon: Users, href: "/status" },
+    { label: "דיוני", icon: MessageSquare, href: "/discussions" },
+    { label: "שאלות", icon: HelpCircle, href: "/questions" },
+    { label: "סיפורי", icon: BookOpen, href: "/stories" },
   ];
 
   useEffect(() => {
@@ -113,17 +130,17 @@ function ForumHomepage() {
       setLoadingTopQuestions(true);
       setTopQuestionsError(null);
       try {
-        const res = await fetch('/api/questions?sort=votes&limit=5');
+        const res = await fetch("/api/questions?sort=votes&limit=5");
         const data = await res.json();
 
         if (!res.ok) {
-          setTopQuestionsError(data.error || 'שגיאה בטעינת השאלות המובילות');
+          setTopQuestionsError(data.error || "שגיאה בטעינת השאלות המובילות");
           return;
         }
 
         setTopQuestions(data.questions || []);
       } catch {
-        setTopQuestionsError('שגיאה בטעינת השאלות המובילות');
+        setTopQuestionsError("שגיאה בטעינת השאלות המובילות");
       } finally {
         setLoadingTopQuestions(false);
       }
@@ -138,7 +155,7 @@ function ForumHomepage() {
   const handleVote = async (
     event: React.MouseEvent,
     questionId: string,
-    voteType: 1 | -1
+    voteType: 1 | -1,
   ) => {
     event.stopPropagation();
     if (!user) {
@@ -148,16 +165,16 @@ function ForumHomepage() {
     setUpdatingVoteId(questionId);
     try {
       const res = await fetch(`/api/questions/${questionId}/vote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ voteType }),
       });
       const data = await res.json();
       if (!res.ok) return;
       setTopQuestions((prev) =>
         prev.map((q) =>
-          q.id === questionId ? { ...q, votes: data.votes ?? q.votes } : q
-        )
+          q.id === questionId ? { ...q, votes: data.votes ?? q.votes } : q,
+        ),
       );
       setUserVotes((prev) => ({ ...prev, [questionId]: voteType }));
     } catch {
@@ -173,7 +190,7 @@ function ForumHomepage() {
     try {
       await signOut();
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -279,13 +296,17 @@ function ForumHomepage() {
                 return (
                   <div
                     key={question.id}
-                    role={isInteractive ? 'button' : undefined}
+                    role={isInteractive ? "button" : undefined}
                     tabIndex={isInteractive ? 0 : -1}
-                    onClick={isInteractive ? () => router.push(`/questions/${question.id}`) : undefined}
+                    onClick={
+                      isInteractive
+                        ? () => router.push(`/questions/${question.id}`)
+                        : undefined
+                    }
                     onKeyDown={
                       isInteractive
                         ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
+                            if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
                               router.push(`/questions/${question.id}`);
                             }
@@ -293,48 +314,62 @@ function ForumHomepage() {
                         : undefined
                     }
                     className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 ${
-                      isInteractive ? 'hover:scale-[1.01] cursor-pointer' : 'cursor-default opacity-100'
+                      isInteractive
+                        ? "hover:scale-[1.01] cursor-pointer"
+                        : "cursor-default opacity-100"
                     }`}
                   >
-                    <div className="flex flex-row min-h-[100px] sm:min-h-[120px]" style={{ direction: 'ltr' }}>
-                      {/* Vote column: narrow on mobile, same on desktop */}
-                      <div className="flex flex-col items-center justify-center gap-0.5 w-12 min-w-[48px] sm:min-w-[64px] sm:w-16 py-3 sm:py-4 px-1.5 sm:px-3 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0">
+                    <div className="flex flex-row" style={{ direction: "ltr" }}>
+                      {/* Vote column */}
+                      <div className="flex flex-col items-center justify-center gap-0.5 w-10 min-w-[40px] sm:min-w-[48px] sm:w-12 px-1 sm:px-2 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0 self-stretch">
                         <button
                           type="button"
-                          onClick={user ? (e) => handleVote(e, question.id, 1) : undefined}
+                          onClick={
+                            user
+                              ? (e) => handleVote(e, question.id, 1)
+                              : undefined
+                          }
                           disabled={isGuest || updatingVoteId === question.id}
-                          className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md p-2 transition-colors [touch-action:manipulation] ${
-                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50'
+                          className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] ${
+                            isGuest
+                              ? "cursor-not-allowed opacity-60"
+                              : "hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
                           }`}
                         >
                           <ArrowUp
-                            size={20}
+                            size={25}
                             className={
                               (userVotes[question.id] === 1
-                                ? 'text-indigo-600 dark:text-indigo-400'
-                                : 'text-gray-400 dark:text-gray-500') +
-                              ' group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors'
+                                ? "text-indigo-600 dark:text-indigo-400"
+                                : "text-gray-400 dark:text-gray-500") +
+                              " group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors"
                             }
                           />
                         </button>
-                        <span className="font-bold text-lg text-gray-800 dark:text-gray-100 py-0.5 select-none">
+                        <span className="font-bold text-base text-gray-800 dark:text-gray-100 py-0.5 select-none">
                           {question.votes}
                         </span>
                         <button
                           type="button"
-                          onClick={user ? (e) => handleVote(e, question.id, -1) : undefined}
+                          onClick={
+                            user
+                              ? (e) => handleVote(e, question.id, -1)
+                              : undefined
+                          }
                           disabled={isGuest || updatingVoteId === question.id}
-                          className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md p-2 transition-colors [touch-action:manipulation] ${
-                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50'
+                          className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] ${
+                            isGuest
+                              ? "cursor-not-allowed opacity-60"
+                              : "hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
                           }`}
                         >
                           <ArrowDown
-                            size={20}
+                            size={25}
                             className={
                               (userVotes[question.id] === -1
-                                ? 'text-indigo-600 dark:text-indigo-400'
-                                : 'text-gray-400 dark:text-gray-500') +
-                              ' group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors'
+                                ? "text-indigo-600 dark:text-indigo-400"
+                                : "text-gray-400 dark:text-gray-500") +
+                              " group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors"
                             }
                           />
                         </button>
@@ -342,14 +377,18 @@ function ForumHomepage() {
 
                       {/* Main content area */}
                       <div
-                        className="flex-1 min-w-0 flex flex-col justify-between px-3 py-3 sm:px-4 sm:py-4 sm:pr-6 text-right overflow-hidden"
-                        style={{ direction: 'rtl' }}
+                        className="flex-1 min-w-0 flex flex-col gap-0.1 px-3 pt-2 pb-0 sm:px-4 sm:pt-3 sm:pb-2 sm:pr-6 text-right overflow-hidden"
+                        style={{ direction: "rtl" }}
                       >
-                        <div>
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {question.isAnswered && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
-                                <Star size={12} className="ml-1" fill="currentColor" />
+                              <span className="inline-flex items-center px-2 py-.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
+                                <Star
+                                  size={12}
+                                  className="ml-1"
+                                  fill="currentColor"
+                                />
                                 נענתה
                               </span>
                             )}
@@ -368,12 +407,12 @@ function ForumHomepage() {
                               </span>
                             )}
                           </div>
-                          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-snug line-clamp-2 sm:text-lg">
+                          <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 line-clamp-2 transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
                             {question.title}
                           </h3>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/70">
+                        <div className="mt-[10px] flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-[0.825rem] text-gray-500 dark:border-gray-700/70 dark:text-gray-400 sm:text-[0.9625rem]">
                           {question.author.username ? (
                             <Link
                               href={`/profile/${encodeURIComponent(question.author.username)}`}
@@ -386,11 +425,11 @@ function ForumHomepage() {
                                   alt={question.author.username}
                                   width={40}
                                   height={40}
-                                  className="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-gray-600 sm:h-10 sm:w-10"
+                                  className="h-9 w-9 rounded-full object-cover border border-gray-200 dark:border-gray-600 sm:h-11 sm:w-11"
                                 />
                               ) : (
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-10 sm:w-10">
-                                  <User size={20} className="text-white" />
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
+                                  <User size={22} className="text-white" />
                                 </div>
                               )}
                             </Link>
@@ -402,11 +441,11 @@ function ForumHomepage() {
                                   alt=""
                                   width={40}
                                   height={40}
-                                  className="h-8 w-8 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-600 sm:h-10 sm:w-10"
+                                  className="h-9 w-9 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-600 sm:h-11 sm:w-11"
                                 />
                               ) : (
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-10 sm:w-10">
-                                  <User size={20} className="text-white" />
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
+                                  <User size={22} className="text-white" />
                                 </div>
                               )}
                             </>
@@ -421,18 +460,24 @@ function ForumHomepage() {
                                 {question.author.username}
                               </Link>
                             ) : (
-                              'אנונימי'
+                              "אנונימי"
                             )}
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                          <span className="text-[0.825rem] text-gray-500 dark:text-gray-400 flex-shrink-0 sm:text-[0.9625rem]">
                             {timeAgo(question.createdAt)}
                           </span>
-                          <div className="flex items-center gap-1" title="תגובות">
-                            <MessageCircle size={14} />
+                          <div
+                            className="flex items-center gap-1"
+                            title="תגובות"
+                          >
+                            <MessageCircle size={15} />
                             <span>{question.replies}</span>
                           </div>
-                          <div className="flex items-center gap-1" title="צפיות">
-                            <Eye size={14} />
+                          <div
+                            className="flex items-center gap-1"
+                            title="צפיות"
+                          >
+                            <Eye size={15} />
                             <span>{question.views}</span>
                           </div>
                         </div>
@@ -446,8 +491,8 @@ function ForumHomepage() {
         </section>
       </main>
 
-      <LoginModal 
-        isOpen={isLoginModalOpen} 
+      <LoginModal
+        isOpen={isLoginModalOpen}
         onClose={closeLoginModal}
         onSwitchToRegister={() => {
           closeLoginModal();
@@ -463,12 +508,12 @@ function ForumHomepage() {
           setIsLoginModalOpen(true);
         }}
       />
-      
+
       <ProfileTestComponent />
 
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Heebo:wght@400;500;700&display=swap');
-        
+        @import url("https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Heebo:wght@400;500;700&display=swap");
+
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
