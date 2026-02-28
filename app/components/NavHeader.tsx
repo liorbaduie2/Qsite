@@ -21,9 +21,9 @@ export default function NavHeader({ title, onMenuClick, rightContent, topContent
   return (
     <header className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl shadow-xl border-b border-gray-200/20 dark:border-gray-700/50">
       {topContent}
-      <div className={`mx-auto px-5 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
-        <div className="flex justify-between items-center py-4">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 justify-end">
+      <div className={`mx-auto px-4 sm:px-5 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
+        <div className="flex justify-between items-center gap-2 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
               type="button"
               onClick={onMenuClick}
@@ -37,12 +37,16 @@ export default function NavHeader({ title, onMenuClick, rightContent, topContent
                 {titleContent}
               </div>
             ) : (
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
                 {title}
               </h1>
             )}
           </div>
-          {rightContent && <div className="flex items-center gap-4">{rightContent}</div>}
+          {rightContent && (
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4 min-w-0 shrink-0">
+              {rightContent}
+            </div>
+          )}
         </div>
       </div>
     </header>

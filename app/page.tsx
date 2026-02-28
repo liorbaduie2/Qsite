@@ -210,15 +210,15 @@ function ForumHomepage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleLogin}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300"
+                  className="flex items-center gap-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white/60 dark:bg-gray-700/60 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 transition-all duration-300 hover:border-indigo-300 hover:bg-white/80 dark:hover:bg-gray-700/80 sm:gap-2 sm:px-4 sm:py-2 sm:text-base"
                 >
-                  <LogIn size={16} /> התחברות
+                  <LogIn size={18} className="shrink-0" /> <span>התחברות</span>
                 </button>
                 <button
                   onClick={handleRegister}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-500 dark:to-purple-500 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 dark:hover:from-indigo-600 dark:hover:to-purple-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2.5 text-sm text-white shadow-lg transition-all duration-300 hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-500 dark:to-purple-500 dark:hover:from-indigo-600 dark:hover:to-purple-600 sm:gap-2 sm:px-4 sm:py-2 sm:text-base"
                 >
-                  <User size={16} /> הרשמה
+                  <User size={18} className="shrink-0" /> <span>הרשמה</span>
                 </button>
               </div>
             )}
@@ -239,10 +239,10 @@ function ForumHomepage() {
         }}
       />
 
-      <main className="mx-auto max-w-full px-4 py-6 sm:max-w-3xl sm:px-5 md:max-w-6xl md:py-8">
-        <section className="mt-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+      <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-5 sm:py-6 md:py-8">
+        <section className="mt-2 sm:mt-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 sm:text-2xl">
               השאלות המדורגות ביותר
             </h3>
             <Link
@@ -293,15 +293,15 @@ function ForumHomepage() {
                       isInteractive ? 'hover:scale-[1.01] cursor-pointer' : 'cursor-default opacity-100'
                     }`}
                   >
-                    <div className="flex flex-col sm:flex-row min-h-[120px]" style={{ direction: 'ltr' }}>
-                      {/* Left: voting column (stacks on top on small screens) */}
-                      <div className="flex flex-col items-center justify-center gap-0.5 min-w-full sm:min-w-[64px] py-3 sm:py-4 px-3 border-b border-gray-200/80 dark:border-gray-600/80 sm:border-b-0 sm:border-r bg-gray-50/80 dark:bg-gray-900/50">
+                    <div className="flex flex-row min-h-[100px] sm:min-h-[120px]" style={{ direction: 'ltr' }}>
+                      {/* Vote column: narrow on mobile, same on desktop */}
+                      <div className="flex flex-col items-center justify-center gap-0.5 w-12 min-w-[48px] sm:min-w-[64px] sm:w-16 py-3 sm:py-4 px-1.5 sm:px-3 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0">
                         <button
                           type="button"
                           onClick={user ? (e) => handleVote(e, question.id, 1) : undefined}
                           disabled={isGuest || updatingVoteId === question.id}
-                          className={`p-1.5 rounded-md transition-colors ${
-                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                          className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md p-2 transition-colors [touch-action:manipulation] ${
+                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50'
                           }`}
                         >
                           <ArrowUp
@@ -321,8 +321,8 @@ function ForumHomepage() {
                           type="button"
                           onClick={user ? (e) => handleVote(e, question.id, -1) : undefined}
                           disabled={isGuest || updatingVoteId === question.id}
-                          className={`p-1.5 rounded-md transition-colors ${
-                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                          className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md p-2 transition-colors [touch-action:manipulation] ${
+                            isGuest ? 'cursor-not-allowed opacity-60' : 'hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50'
                           }`}
                         >
                           <ArrowDown
@@ -337,9 +337,9 @@ function ForumHomepage() {
                         </button>
                       </div>
 
-                      {/* Right: main content area */}
+                      {/* Main content area */}
                       <div
-                        className="flex-1 min-w-0 flex flex-col justify-between px-4 py-4 sm:pr-6 sm:pl-4 text-right"
+                        className="flex-1 min-w-0 flex flex-col justify-between px-3 py-3 sm:px-4 sm:py-4 sm:pr-6 text-right overflow-hidden"
                         style={{ direction: 'rtl' }}
                       >
                         <div>
@@ -365,12 +365,12 @@ function ForumHomepage() {
                               </span>
                             )}
                           </div>
-                          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-snug line-clamp-2">
+                          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300 leading-snug line-clamp-2 sm:text-lg">
                             {question.title}
                           </h3>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/70">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/70">
                           {question.author.username ? (
                             <Link
                               href={`/profile/${encodeURIComponent(question.author.username)}`}
@@ -383,10 +383,10 @@ function ForumHomepage() {
                                   alt={question.author.username}
                                   width={40}
                                   height={40}
-                                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                                  className="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-gray-600 sm:h-10 sm:w-10"
                                 />
                               ) : (
-                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-10 sm:w-10">
                                   <User size={20} className="text-white" />
                                 </div>
                               )}
@@ -399,10 +399,10 @@ function ForumHomepage() {
                                   alt=""
                                   width={40}
                                   height={40}
-                                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600 flex-shrink-0"
+                                  className="h-8 w-8 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-600 sm:h-10 sm:w-10"
                                 />
                               ) : (
-                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-10 sm:w-10">
                                   <User size={20} className="text-white" />
                                 </div>
                               )}
