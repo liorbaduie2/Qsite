@@ -11,10 +11,17 @@ import {
   Star,
   Music,
   MessageCircle,
+  Heart,
+  MessageSquare,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import Image from "next/image";
-import { SkeletonBlock, SkeletonCircle, SkeletonText } from "../../components/ui/Skeleton";
+import {
+  SkeletonBlock,
+  SkeletonCircle,
+  SkeletonText,
+} from "../../components/ui/Skeleton";
 
 interface PublicProfile {
   id: string;
@@ -28,12 +35,29 @@ interface PublicProfile {
   is_verified: boolean;
   is_moderator: boolean;
   created_at: string | null;
+  questions_count?: number;
+  profile_likes_count?: number;
 }
 
 interface SharedStatus {
   id: string;
   content: string;
   createdAt: string;
+}
+
+interface ProfileQuestion {
+  id: string;
+  title: string;
+  created_at: string;
+}
+
+interface ProfileComment {
+  id: string;
+  content: string;
+  created_at: string;
+  author_id: string;
+  author_username: string | null;
+  author_avatar_url: string | null;
 }
 
 const getPlaylistInfo = (url: string | undefined) => {
@@ -183,6 +207,11 @@ export default function PublicProfilePage() {
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [sharedStatus, setSharedStatus] = useState<SharedStatus | null>(null);
+  const [questions, setQuestions] = useState<ProfileQuestion[]>([]);
+  const [repliesCount, setRepliesCount] = useState(0);
+  const [comments, setComments] = useState<ProfileComment[]>([]);
+  const [profileLiked, setProfileLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [chatStatus, setChatStatus] = useState<
@@ -198,6 +227,9 @@ export default function PublicProfilePage() {
     null,
   );
   const [chatRequesting, setChatRequesting] = useState(false);
+  const [likeRequesting, setLikeRequesting] = useState(false);
+  const [commentContent, setCommentContent] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
 
   useEffect(() => {
     if (!username) {
@@ -219,6 +251,11 @@ export default function PublicProfilePage() {
         if (data?.profile) {
           setProfile(data.profile);
           setSharedStatus(data.sharedStatus || null);
+          setQuestions(Array.isArray(data.questions) ? data.questions : []);
+          setRepliesCount(
+            typeof data.replies_count === "number" ? data.replies_count : 0,
+          );
+          setLikesCount(data.profile?.profile_likes_count ?? 0);
         } else {
           setNotFound(true);
         }
@@ -226,6 +263,35 @@ export default function PublicProfilePage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [username]);
+
+  useEffect(() => {
+    if (!username || !profile) return;
+    fetch(`/api/profile/${encodeURIComponent(username)}/comments`)
+      .then((res) => (res.ok ? res.json() : { comments: [] }))
+      .then((data) =>
+        setComments(Array.isArray(data?.comments) ? data.comments : []),
+      )
+      .catch(() => setComments([]));
+  }, [username, profile?.id]);
+
+  useEffect(() => {
+    if (
+      !username ||
+      !user ||
+      (profile && profile.username === authProfile?.username)
+    )
+      return;
+    fetch(`/api/profile/${encodeURIComponent(username)}/like`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setProfileLiked(!!data.liked);
+          if (typeof data.likes_count === "number")
+            setLikesCount(data.likes_count);
+        }
+      })
+      .catch(() => {});
+  }, [username, user, profile?.username, authProfile?.username]);
 
   useEffect(() => {
     if (authLoading || !profile || !authProfile) return;
@@ -295,7 +361,60 @@ export default function PublicProfilePage() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 sticky top-8">
+            <div className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 sticky top-8">
+              {!isSkeleton && profile && (
+                <div className="absolute top-4 right-4">
+                  {user && profile.username !== authProfile?.username ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (likeRequesting) return;
+                        setLikeRequesting(true);
+                        try {
+                          const res = await fetch(
+                            `/api/profile/${encodeURIComponent(username)}/like`,
+                            {
+                              method: "POST",
+                            },
+                          );
+                          const data = await res.json();
+                          if (res.ok) {
+                            setProfileLiked(!!data.liked);
+                            if (typeof data.likes_count === "number")
+                              setLikesCount(data.likes_count);
+                          }
+                        } finally {
+                          setLikeRequesting(false);
+                        }
+                      }}
+                      disabled={likeRequesting}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors shadow-sm"
+                    >
+                      <Heart
+                        size={18}
+                        className={
+                          profileLiked
+                            ? "fill-red-500 text-red-500"
+                            : "text-gray-500 dark:text-gray-400"
+                        }
+                      />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {likesCount}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-3 py-2 text-gray-600 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-700/80">
+                      <Heart
+                        size={18}
+                        className="text-gray-500 dark:text-gray-400"
+                      />
+                      <span className="text-sm font-medium">
+                        {likesCount} לייקים
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="text-center mb-4">
                 <div className="flex flex-col items-center justify-center mb-2">
                   <div className="relative" style={{ width: 124, height: 124 }}>
@@ -454,9 +573,9 @@ export default function PublicProfilePage() {
                         />
                         <span>
                           הצטרף ב-
-                          {new Date(
-                            profile.created_at,
-                          ).toLocaleDateString("he-IL")}
+                          {new Date(profile.created_at).toLocaleDateString(
+                            "he-IL",
+                          )}
                         </span>
                       </div>
                     )}
@@ -565,7 +684,7 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
               {isSkeleton ? (
                 <div className="space-y-4">
@@ -577,9 +696,181 @@ export default function PublicProfilePage() {
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  פרופיל ציבורי — אין פעילות להצגה כאן.
-                </p>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+                      <HelpCircle size={20} className="text-indigo-500" />
+                      פעילות
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                      <div className="flex items-center gap-3 p-4 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-gradient-to-br from-blue-50 to-blue-100/80 dark:from-blue-900/20 dark:to-blue-800/20">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/15 dark:bg-blue-500/25">
+                          <HelpCircle
+                            size={22}
+                            className="text-blue-600 dark:text-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 tabular-nums">
+                            {profile?.questions_count ?? 0}
+                          </p>
+                          <p className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                            שאלות
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-4 rounded-xl border border-emerald-200 dark:border-emerald-700/50 bg-gradient-to-br from-emerald-50 to-emerald-100/80 dark:from-emerald-900/20 dark:to-emerald-800/20">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-500/15 dark:bg-emerald-500/25">
+                          <MessageSquare
+                            size={22}
+                            className="text-emerald-600 dark:text-emerald-400"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
+                            {repliesCount}
+                          </p>
+                          <p className="text-xs font-medium text-emerald-600/80 dark:text-emerald-400/80">
+                            תשובות
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {questions.length > 0 && (
+                      <>
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          השאלה האחרונה
+                        </h4>
+                        <Link
+                          href={`/questions/${questions[0].id}`}
+                          className="block p-3 rounded-lg bg-indigo-50/80 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30 transition-colors"
+                        >
+                          <span className="font-medium text-gray-800 dark:text-gray-200">
+                            {questions[0].title}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
+                            {new Date(
+                              questions[0].created_at,
+                            ).toLocaleDateString("he-IL")}
+                          </span>
+                        </Link>
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-2">
+                          כל השאלות
+                        </h4>
+                        <ul className="space-y-2">
+                          {questions.map((q) => (
+                            <li key={q.id}>
+                              <Link
+                                href={`/questions/${q.id}`}
+                                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                              >
+                                {q.title}
+                              </Link>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+                                {" "}
+                                {new Date(q.created_at).toLocaleDateString(
+                                  "he-IL",
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {questions.length === 0 && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        אין שאלות עדיין.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                תגובות על הפרופיל
+              </h3>
+              {isSkeleton ? (
+                <div className="space-y-2">
+                  <SkeletonText className="w-full" />
+                  <SkeletonText className="w-4/5" />
+                </div>
+              ) : (
+                <>
+                  {user &&
+                    profile &&
+                    profile.username !== authProfile?.username && (
+                      <form
+                        className="mb-4"
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!commentContent.trim() || commentSubmitting)
+                            return;
+                          setCommentSubmitting(true);
+                          try {
+                            const res = await fetch(
+                              `/api/profile/${encodeURIComponent(username)}/comments`,
+                              {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  content: commentContent.trim(),
+                                }),
+                              },
+                            );
+                            const data = await res.json();
+                            if (res.ok && data?.comment) {
+                              setComments((prev) => [data.comment, ...prev]);
+                              setCommentContent("");
+                            }
+                          } finally {
+                            setCommentSubmitting(false);
+                          }
+                        }}
+                      >
+                        <textarea
+                          value={commentContent}
+                          onChange={(e) => setCommentContent(e.target.value)}
+                          placeholder="הוסף תגובה ציבורית..."
+                          rows={2}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 resize-none"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!commentContent.trim() || commentSubmitting}
+                          className="mt-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {commentSubmitting ? "שולח..." : "פרסם"}
+                        </button>
+                      </form>
+                    )}
+                  <div className="space-y-3">
+                    {comments.length === 0 && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        אין תגובות עדיין.
+                      </p>
+                    )}
+                    {comments.map((c) => (
+                      <div
+                        key={c.id}
+                        className="p-3 rounded-lg bg-gray-50/80 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-gray-800 dark:text-gray-200">
+                            {c.author_username ?? "משתמש"}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(c.created_at).toLocaleDateString("he-IL")}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                          {c.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>

@@ -30,6 +30,7 @@ interface Profile {
   answers_count?: number;
   best_answers_count?: number;
   total_views?: number;
+  profile_likes_count?: number;
   email?: string;
   phone?: string;
   phone_verified_at?: string;
@@ -286,7 +287,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           approved_at, approved_by, rejection_reason, is_moderator,
           is_verified, created_at, updated_at, email,
           questions_count, answers_count, best_answers_count, total_views,
-          last_seen_at
+          profile_likes_count, last_seen_at
         `,
           )
           .eq("id", userId)
@@ -343,6 +344,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           total_views:
             typeof data.total_views === "number"
               ? data.total_views
+              : undefined,
+          profile_likes_count:
+            typeof (data as { profile_likes_count?: number }).profile_likes_count === "number"
+              ? (data as { profile_likes_count: number }).profile_likes_count
               : undefined,
           last_seen_at: data.last_seen_at ? String(data.last_seen_at) : null,
         };

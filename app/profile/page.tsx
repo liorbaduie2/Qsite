@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   MapPin,
@@ -9,16 +10,15 @@ import {
   Calendar,
   MessageSquare,
   HelpCircle,
-  Eye,
   Edit3,
   Save,
   X,
   Camera,
   BarChart3,
-  CheckCircle,
-  Clock,
   Music,
   Star,
+  Heart,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../components/AuthProvider";
 import { useRouter } from "next/navigation";
@@ -30,15 +30,27 @@ import {
   SkeletonText,
 } from "../components/ui/Skeleton";
 
-interface Question {
-  id: number;
+interface ProfileQuestion {
+  id: string;
   title: string;
-  votes: number;
-  answers: number;
-  views: number;
-  isAnswered: boolean;
-  createdAt: string;
-  tags: string[];
+  created_at: string;
+}
+
+interface ProfileReply {
+  id: string;
+  content: string;
+  created_at: string;
+  question_id: string;
+  question_title: string | null;
+}
+
+interface ProfileComment {
+  id: string;
+  content: string;
+  created_at: string;
+  author_id: string;
+  author_username: string | null;
+  author_avatar_url: string | null;
 }
 
 // Helper function to determine playlist icon and text
@@ -204,39 +216,9 @@ export default function ProfilePage() {
     createdAt: string;
   } | null>(null);
   const [removingShared, setRemovingShared] = useState(false);
-
-  const [userQuestions] = useState<Question[]>([
-    {
-      id: 1,
-      title: "איך ללמוד React בצורה יעילה?",
-      votes: 12,
-      answers: 5,
-      views: 234,
-      isAnswered: true,
-      createdAt: "2024-12-15",
-      tags: ["React", "למידה"],
-    },
-    {
-      id: 2,
-      title: "מה ההבדל בין useState ל-useReducer?",
-      votes: 8,
-      answers: 3,
-      views: 156,
-      isAnswered: true,
-      createdAt: "2024-12-14",
-      tags: ["React", "Hooks"],
-    },
-    {
-      id: 3,
-      title: "איך לבצע optimization ב-Next.js?",
-      votes: 15,
-      answers: 7,
-      views: 412,
-      isAnswered: false,
-      createdAt: "2024-12-13",
-      tags: ["Next.js", "Performance"],
-    },
-  ]);
+  const [userQuestions, setUserQuestions] = useState<ProfileQuestion[]>([]);
+  const [userReplies, setUserReplies] = useState<ProfileReply[]>([]);
+  const [profileComments, setProfileComments] = useState<ProfileComment[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -274,6 +256,32 @@ export default function ProfilePage() {
       })
       .catch(() => setSharedStatus(null));
   }, [user]);
+
+  useEffect(() => {
+    if (!profile?.username) return;
+    fetch(`/api/profile/${encodeURIComponent(profile.username)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setUserQuestions(Array.isArray(data.questions) ? data.questions : []);
+          setUserReplies(Array.isArray(data.replies) ? data.replies : []);
+        }
+      })
+      .catch(() => {
+        setUserQuestions([]);
+        setUserReplies([]);
+      });
+  }, [profile?.username]);
+
+  useEffect(() => {
+    if (!profile?.username) return;
+    fetch(`/api/profile/${encodeURIComponent(profile.username)}/comments`)
+      .then((res) => (res.ok ? res.json() : { comments: [] }))
+      .then((data) =>
+        setProfileComments(Array.isArray(data?.comments) ? data.comments : []),
+      )
+      .catch(() => setProfileComments([]));
+  }, [profile?.username]);
 
   const removeSharedFromProfile = async () => {
     if (!sharedStatus) return;
@@ -348,8 +356,7 @@ export default function ProfilePage() {
   const { textClass: reputationTextClass } = getReputationVisuals(reputation);
   const questionsAsked = profile?.questions_count ?? 0;
   const answersGiven = profile?.answers_count ?? 0;
-  const bestAnswers = profile?.best_answers_count ?? 0;
-  const totalViews = profile?.total_views ?? 0;
+  const profileLikesCount = profile?.profile_likes_count ?? 0;
 
   const playlistInfo = getPlaylistInfo(
     isEditing ? editForm.website : profile?.website,
@@ -732,7 +739,7 @@ export default function ProfilePage() {
                     {activeTab === "overview" && (
                       <div className="space-y-6">
                         {/* Statistics Cards */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700/50">
                             <div className="flex items-center gap-2 mb-2">
                               <HelpCircle
@@ -763,33 +770,18 @@ export default function ProfilePage() {
                             </div>
                           </div>
 
-                          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
-                            <div className="flex items-center gap-2 mb-2">
-                              <CheckCircle
-                                className="text-yellow-600 dark:text-yellow-500"
-                                size={20}
-                              />
-                              <span className="font-semibold text-yellow-800 dark:text-yellow-200">
-                                תשובות מקובלות
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
-                              {bestAnswers}
-                            </div>
-                          </div>
-
                           <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50">
                             <div className="flex items-center gap-2 mb-2">
-                              <Eye
+                              <Heart
                                 className="text-purple-600 dark:text-purple-400"
                                 size={20}
                               />
                               <span className="font-semibold text-purple-800 dark:text-purple-200">
-                                צפיות
+                                לייקים לפרופיל
                               </span>
                             </div>
                             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                              {totalViews}
+                              {profileLikesCount}
                             </div>
                           </div>
                         </div>
@@ -800,38 +792,75 @@ export default function ProfilePage() {
                             פעילות אחרונה
                           </h3>
                           <div className="space-y-3">
-                            {userQuestions.slice(0, 3).map((question) => (
-                              <div
+                            {userQuestions.length === 0 && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                אין שאלות עדיין.
+                              </p>
+                            )}
+                            {userQuestions.slice(0, 5).map((question) => (
+                              <Link
                                 key={question.id}
-                                className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                                href={`/questions/${question.id}`}
+                                className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
                               >
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
-                                    {question.title}
-                                  </h4>
-                                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                    <span className="flex items-center gap-1">
-                                      <MessageSquare size={14} />
-                                      {question.answers}
+                                <h4 className="font-medium text-gray-800 dark:text-gray-200 flex-1">
+                                  {question.title}
+                                </h4>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  {new Date(question.created_at).toLocaleDateString("he-IL")}
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Profile Comments (owner view with delete) */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                            תגובות על הפרופיל
+                          </h3>
+                          {profileComments.length === 0 && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              אין תגובות על הפרופיל שלך.
+                            </p>
+                          )}
+                          <div className="space-y-3">
+                            {profileComments.map((c) => (
+                              <div
+                                key={c.id}
+                                className="flex items-start justify-between gap-2 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-gray-800 dark:text-gray-200">
+                                      {c.author_username ?? "משתמש"}
                                     </span>
-                                    <span className="flex items-center gap-1">
-                                      <Eye size={14} />
-                                      {question.views}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <Clock size={14} />
-                                      {new Date(
-                                        question.createdAt,
-                                      ).toLocaleDateString("he-IL")}
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {new Date(c.created_at).toLocaleDateString("he-IL")}
                                     </span>
                                   </div>
+                                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                    {c.content}
+                                  </p>
                                 </div>
-                                {question.isAnswered && (
-                                  <CheckCircle
-                                    className="text-green-600 dark:text-green-400"
-                                    size={18}
-                                  />
-                                )}
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!profile?.username) return;
+                                    const res = await fetch(
+                                      `/api/profile/${encodeURIComponent(profile.username)}/comments/${c.id}`,
+                                      { method: "DELETE" },
+                                    );
+                                    if (res.ok)
+                                      setProfileComments((prev) =>
+                                        prev.filter((x) => x.id !== c.id),
+                                      );
+                                  }}
+                                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                  title="מחק תגובה"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -846,63 +875,67 @@ export default function ProfilePage() {
                             השאלות שלי ({userQuestions.length})
                           </h3>
                         </div>
+                        {userQuestions.length === 0 && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            אין שאלות עדיין.
+                          </p>
+                        )}
                         <div className="space-y-4">
                           {userQuestions.map((question) => (
-                            <div
+                            <Link
                               key={question.id}
-                              className="p-4 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                              href={`/questions/${question.id}`}
+                              className="block p-4 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
                             >
-                              <div className="flex items-start justify-between mb-2">
-                                <h4 className="font-medium text-gray-800 dark:text-gray-200 flex-1">
-                                  {question.title}
-                                </h4>
-                                {question.isAnswered && (
-                                  <CheckCircle
-                                    className="text-green-600 dark:text-green-400 ml-2"
-                                    size={18}
-                                  />
-                                )}
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                  <span className="flex items-center gap-1">
-                                    <MessageSquare size={14} />
-                                    {question.answers} תשובות
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Eye size={14} />
-                                    {question.views} צפיות
-                                  </span>
-                                </div>
-                                <div className="flex gap-1">
-                                  {question.tags.map((tag) => (
-                                    <span
-                                      key={tag}
-                                      className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs rounded-full"
-                                    >
-                                      {tag}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
+                              <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                                {question.title}
+                              </h4>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
+                                {new Date(question.created_at).toLocaleDateString("he-IL")}
+                              </span>
+                            </Link>
                           ))}
                         </div>
                       </div>
                     )}
 
                     {activeTab === "answers" && (
-                      <div className="text-center py-12">
-                        <MessageSquare
-                          className="mx-auto text-gray-400 dark:text-gray-500 mb-4"
-                          size={48}
-                        />
-                        <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                          אין תשובות עדיין
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                          התשובות שלי
                         </h3>
-                        <p className="text-gray-500 dark:text-gray-500">
-                          התחל לענות על שאלות כדי לראות אותן כאן
-                        </p>
+                        {userReplies.length === 0 && (
+                          <div className="text-center py-12">
+                            <MessageSquare
+                              className="mx-auto text-gray-400 dark:text-gray-500 mb-4"
+                              size={48}
+                            />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              התחל לענות על שאלות כדי לראות אותן כאן
+                            </p>
+                          </div>
+                        )}
+                        <div className="space-y-3">
+                          {userReplies.map((r) => (
+                            <div
+                              key={r.id}
+                              className="p-4 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                            >
+                              <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 mb-2">
+                                {r.content}
+                              </p>
+                              <Link
+                                href={`/questions/${r.question_id}`}
+                                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                              >
+                                {r.question_title ?? "שאלה"}
+                              </Link>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
+                                {new Date(r.created_at).toLocaleDateString("he-IL")}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </>
