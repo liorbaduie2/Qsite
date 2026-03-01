@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   MessageSquare,
   Users,
@@ -9,7 +9,6 @@ import {
   Home,
   Plus,
   Search,
-  Filter,
   Eye,
   MessageCircle,
   ArrowUp,
@@ -18,6 +17,7 @@ import {
   Crown,
   User,
   LogIn,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../components/AuthProvider";
 import LoginModal from "../components/LoginModal";
@@ -102,6 +102,7 @@ function timeAgo(dateStr: string): string {
 const QuestionsPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isNewQuestionModalOpen, setIsNewQuestionModalOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("weekly_top");
   const [filterTag, setFilterTag] = useState("הכל");
@@ -110,6 +111,8 @@ const QuestionsPage = () => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
   const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
@@ -198,6 +201,29 @@ const QuestionsPage = () => {
     fetchQuestions();
   }, [fetchQuestions]);
 
+  useEffect(() => {
+    if (!tagDropdownOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTagDropdownOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [tagDropdownOpen]);
+
+  useEffect(() => {
+    if (!tagDropdownOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (
+        tagDropdownRef.current &&
+        !tagDropdownRef.current.contains(e.target as Node)
+      ) {
+        setTagDropdownOpen(false);
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [tagDropdownOpen]);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -281,6 +307,15 @@ const QuestionsPage = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setIsSearchOpen((prev) => !prev)}
+              className="flex items-center justify-center p-2.5 text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-300"
+              aria-expanded={isSearchOpen}
+              aria-label={isSearchOpen ? "סגור חיפוש" : "חפש שאלות"}
+            >
+              <Search size={20} />
+            </button>
+            <button
+              type="button"
               onClick={handleNewQuestion}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl font-medium"
             >
@@ -322,66 +357,74 @@ const QuestionsPage = () => {
 
       {/* Main Content */}
       <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-5 sm:py-6 md:py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-4 leading-tight">
-            שאלות ותשובות
-          </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            מקום לשאול שאלות, לחלוק ידע ולקבל עזרה מהקהילה
-          </p>
-        </div>
-
-        {/* Search and Filter */}
-        <div className="mb-8">
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
+        {/* Search and Filter — compact bar (visible when user clicks "חפש שאלות") */}
+        {isSearchOpen && (
+          <div className="mb-5 relative z-10">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm shadow-xl p-3 sm:p-4">
+              <div className="flex-1 relative min-w-0 flex items-center rounded-xl border border-gray-200/50 dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-900/50 focus-within:ring-2 focus-within:ring-indigo-500/40 dark:focus-within:ring-indigo-400/50 transition-shadow">
                 <Search
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                  size={20}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400 pointer-events-none"
+                  size={18}
                 />
                 <input
                   type="text"
                   placeholder="חפש שאלות..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pr-11 pl-4 py-3 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 text-gray-800 dark:text-gray-200"
+                  className="w-full h-10 pr-10 pl-3 text-sm border-0 bg-transparent text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none rounded-xl"
                 />
               </div>
-
-              <div className="flex items-center gap-2">
-                <Filter
-                  size={20}
-                  className="text-gray-500 dark:text-gray-400"
-                />
+              <div className="flex gap-2 sm:gap-2">
+                <div className="relative" ref={tagDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setTagDropdownOpen((o) => !o)}
+                    className="h-10 min-w-0 flex-1 sm:flex-none sm:w-36 flex items-center justify-between gap-2 px-3 rounded-xl border border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-2 focus:ring-indigo-500/40 dark:focus:ring-indigo-400/50 focus:border-transparent cursor-pointer"
+                  >
+                    <span className="truncate">{filterTag}</span>
+                    <ChevronDown
+                      size={18}
+                      className="text-gray-500 dark:text-gray-400 shrink-0"
+                    />
+                  </button>
+                  {tagDropdownOpen && (
+                    <div className="absolute top-full end-5 mt-1 py-1 w-30 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-64 overflow-y-auto">
+                      {allTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            setFilterTag(tag);
+                            setTagDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2 px-4 py-2.5 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterTag === tag ? "bg-gray-100 dark:bg-gray-700" : ""}`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <select
-                  value={filterTag}
-                  onChange={(e) => setFilterTag(e.target.value)}
-                  className="px-4 py-3 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 text-gray-800 dark:text-gray-200"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="h-10 pl-8 pr-3 text-sm rounded-xl border border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500/40 dark:focus:ring-indigo-400/50 focus:border-transparent cursor-pointer min-w-0 flex-1 sm:flex-none sm:w-40 [color-scheme:light] dark:[color-scheme:dark] appearance-none bg-no-repeat bg-[length:1rem] bg-[left_0.75rem_center]"
+                  style={{
+                    backgroundImage:
+                      "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")",
+                  }}
                 >
-                  {allTags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
+                  <option value="weekly_top">שאלת השבוע</option>
+                  <option value="newest">חדש</option>
+                  <option value="oldest">ישן</option>
+                  <option value="votes">הכי מצוינות</option>
+                  <option value="replies">הכי פופולריות</option>
+                  <option value="views">הכי נצפות</option>
                 </select>
               </div>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 text-gray-800 dark:text-gray-200"
-              >
-                <option value="weekly_top">שאלת השבוע תחילה</option>
-                <option value="newest">החדשות ביותר</option>
-                <option value="oldest">הישנות ביותר</option>
-                <option value="votes">הכי מצוינות</option>
-                <option value="replies">הכי פופולריות</option>
-                <option value="views">הכי נצפות</option>
-              </select>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Questions List */}
         <div className="space-y-3">

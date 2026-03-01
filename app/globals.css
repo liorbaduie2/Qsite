@@ -101,3 +101,18 @@
 body.modal-open {
   overflow: hidden;
 }
+
+/* Dropdown option colors — match card theme; avoid system light-blue highlight in dark */
+select option {
+  background: #fff;
+  color: rgb(55 65 81);
+}
+.dark select option {
+  background: rgb(31 41 55);
+  color: rgb(229 231 235);
+}
+.dark select option:checked,
+.dark select option:hover {
+  background: rgb(55 65 81);
+  color: rgb(243 244 246);
+}

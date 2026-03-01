@@ -261,13 +261,13 @@ function ForumHomepage() {
 
       <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-5 sm:py-6 md:py-8">
         <section className="mt-2 sm:mt-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 sm:text-2xl">
+          <div className="flex flex-row items-center justify-between gap-2 mb-3 sm:mb-4">
+            <h3 className="min-w-0 truncate text-xl font-semibold text-gray-800 dark:text-gray-100 sm:text-2xl">
               השאלות המדורגות ביותר
             </h3>
             <Link
               href="/questions"
-              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+              className="shrink-0 text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
             >
               צפה בכל השאלות
             </Link>
