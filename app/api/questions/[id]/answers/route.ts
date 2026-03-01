@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(
   request: NextRequest,
@@ -84,7 +85,7 @@ export async function POST(
 
     const { data: question, error: qError } = await supabase
       .from('questions')
-      .select('id')
+      .select('id, author_id')
       .eq('id', questionId)
       .single();
 
@@ -93,16 +94,18 @@ export async function POST(
     }
 
     const isReply = !!parentAnswerId;
+    let parentAnswerAuthorId: string | null = null;
     if (isReply) {
       const { data: parentAnswer, error: parentError } = await supabase
         .from('answers')
-        .select('id')
+        .select('id, author_id')
         .eq('id', parentAnswerId)
         .eq('question_id', questionId)
         .single();
       if (parentError || !parentAnswer) {
         return NextResponse.json({ error: 'התגובה המקורית לא נמצאה' }, { status: 400 });
       }
+      parentAnswerAuthorId = parentAnswer.author_id;
     }
 
     const { data: answer, error: insertError } = await supabase
@@ -135,6 +138,29 @@ export async function POST(
           last_activity_at: new Date().toISOString(),
         })
         .eq('id', questionId);
+
+      // Notify question author when someone comments (top-level answer)
+      if (question.author_id && question.author_id !== user.id) {
+        await createNotification({
+          user_id: question.author_id,
+          type: 'question_comment',
+          title: 'מישהו הגיב על השאלה שלך',
+          message: 'נוספה תגובה חדשה לשאלה שלך.',
+          question_id: questionId,
+          from_user_id: user.id,
+        });
+      }
+    } else if (parentAnswerAuthorId && parentAnswerAuthorId !== user.id) {
+      // Notify parent answer author when someone replies to their answer
+      await createNotification({
+        user_id: parentAnswerAuthorId,
+        type: 'answer_comment',
+        title: 'מישהו הגיב לתגובה שלך',
+        message: 'נוספה תגובה לתגובה שלך.',
+        question_id: questionId,
+        answer_id: parentAnswerId,
+        from_user_id: user.id,
+      });
     }
 
     return NextResponse.json({ success: true, answerId: answer.id }, { status: 201 });

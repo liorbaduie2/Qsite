@@ -65,6 +65,20 @@ const Drawer: React.FC<DrawerProps> = ({
   headerExtra,
 }) => {
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsList, setNotificationsList] = useState<Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    question_id?: string | null;
+    answer_id?: string | null;
+    status_id?: string | null;
+    is_read: boolean;
+    created_at: string;
+  }>>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user?.id) return;
@@ -78,17 +92,53 @@ const Drawer: React.FC<DrawerProps> = ({
     }
   }, [user?.id]);
 
+  const fetchNotificationUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch("/api/notifications/unread-count");
+      const data = await res.json();
+      if (res.ok && typeof data.count === "number")
+        setNotificationUnreadCount(data.count);
+    } catch {
+      // ignore
+    }
+  }, [user?.id]);
+
+  const fetchNotificationsList = useCallback(async () => {
+    if (!user?.id) return;
+    setNotificationsLoading(true);
+    try {
+      const res = await fetch("/api/notifications?limit=10");
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.notifications))
+        setNotificationsList(data.notifications);
+    } catch {
+      setNotificationsList([]);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user?.id) {
       setChatUnreadCount(0);
+      setNotificationUnreadCount(0);
       return;
     }
     fetchUnreadCount();
-  }, [user?.id, fetchUnreadCount]);
+    fetchNotificationUnreadCount();
+  }, [user?.id, fetchUnreadCount, fetchNotificationUnreadCount]);
 
   useEffect(() => {
-    if (user?.id && isDrawerOpen) fetchUnreadCount();
-  }, [user?.id, isDrawerOpen, fetchUnreadCount]);
+    if (user?.id && isDrawerOpen) {
+      fetchUnreadCount();
+      fetchNotificationUnreadCount();
+    }
+  }, [user?.id, isDrawerOpen, fetchUnreadCount, fetchNotificationUnreadCount]);
+
+  useEffect(() => {
+    if (notificationsOpen && user?.id) fetchNotificationsList();
+  }, [notificationsOpen, user?.id, fetchNotificationsList]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -306,16 +356,73 @@ const Drawer: React.FC<DrawerProps> = ({
           {user && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="space-y-2">
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-                  <Bell
-                    size={20}
-                    className="text-gray-700 dark:text-gray-300"
-                  />
-                  <span>התראות</span>
-                  <span className="mr-auto bg-[#6633cc] text-white text-xs min-w-[1.25rem] h-5 px-2 flex items-center justify-center rounded-full font-medium">
-                    3
-                  </span>
-                </button>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationsOpen((prev) => !prev)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                  >
+                    <Bell
+                      size={20}
+                      className="text-gray-700 dark:text-gray-300"
+                    />
+                    <span>התראות</span>
+                    {notificationUnreadCount > 0 && (
+                      <span className="mr-auto bg-[#6633cc] text-white text-xs min-w-[1.25rem] h-5 px-2 flex items-center justify-center rounded-full font-medium">
+                        {notificationUnreadCount > 99 ? "99+" : notificationUnreadCount}
+                      </span>
+                    )}
+                  </button>
+                  {notificationsOpen && (
+                    <div className="mt-2 mr-2 ml-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 max-h-64 overflow-y-auto">
+                      {notificationsLoading ? (
+                        <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                          טוען...
+                        </div>
+                      ) : notificationsList.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                          אין התראות חדשות
+                        </div>
+                      ) : (
+                        <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                          {notificationsList.map((n) => {
+                            const href = n.question_id
+                              ? `/questions/${n.question_id}`
+                              : n.status_id
+                                ? "/status"
+                                : "#";
+                            return (
+                              <li key={n.id}>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!n.is_read) {
+                                      try {
+                                        await fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" });
+                                        setNotificationUnreadCount((c) => Math.max(0, c - 1));
+                                      } catch {
+                                        // ignore
+                                      }
+                                    }
+                                    setNotificationsOpen(false);
+                                    if (href !== "#") {
+                                      setIsDrawerOpen(false);
+                                      window.location.href = href;
+                                    }
+                                  }}
+                                  className={`w-full text-right px-3 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors ${!n.is_read ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400"}`}
+                                >
+                                  <span className="block truncate">{n.title}</span>
+                                  <span className="block truncate text-xs mt-0.5 opacity-80">{n.message}</span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
                   <Bookmark
                     size={20}
