@@ -21,7 +21,8 @@ import LoginModal from "./components/LoginModal";
 import RegisterModal from "./components/RegisterModal";
 import Drawer from "./components/Drawer";
 import NavHeader from "./components/NavHeader";
-import Image from "next/image";
+import { UserAvatar } from "./components/UserAvatar";
+import { isOnline } from "@/lib/utils";
 import AuthStatusDisplay from "./components/AuthStatusDisplay";
 import { SimpleThemeToggle } from "./components/SimpleThemeToggle";
 import Link from "next/link";
@@ -64,6 +65,7 @@ interface TopQuestion {
     id: string;
     username: string;
     avatar_url: string | null;
+    lastSeenAt?: string | null;
   };
   tags: string[];
 }
@@ -419,35 +421,21 @@ function ForumHomepage() {
                               onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-2 hover:opacity-90 transition-opacity flex-shrink-0"
                             >
-                              {question.author.avatar_url ? (
-                                <Image
-                                  src={question.author.avatar_url}
-                                  alt={question.author.username}
-                                  width={40}
-                                  height={40}
-                                  className="h-9 w-9 rounded-full object-cover border border-gray-200 dark:border-gray-600 sm:h-11 sm:w-11"
-                                />
-                              ) : (
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
-                                  <User size={22} className="text-white" />
-                                </div>
-                              )}
+                              <UserAvatar
+                                avatarUrl={question.author.avatar_url}
+                                username={question.author.username}
+                                size="lg"
+                                isOnline={isOnline(question.author.lastSeenAt)}
+                              />
                             </Link>
                           ) : (
                             <>
-                              {question.author.avatar_url ? (
-                                <Image
-                                  src={question.author.avatar_url}
-                                  alt=""
-                                  width={40}
-                                  height={40}
-                                  className="h-9 w-9 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-600 sm:h-11 sm:w-11"
-                                />
-                              ) : (
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
-                                  <User size={22} className="text-white" />
-                                </div>
-                              )}
+                              <UserAvatar
+                                avatarUrl={question.author.avatar_url}
+                                username={question.author.username}
+                                size="lg"
+                                isOnline={isOnline(question.author.lastSeenAt)}
+                              />
                             </>
                           )}
                           <span className="font-medium text-gray-600 dark:text-gray-300">

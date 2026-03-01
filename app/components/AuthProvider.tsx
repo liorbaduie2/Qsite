@@ -47,6 +47,7 @@ interface Profile {
   is_verified: boolean;
   created_at?: string;
   updated_at?: string;
+  last_seen_at?: string | null;
 }
 
 interface UserPermissions {
@@ -284,7 +285,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           reputation, phone, phone_verified_at, approval_status,
           approved_at, approved_by, rejection_reason, is_moderator,
           is_verified, created_at, updated_at, email,
-          questions_count, answers_count, best_answers_count, total_views
+          questions_count, answers_count, best_answers_count, total_views,
+          last_seen_at
         `,
           )
           .eq("id", userId)
@@ -342,6 +344,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             typeof data.total_views === "number"
               ? data.total_views
               : undefined,
+          last_seen_at: data.last_seen_at ? String(data.last_seen_at) : null,
         };
 
         setProfile(profile);
@@ -608,6 +611,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     },
     [checkLoginStatus, fetchUserProfile, getUserPermissions, supabase, router]
   );
+
+  // Heartbeat: update last_seen_at when user is active (for online indicator)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let didFirstRefresh = false;
+    const ping = async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible")
+        return;
+      try {
+        const res = await fetch("/api/me/ping", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (res.ok && !didFirstRefresh) {
+          didFirstRefresh = true;
+          await refreshProfile();
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    ping();
+    const interval = setInterval(ping, 2.5 * 60 * 1000); // 2.5 minutes
+    return () => clearInterval(interval);
+  }, [user?.id, refreshProfile]);
 
   // Handle auth state changes
   useEffect(() => {

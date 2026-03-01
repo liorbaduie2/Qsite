@@ -1,20 +1,41 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  MessageSquare, Users, HelpCircle, BookOpen, Home,
-  ArrowUp, ArrowDown, Star, User, LogIn, Eye, MessageCircle,
-  ChevronRight, Clock, Shield, Send, CheckCircle, Pencil, X, Plus, Reply,
-  MoreVertical, Trash2, FileQuestion
-} from 'lucide-react';
-import { useAuth } from '../../components/AuthProvider';
-import LoginModal from '../../components/LoginModal';
-import RegisterModal from '../../components/RegisterModal';
-import Drawer from '../../components/Drawer';
-import NavHeader from '../../components/NavHeader';
+  MessageSquare,
+  Users,
+  HelpCircle,
+  BookOpen,
+  Home,
+  ArrowUp,
+  ArrowDown,
+  Star,
+  User,
+  LogIn,
+  Eye,
+  MessageCircle,
+  ChevronRight,
+  Clock,
+  Shield,
+  Send,
+  CheckCircle,
+  Pencil,
+  X,
+  Plus,
+  Reply,
+  MoreVertical,
+  Trash2,
+  FileQuestion,
+} from "lucide-react";
+import { useAuth } from "../../components/AuthProvider";
+import LoginModal from "../../components/LoginModal";
+import RegisterModal from "../../components/RegisterModal";
+import Drawer from "../../components/Drawer";
+import NavHeader from "../../components/NavHeader";
+import { UserAvatar } from "../../components/UserAvatar";
+import { isOnline } from "@/lib/utils";
 
 interface QuestionDetail {
   id: string;
@@ -35,6 +56,7 @@ interface QuestionDetail {
     username: string;
     avatar_url: string | null;
     reputation: number;
+    lastSeenAt?: string | null;
   };
   tags: string[];
 }
@@ -53,6 +75,7 @@ interface Answer {
     username: string;
     avatar_url: string | null;
     reputation: number;
+    lastSeenAt?: string | null;
   };
 }
 
@@ -122,11 +145,11 @@ function timeAgo(dateStr: string): string {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'הרגע';
+  if (diffMins < 1) return "הרגע";
   if (diffMins < 60) return `לפני ${diffMins} דקות`;
   if (diffHours < 24) return `לפני ${diffHours} שעות`;
   if (diffDays < 30) return `לפני ${diffDays} ימים`;
-  return date.toLocaleDateString('he-IL');
+  return date.toLocaleDateString("he-IL");
 }
 
 function buildAnswerTree(flat: Answer[]): Answer[] {
@@ -150,7 +173,10 @@ function buildAnswerTree(flat: Answer[]): Answer[] {
     }
   });
   const sortByDate = (arr: Answer[]) =>
-    arr.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    arr.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
   sortByDate(roots);
   function sortReplies(nodes: Answer[]) {
     nodes.forEach((n) => {
@@ -172,14 +198,14 @@ export default function QuestionDetailPage() {
 
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [answersLoading, setAnswersLoading] = useState(true);
-  const [answerContent, setAnswerContent] = useState('');
+  const [answerContent, setAnswerContent] = useState("");
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [answerError, setAnswerError] = useState<string | null>(null);
 
   const [isAnswerPanelOpen, setIsAnswerPanelOpen] = useState(false);
 
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState('');
+  const [replyContent, setReplyContent] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
 
@@ -189,35 +215,42 @@ export default function QuestionDetailPage() {
 
   const [questionMenuOpen, setQuestionMenuOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const [deletionReason, setDeletionReason] = useState('');
+  const [deletionReason, setDeletionReason] = useState("");
   const [removing, setRemoving] = useState(false);
   const [showRequestRemovalModal, setShowRequestRemovalModal] = useState(false);
-  const [requestRemovalReason, setRequestRemovalReason] = useState('');
-  const [submittingRemovalRequest, setSubmittingRemovalRequest] = useState(false);
+  const [requestRemovalReason, setRequestRemovalReason] = useState("");
+  const [submittingRemovalRequest, setSubmittingRemovalRequest] =
+    useState(false);
   const questionMenuRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
-  const { user, profile, userPermissions, loading: authLoading, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    userPermissions,
+    loading: authLoading,
+    signOut,
+  } = useAuth();
   const isGuest = !user;
 
   useEffect(() => {
     if (isLoginModalOpen || isRegisterModalOpen) {
-      document.body.classList.add('modal-open');
+      document.body.classList.add("modal-open");
     } else {
-      document.body.classList.remove('modal-open');
+      document.body.classList.remove("modal-open");
     }
   }, [isLoginModalOpen, isRegisterModalOpen]);
 
   const menuItems = [
-    { label: 'ראשי', icon: Home, href: '/' },
-    { label: 'סטטוסי', icon: Users, href: '/status' },
-    { label: 'דיוני', icon: MessageSquare, href: '/discussions' },
-    { label: 'שאלות', icon: HelpCircle, href: '/questions', active: true },
-    { label: 'סיפורי', icon: BookOpen, href: '/stories' },
+    { label: "ראשי", icon: Home, href: "/" },
+    { label: "סטטוסי", icon: Users, href: "/status" },
+    { label: "דיוני", icon: MessageSquare, href: "/discussions" },
+    { label: "שאלות", icon: HelpCircle, href: "/questions", active: true },
+    { label: "סיפורי", icon: BookOpen, href: "/stories" },
   ];
 
   const canEditAny = !!userPermissions?.can_edit_delete_content;
@@ -225,18 +258,25 @@ export default function QuestionDetailPage() {
   const authorRep = profile?.reputation ?? 0;
   const canEditOwn = isAuthor && authorRep > 50;
   const canEdit = question && user && (canEditAny || canEditOwn);
-  const canRemove = question && user && (userPermissions?.role === 'owner' || userPermissions?.role === 'guardian');
-  const canRequestRemoval = question && user && userPermissions?.role === 'admin';
+  const canRemove =
+    question &&
+    user &&
+    (userPermissions?.role === "owner" || userPermissions?.role === "guardian");
+  const canRequestRemoval =
+    question && user && userPermissions?.role === "admin";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (questionMenuRef.current && !questionMenuRef.current.contains(e.target as Node)) {
+      if (
+        questionMenuRef.current &&
+        !questionMenuRef.current.contains(e.target as Node)
+      ) {
         setQuestionMenuOpen(false);
       }
     }
     if (questionMenuOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [questionMenuOpen]);
 
@@ -314,7 +354,7 @@ export default function QuestionDetailPage() {
     if (!answerContent.trim()) return;
 
     if (!user) {
-      handleAuthAction('login');
+      handleAuthAction("login");
       return;
     }
 
@@ -322,22 +362,22 @@ export default function QuestionDetailPage() {
     setAnswerError(null);
     try {
       const res = await fetch(`/api/questions/${id}/answers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: answerContent.trim() }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setAnswerError(data.error || 'שגיאה בשליחת התשובה');
+        setAnswerError(data.error || "שגיאה בשליחת התשובה");
         return;
       }
 
-      setAnswerContent('');
+      setAnswerContent("");
       setIsAnswerPanelOpen(false);
       fetchAnswers();
     } catch {
-      setAnswerError('שגיאה בחיבור לשרת');
+      setAnswerError("שגיאה בחיבור לשרת");
     } finally {
       setSubmittingAnswer(false);
     }
@@ -345,38 +385,41 @@ export default function QuestionDetailPage() {
 
   const answerTree = React.useMemo(() => buildAnswerTree(answers), [answers]);
 
-  const handleSubmitReply = async (e: React.FormEvent, parentAnswerId: string) => {
+  const handleSubmitReply = async (
+    e: React.FormEvent,
+    parentAnswerId: string,
+  ) => {
     e.preventDefault();
     if (!replyContent.trim()) return;
     if (!user) {
-      handleAuthAction('login');
+      handleAuthAction("login");
       return;
     }
     setSubmittingReply(true);
     setReplyError(null);
     try {
       const res = await fetch(`/api/questions/${id}/answers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: replyContent.trim(), parentAnswerId }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setReplyError(data.error || 'שגיאה בשליחת התגובה');
+        setReplyError(data.error || "שגיאה בשליחת התגובה");
         return;
       }
-      setReplyContent('');
+      setReplyContent("");
       setReplyingToId(null);
       fetchAnswers();
     } catch {
-      setReplyError('שגיאה בחיבור לשרת');
+      setReplyError("שגיאה בחיבור לשרת");
     } finally {
       setSubmittingReply(false);
     }
   };
 
-  const handleAuthAction = (mode: 'login' | 'register') => {
-    if (mode === 'login') {
+  const handleAuthAction = (mode: "login" | "register") => {
+    if (mode === "login") {
       setIsRegisterModalOpen(false);
       setIsLoginModalOpen(true);
     } else {
@@ -389,7 +432,7 @@ export default function QuestionDetailPage() {
     try {
       await signOut();
     } catch (err) {
-      console.error('Error signing out:', err);
+      console.error("Error signing out:", err);
     }
   };
 
@@ -404,29 +447,42 @@ export default function QuestionDetailPage() {
 
   const handleCancelEdit = () => {
     setIsEditMode(false);
-    setEditTitle('');
-    setEditContent('');
+    setEditTitle("");
+    setEditContent("");
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !editTitle.trim() || editTitle.trim().length < 5 || !editContent.trim()) return;
+    if (
+      !id ||
+      !editTitle.trim() ||
+      editTitle.trim().length < 5 ||
+      !editContent.trim()
+    )
+      return;
     setSavingEdit(true);
     try {
       const res = await fetch(`/api/questions/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editTitle.trim(), content: editContent.trim() }),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          content: editContent.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'שגיאה בעדכון השאלה');
+        alert(data.error || "שגיאה בעדכון השאלה");
         return;
       }
-      setQuestion((q) => (q ? { ...q, title: editTitle.trim(), content: editContent.trim() } : null));
+      setQuestion((q) =>
+        q
+          ? { ...q, title: editTitle.trim(), content: editContent.trim() }
+          : null,
+      );
       handleCancelEdit();
     } catch {
-      alert('שגיאה בחיבור לשרת');
+      alert("שגיאה בחיבור לשרת");
     } finally {
       setSavingEdit(false);
     }
@@ -437,25 +493,25 @@ export default function QuestionDetailPage() {
     if (!id) return;
     const reason = deletionReason.trim();
     if (!reason) {
-      alert('נא לציין סיבת ההסרה');
+      alert("נא לציין סיבת ההסרה");
       return;
     }
     setRemoving(true);
     try {
       const res = await fetch(`/api/questions/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'שגיאה בהסרת השאלה');
+        alert(data.error || "שגיאה בהסרת השאלה");
         return;
       }
-      setDeletionReason('');
-      router.push('/questions');
+      setDeletionReason("");
+      router.push("/questions");
     } catch {
-      alert('שגיאה בחיבור לשרת');
+      alert("שגיאה בחיבור לשרת");
     } finally {
       setRemoving(false);
       setShowRemoveConfirm(false);
@@ -464,7 +520,7 @@ export default function QuestionDetailPage() {
   };
 
   const handleOpenRequestRemoval = () => {
-    setRequestRemovalReason('');
+    setRequestRemovalReason("");
     setShowRequestRemovalModal(true);
     setQuestionMenuOpen(false);
   };
@@ -475,19 +531,19 @@ export default function QuestionDetailPage() {
     setSubmittingRemovalRequest(true);
     try {
       const res = await fetch(`/api/questions/${id}/request-removal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: requestRemovalReason.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'שגיאה בשליחת הבקשה');
+        alert(data.error || "שגיאה בשליחת הבקשה");
         return;
       }
       setShowRequestRemovalModal(false);
-      setRequestRemovalReason('');
+      setRequestRemovalReason("");
     } catch {
-      alert('שגיאה בחיבור לשרת');
+      alert("שגיאה בחיבור לשרת");
     } finally {
       setSubmittingRemovalRequest(false);
     }
@@ -514,11 +570,9 @@ export default function QuestionDetailPage() {
     <div
       className="min-h-screen relative bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100"
       dir="rtl"
-      style={{ fontFamily: 'Assistant, system-ui, sans-serif' }}
+      style={{ fontFamily: "Assistant, system-ui, sans-serif" }}
     >
-      <div
-        className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_40%_40%,rgba(236,72,153,0.05)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]"
-      />
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_40%_40%,rgba(236,72,153,0.05)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
 
       <NavHeader
         title="שאלות ותשובות"
@@ -528,14 +582,14 @@ export default function QuestionDetailPage() {
           !user ? (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleAuthAction('login')}
+                onClick={() => handleAuthAction("login")}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 dark:hover:border-indigo-700"
               >
                 <LogIn size={16} />
                 התחברות
               </button>
               <button
-                onClick={() => handleAuthAction('register')}
+                onClick={() => handleAuthAction("register")}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
                 <User size={16} />
@@ -563,19 +617,27 @@ export default function QuestionDetailPage() {
       <main className="max-w-4xl mx-auto px-5 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
-          <Link href="/questions" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+          <Link
+            href="/questions"
+            className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          >
             שאלות ותשובות
           </Link>
           <ChevronRight size={14} className="rotate-180" />
           <span className="text-gray-400 dark:text-gray-500 truncate max-w-xs">
-            {question?.title || 'שאלה'}
+            {question?.title || "שאלה"}
           </span>
         </nav>
 
         {error ? (
           <div className="text-center py-16">
-            <HelpCircle size={48} className="mx-auto text-red-400 dark:text-red-500 mb-4" />
-            <h3 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">{error}</h3>
+            <HelpCircle
+              size={48}
+              className="mx-auto text-red-400 dark:text-red-500 mb-4"
+            />
+            <h3 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">
+              {error}
+            </h3>
             <Link
               href="/questions"
               className="inline-block mt-4 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg"
@@ -584,106 +646,128 @@ export default function QuestionDetailPage() {
             </Link>
           </div>
         ) : question ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Question Card */}
             <div className="bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
               <div className="flex">
                 {/* Vote sidebar */}
-                <div className="flex flex-col items-center gap-1 px-4 py-6 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
+                <div className="flex flex-col items-center gap-1 px-4 py-4 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
                   <button className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
-                    <ArrowUp size={22} className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" />
+                    <ArrowUp
+                      size={22}
+                      className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    />
                   </button>
-                  <span className="font-bold text-xl text-gray-800 dark:text-gray-100">{question.votes}</span>
+                  <span className="font-bold text-xl text-gray-800 dark:text-gray-100">
+                    {question.votes}
+                  </span>
                   <button className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
-                    <ArrowDown size={22} className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" />
+                    <ArrowDown
+                      size={22}
+                      className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    />
                   </button>
                   {question.isAnswered && (
-                    <div className="mt-3 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full" title="נענתה">
-                      <Star size={18} className="text-green-600 dark:text-green-400" fill="currentColor" />
+                    <div
+                      className="mt-3 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full"
+                      title="נענתה"
+                    >
+                      <Star
+                        size={18}
+                        className="text-green-600 dark:text-green-400"
+                        fill="currentColor"
+                      />
                     </div>
                   )}
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-6">
-                  {/* Status badges and question menu */}
-                  <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {question.isAnswered && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
-                          נענתה
-                        </span>
-                      )}
-                      {question.isPinned && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700">
-                          נעוצה
-                        </span>
-                      )}
-                      {question.isClosed && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700">
-                          סגורה
-                        </span>
-                      )}
-                    </div>
-                    {(canEdit || canRemove || canRequestRemoval) && (
-                      <div className="relative" ref={questionMenuRef}>
-                        <button
-                          type="button"
-                          onClick={() => setQuestionMenuOpen((o) => !o)}
-                          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                          aria-label="תפריט שאלה"
-                        >
-                          <MoreVertical size={20} />
-                        </button>
-                        {questionMenuOpen && (
-                          <div className="absolute left-0 top-full mt-1 min-w-[180px] py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
-                            {canEdit && (
-                              <button
-                                type="button"
-                                onClick={handleStartEdit}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              >
-                                <Pencil size={16} />
-                                ערוך שאלה
-                              </button>
-                            )}
-                            {canRemove && (
-                              <button
-                                type="button"
-                                onClick={() => { setDeletionReason(''); setShowRemoveConfirm(true); setQuestionMenuOpen(false); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              >
-                                <Trash2 size={16} />
-                                הסר שאלה
-                              </button>
-                            )}
-                            {canRequestRemoval && (
-                              <button
-                                type="button"
-                                onClick={handleOpenRequestRemoval}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              >
-                                <FileQuestion size={16} />
-                                בקשת הסרה
-                              </button>
+                <div className="flex-1 pt-3 px-6 pb-4">
+                  {/* Status badges */}
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                    {question.isAnswered && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
+                        נענתה
+                      </span>
+                    )}
+                    {question.isPinned && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700">
+                        נעוצה
+                      </span>
+                    )}
+                    {question.isClosed && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700">
+                        סגורה
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Title row: title + three-dots menu aligned */}
+                  {isEditMode ? (
+                    <form onSubmit={handleSaveEdit} className="mb-3 space-y-3">
+                      <div className="flex items-center gap-3 mb-1.5">
+                        <input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="flex-1 min-w-0 text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
+                          placeholder="כותרת (לפחות 5 תווים)"
+                          minLength={5}
+                          required
+                        />
+                        {(canEdit || canRemove || canRequestRemoval) && (
+                          <div
+                            className="relative flex-shrink-0"
+                            ref={questionMenuRef}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setQuestionMenuOpen((o) => !o)}
+                              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                              aria-label="תפריט שאלה"
+                            >
+                              <MoreVertical size={20} />
+                            </button>
+                            {questionMenuOpen && (
+                              <div className="absolute left-0 top-full mt-1 min-w-[180px] py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    onClick={handleStartEdit}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  >
+                                    <Pencil size={16} />
+                                    ערוך שאלה
+                                  </button>
+                                )}
+                                {canRemove && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDeletionReason("");
+                                      setShowRemoveConfirm(true);
+                                      setQuestionMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  >
+                                    <Trash2 size={16} />
+                                    הסר שאלה
+                                  </button>
+                                )}
+                                {canRequestRemoval && (
+                                  <button
+                                    type="button"
+                                    onClick={handleOpenRequestRemoval}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  >
+                                    <FileQuestion size={16} />
+                                    בקשת הסרה
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Title (view or edit) */}
-                  {isEditMode ? (
-                    <form onSubmit={handleSaveEdit} className="mb-4 space-y-4">
-                      <input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
-                        placeholder="כותרת (לפחות 5 תווים)"
-                        minLength={5}
-                        required
-                      />
                       <textarea
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
@@ -694,10 +778,14 @@ export default function QuestionDetailPage() {
                       <div className="flex gap-2">
                         <button
                           type="submit"
-                          disabled={savingEdit || editTitle.trim().length < 5 || !editContent.trim()}
+                          disabled={
+                            savingEdit ||
+                            editTitle.trim().length < 5 ||
+                            !editContent.trim()
+                          }
                           className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
                         >
-                          {savingEdit ? 'שומר...' : 'שמור'}
+                          {savingEdit ? "שומר..." : "שמור"}
                         </button>
                         <button
                           type="button"
@@ -709,21 +797,76 @@ export default function QuestionDetailPage() {
                       </div>
                     </form>
                   ) : (
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-snug">
-                      {question.title}
-                    </h1>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <h1 className="flex-1 min-w-0 text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug">
+                        {question.title}
+                      </h1>
+                      {(canEdit || canRemove || canRequestRemoval) && (
+                        <div
+                          className="relative flex-shrink-0"
+                          ref={questionMenuRef}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setQuestionMenuOpen((o) => !o)}
+                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                            aria-label="תפריט שאלה"
+                          >
+                            <MoreVertical size={20} />
+                          </button>
+                          {questionMenuOpen && (
+                            <div className="absolute left-0 top-full mt-1 min-w-[180px] py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={handleStartEdit}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                  <Pencil size={16} />
+                                  ערוך שאלה
+                                </button>
+                              )}
+                              {canRemove && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDeletionReason("");
+                                    setShowRemoveConfirm(true);
+                                    setQuestionMenuOpen(false);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                >
+                                  <Trash2 size={16} />
+                                  הסר שאלה
+                                </button>
+                              )}
+                              {canRequestRemoval && (
+                                <button
+                                  type="button"
+                                  onClick={handleOpenRequestRemoval}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                  <FileQuestion size={16} />
+                                  בקשת הסרה
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {/* Content body (only when not editing) */}
                   {!isEditMode && (
-                    <div className="prose prose-gray max-w-none mb-6 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    <div className="prose prose-gray max-w-none mb-3 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                       {question.content}
                     </div>
                   )}
 
                   {/* Tags */}
                   {question.tags.length > 0 && (
-                    <div className="flex gap-2 mb-5 flex-wrap">
+                    <div className="flex gap-2 mb-3 flex-wrap">
                       {question.tags.map((tag) => (
                         <Link
                           key={tag}
@@ -737,55 +880,48 @@ export default function QuestionDetailPage() {
                   )}
 
                   {/* Meta bar */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
                     {/* Author */}
                     <div className="flex items-center gap-3">
-                      {(question.author.username || user?.id === question.author.id) ? (
+                      {question.author.username ||
+                      user?.id === question.author.id ? (
                         <Link
-                          href={user?.id === question.author.id ? '/profile' : `/profile/${encodeURIComponent(question.author.username)}`}
+                          href={
+                            user?.id === question.author.id
+                              ? "/profile"
+                              : `/profile/${encodeURIComponent(question.author.username)}`
+                          }
                           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
                         >
-                          {question.author.avatar_url ? (
-                            <Image
-                              src={question.author.avatar_url}
-                              alt={question.author.username}
-                              width={36}
-                              height={36}
-                              className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                            />
-                          ) : (
-                            <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                              <User size={16} className="text-white" />
-                            </div>
-                          )}
+                          <UserAvatar
+                            avatarUrl={question.author.avatar_url}
+                            username={question.author.username}
+                            size="md"
+                            isOnline={isOnline(question.author.lastSeenAt)}
+                          />
                           <div>
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">{question.author.username || profile?.username}</span>
-                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              <Shield size={11} />
-                              <span>{question.author.reputation} נקודות</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">
+                              {question.author.username || profile?.username}
+                            </span>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {question.author.reputation} מוניטין
                             </div>
                           </div>
                         </Link>
                       ) : (
                         <>
-                          {question.author.avatar_url ? (
-                            <Image
-                              src={question.author.avatar_url}
-                              alt=""
-                              width={36}
-                              height={36}
-                              className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                            />
-                          ) : (
-                            <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                              <User size={16} className="text-white" />
-                            </div>
-                          )}
+                          <UserAvatar
+                            avatarUrl={question.author.avatar_url}
+                            username={question.author.username}
+                            size="md"
+                            isOnline={isOnline(question.author.lastSeenAt)}
+                          />
                           <div>
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">{question.author.username}</span>
-                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              <Shield size={11} />
-                              <span>{question.author.reputation} נקודות</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">
+                              {question.author.username}
+                            </span>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {question.author.reputation} מוניטין
                             </div>
                           </div>
                         </>
@@ -813,9 +949,12 @@ export default function QuestionDetailPage() {
             </div>
 
             {/* Answers Section */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-                <MessageCircle size={22} className="text-indigo-500 dark:text-indigo-400" />
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
+                <MessageCircle
+                  size={22}
+                  className="text-indigo-500 dark:text-indigo-400"
+                />
                 תשובות ({answerTree.length})
                 {answers.length > answerTree.length && (
                   <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
@@ -829,103 +968,128 @@ export default function QuestionDetailPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
                 </div>
               ) : answerTree.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {(() => {
                     const q = question!;
-                    function renderAnswerNode(node: Answer, isTopLevel: boolean): React.ReactNode {
+                    function renderAnswerNode(
+                      node: Answer,
+                      isTopLevel: boolean,
+                    ): React.ReactNode {
                       const isOP = node.author.id === q.author.id;
                       return (
-                        <div key={node.id} className={isTopLevel ? '' : 'mr-6 border-r-2 border-indigo-100 dark:border-indigo-900/50 pr-4 mt-3'}>
+                        <div
+                          key={node.id}
+                          className={
+                            isTopLevel
+                              ? ""
+                              : "mr-6 border-r-2 border-indigo-100 dark:border-indigo-900/50 pr-4 mt-3"
+                          }
+                        >
                           <div
                             className={`rounded-xl border transition-all ${
-                              isTopLevel ? 'p-5' : 'p-4 rounded-r-lg bg-gray-50/60 dark:bg-gray-700/50 border-gray-200/50 dark:border-gray-600/50'
+                              isTopLevel
+                                ? "p-4"
+                                : "p-3 rounded-r-lg bg-gray-50/60 dark:bg-gray-700/50 border-gray-200/50 dark:border-gray-600/50"
                             } ${
                               node.isAccepted && isTopLevel
-                                ? 'bg-green-50/60 dark:bg-green-900/20 border-green-200 dark:border-green-700/50'
+                                ? "bg-green-50/60 dark:bg-green-900/20 border-green-200 dark:border-green-700/50"
                                 : isTopLevel
-                                  ? 'bg-white/60 dark:bg-gray-700/50 border-gray-200/50 dark:border-gray-600/50'
-                                  : ''
+                                  ? "bg-white/60 dark:bg-gray-700/50 border-gray-200/50 dark:border-gray-600/50"
+                                  : ""
                             }`}
                           >
                             <div className="flex gap-4">
                               {isTopLevel && (
                                 <div className="flex flex-col items-center gap-0.5 min-w-[40px]">
                                   <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors">
-                                    <ArrowUp size={18} className="text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400" />
+                                    <ArrowUp
+                                      size={18}
+                                      className="text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                    />
                                   </button>
-                                  <span className="font-bold text-gray-700 dark:text-gray-200">{node.votes}</span>
+                                  <span className="font-bold text-gray-700 dark:text-gray-200">
+                                    {node.votes}
+                                  </span>
                                   <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors">
-                                    <ArrowDown size={18} className="text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400" />
+                                    <ArrowDown
+                                      size={18}
+                                      className="text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                    />
                                   </button>
                                   {node.isAccepted && (
-                                    <CheckCircle size={20} className="text-green-600 dark:text-green-400 mt-1" fill="currentColor" />
+                                    <CheckCircle
+                                      size={20}
+                                      className="text-green-600 dark:text-green-400 mt-1"
+                                      fill="currentColor"
+                                    />
                                   )}
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
                                 <div
-                                  className={`text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap mb-4 ${!isTopLevel ? 'text-sm' : ''}`}
+                                  className={`text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap mb-3 ${!isTopLevel ? "text-sm" : ""}`}
                                 >
                                   {node.content}
                                 </div>
 
-                                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700 flex-wrap gap-2">
+                                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 flex-wrap gap-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    {(node.author.username || user?.id === node.author.id) ? (
+                                    {node.author.username ||
+                                    user?.id === node.author.id ? (
                                       <Link
-                                        href={user?.id === node.author.id ? '/profile' : `/profile/${encodeURIComponent(node.author.username)}`}
+                                        href={
+                                          user?.id === node.author.id
+                                            ? "/profile"
+                                            : `/profile/${encodeURIComponent(node.author.username)}`
+                                        }
                                         className="flex items-center gap-2 hover:opacity-90 transition-opacity"
                                       >
-                                        {node.author.avatar_url ? (
-                                          <Image
-                                            src={node.author.avatar_url}
-                                            alt={node.author.username}
-                                            width={isTopLevel ? 28 : 24}
-                                            height={isTopLevel ? 28 : 24}
-                                            className={`rounded-full object-cover border border-gray-200 dark:border-gray-600 ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
-                                          />
-                                        ) : (
-                                          <div
-                                            className={`bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                        <UserAvatar
+                                          avatarUrl={node.author.avatar_url}
+                                          username={node.author.username}
+                                          size={isTopLevel ? "sm2" : "sm"}
+                                          isOnline={isOnline(node.author.lastSeenAt)}
+                                        />
+                                        <div className="flex flex-col">
+                                          <span
+                                            className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? "text-sm" : "text-sm"}`}
                                           >
-                                            <User size={isTopLevel ? 12 : 10} className="text-white" />
-                                          </div>
-                                        )}
-                                        <span className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? 'text-sm' : 'text-sm'}`}>
-                                          {node.author.username || (user?.id === node.author.id ? profile?.username : null)}
-                                        </span>
+                                            {node.author.username ||
+                                              (user?.id === node.author.id
+                                                ? profile?.username
+                                                : null)}
+                                          </span>
+                                          <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.9">
+                                            {node.author.reputation} מוניטין
+                                          </span>
+                                        </div>
                                       </Link>
                                     ) : (
-                                      <>
-                                        {node.author.avatar_url ? (
-                                          <Image
-                                            src={node.author.avatar_url}
-                                            alt=""
-                                            width={isTopLevel ? 28 : 24}
-                                            height={isTopLevel ? 28 : 24}
-                                            className={`rounded-full object-cover border border-gray-200 dark:border-gray-600 ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
-                                          />
-                                        ) : (
-                                          <div
-                                            className={`bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center ${isTopLevel ? 'w-7 h-7' : 'w-6 h-6'}`}
+                                      <div className="flex items-center gap-2">
+                                        <UserAvatar
+                                          avatarUrl={node.author.avatar_url}
+                                          username={node.author.username}
+                                          size={isTopLevel ? "sm2" : "sm"}
+                                          isOnline={isOnline(node.author.lastSeenAt)}
+                                        />
+                                        <div className="flex flex-col">
+                                          <span
+                                            className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? "text-sm" : "text-sm"}`}
                                           >
-                                            <User size={isTopLevel ? 12 : 10} className="text-white" />
-                                          </div>
-                                        )}
-                                        <span className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? 'text-sm' : 'text-sm'}`}>
-                                          {node.author.username}
-                                        </span>
-                                      </>
+                                            {node.author.username}
+                                          </span>
+                                          <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                            <Shield size={10} />
+                                            {node.author.reputation}
+                                          </span>
+                                        </div>
+                                      </div>
                                     )}
                                     {isOP && (
                                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700">
                                         שואל השאלה
                                       </span>
                                     )}
-                                    <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                                      <Shield size={10} />
-                                      {node.author.reputation}
-                                    </span>
                                     {node.isEdited && (
                                       <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
                                         <Pencil size={10} />
@@ -936,7 +1100,7 @@ export default function QuestionDetailPage() {
                                       type="button"
                                       onClick={() => {
                                         if (!user) {
-                                          handleAuthAction('login');
+                                          handleAuthAction("login");
                                           return;
                                         }
                                         setReplyingToId(node.id);
@@ -948,17 +1112,23 @@ export default function QuestionDetailPage() {
                                       הגב
                                     </button>
                                   </div>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500">{timeAgo(node.createdAt)}</span>
+                                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                                    {timeAgo(node.createdAt)}
+                                  </span>
                                 </div>
 
                                 {replyingToId === node.id && (
                                   <form
-                                    onSubmit={(e) => handleSubmitReply(e, node.id)}
+                                    onSubmit={(e) =>
+                                      handleSubmitReply(e, node.id)
+                                    }
                                     className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700"
                                   >
                                     <textarea
                                       value={replyContent}
-                                      onChange={(e) => setReplyContent(e.target.value)}
+                                      onChange={(e) =>
+                                        setReplyContent(e.target.value)
+                                      }
                                       placeholder="כתוב תגובה... (לפחות 10 תווים)"
                                       className="w-full min-h-[80px] p-3 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                                       autoFocus
@@ -973,7 +1143,10 @@ export default function QuestionDetailPage() {
                                     <div className="flex items-center gap-2 mt-2">
                                       <button
                                         type="submit"
-                                        disabled={replyContent.trim().length < 10 || submittingReply}
+                                        disabled={
+                                          replyContent.trim().length < 10 ||
+                                          submittingReply
+                                        }
                                         className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
                                         {submittingReply ? (
@@ -992,7 +1165,7 @@ export default function QuestionDetailPage() {
                                         type="button"
                                         onClick={() => {
                                           setReplyingToId(null);
-                                          setReplyContent('');
+                                          setReplyContent("");
                                           setReplyError(null);
                                         }}
                                         className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm"
@@ -1008,36 +1181,57 @@ export default function QuestionDetailPage() {
 
                           {node.replies && node.replies.length > 0 && (
                             <div className="space-y-1">
-                              {node.replies.map((reply) => renderAnswerNode(reply, false))}
+                              {node.replies.map((reply) =>
+                                renderAnswerNode(reply, false),
+                              )}
                             </div>
                           )}
                         </div>
                       );
                     }
-                    return answerTree.map((answer) => renderAnswerNode(answer, true));
+                    return answerTree.map((answer) =>
+                      renderAnswerNode(answer, true),
+                    );
                   })()}
                 </div>
               ) : (
                 <div className="text-center py-6 text-gray-400 dark:text-gray-500">
-                  <MessageCircle size={36} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-gray-500 dark:text-gray-400">אין תשובות עדיין. היה הראשון לענות!</p>
+                  <MessageCircle
+                    size={36}
+                    className="mx-auto mb-2 opacity-50"
+                  />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    אין תשובות עדיין. היה הראשון לענות!
+                  </p>
                 </div>
               )}
             </div>
-
           </div>
         ) : null}
       </main>
 
       {/* Remove question confirmation */}
       {showRemoveConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
-          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => !removing && setShowRemoveConfirm(false)} />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            onClick={() => !removing && setShowRemoveConfirm(false)}
+          />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">הסרת שאלה</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-3">האם אתה בטוח שברצונך להסיר את השאלה? יוצרה יקבל הודעה הכוללת את סיבת ההסרה ויוכל להגיש ערעור.</p>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+              הסרת שאלה
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-3">
+              האם אתה בטוח שברצונך להסיר את השאלה? יוצרה יקבל הודעה הכוללת את
+              סיבת ההסרה ויוכל להגיש ערעור.
+            </p>
             <form onSubmit={handleConfirmRemove} className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">סיבת ההסרה (חובה)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                סיבת ההסרה (חובה)
+              </label>
               <textarea
                 value={deletionReason}
                 onChange={(e) => setDeletionReason(e.target.value)}
@@ -1060,7 +1254,7 @@ export default function QuestionDetailPage() {
                 disabled={removing || !deletionReason.trim()}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {removing ? 'מסיר...' : 'הסר שאלה'}
+                {removing ? "מסיר..." : "הסר שאלה"}
                 <Trash2 size={16} />
               </button>
             </div>
@@ -1070,13 +1264,28 @@ export default function QuestionDetailPage() {
 
       {/* Request removal modal (שומר סף) */}
       {showRequestRemovalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
-          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => !submittingRemovalRequest && setShowRequestRemovalModal(false)} />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            onClick={() =>
+              !submittingRemovalRequest && setShowRequestRemovalModal(false)
+            }
+          />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">בקשת הסרת שאלה</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">בקשתך תישלח לפאנל הניהול. בעלים או ממונה מוסמך יאשרו או ידחו את ההסרה.</p>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+              בקשת הסרת שאלה
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              בקשתך תישלח לפאנל הניהול. בעלים או ממונה מוסמך יאשרו או ידחו את
+              ההסרה.
+            </p>
             <form onSubmit={handleSubmitRequestRemoval}>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">סיבה (אופציונלי)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                סיבה (אופציונלי)
+              </label>
               <textarea
                 value={requestRemovalReason}
                 onChange={(e) => setRequestRemovalReason(e.target.value)}
@@ -1097,7 +1306,7 @@ export default function QuestionDetailPage() {
                   disabled={submittingRemovalRequest}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {submittingRemovalRequest ? 'שולח...' : 'שלח בקשת הסרה'}
+                  {submittingRemovalRequest ? "שולח..." : "שלח בקשת הסרה"}
                 </button>
               </div>
             </form>
@@ -1128,7 +1337,7 @@ export default function QuestionDetailPage() {
         <button
           onClick={() => {
             if (!user) {
-              handleAuthAction('login');
+              handleAuthAction("login");
               return;
             }
             setIsAnswerPanelOpen(true);
@@ -1142,7 +1351,10 @@ export default function QuestionDetailPage() {
 
       {/* Answer Modal (centered) */}
       {isAnswerPanelOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
@@ -1155,11 +1367,18 @@ export default function QuestionDetailPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-l from-indigo-50 to-white dark:from-indigo-900/30 dark:to-gray-800 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                  <Send size={20} className="text-indigo-600 dark:text-indigo-400" />
+                  <Send
+                    size={20}
+                    className="text-indigo-600 dark:text-indigo-400"
+                  />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">כתוב תשובה</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[400px]">{question?.title}</p>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    כתוב תשובה
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[400px]">
+                    {question?.title}
+                  </p>
                 </div>
               </div>
               <button
@@ -1171,8 +1390,13 @@ export default function QuestionDetailPage() {
             </div>
 
             {/* Body */}
-            <form onSubmit={handleSubmitAnswer} className="flex-1 flex flex-col p-6 gap-4 overflow-y-auto">
-              <label className="font-semibold text-gray-700 dark:text-gray-200">התשובה שלך</label>
+            <form
+              onSubmit={handleSubmitAnswer}
+              className="flex-1 flex flex-col p-6 gap-4 overflow-y-auto"
+            >
+              <label className="font-semibold text-gray-700 dark:text-gray-200">
+                התשובה שלך
+              </label>
               <textarea
                 value={answerContent}
                 onChange={(e) => setAnswerContent(e.target.value)}
@@ -1197,7 +1421,9 @@ export default function QuestionDetailPage() {
               <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   type="submit"
-                  disabled={answerContent.trim().length < 10 || submittingAnswer}
+                  disabled={
+                    answerContent.trim().length < 10 || submittingAnswer
+                  }
                   className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {submittingAnswer ? (

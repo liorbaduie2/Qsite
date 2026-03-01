@@ -30,7 +30,8 @@ export async function GET(
           id,
           username,
           avatar_url,
-          reputation
+          reputation,
+          last_seen_at
         ),
         question_tags (
           tags (
@@ -70,6 +71,8 @@ export async function GET(
         avatar_url: (question.profiles as any)?.avatar_url || null,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         reputation: (question.profiles as any)?.reputation || 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        lastSeenAt: (question.profiles as any)?.last_seen_at ?? null,
       },
       tags: (question.question_tags || [])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -25,7 +25,8 @@ export async function GET(
           id,
           username,
           avatar_url,
-          reputation
+          reputation,
+          last_seen_at
         )
       `)
       .eq('question_id', id)
@@ -53,6 +54,7 @@ export async function GET(
         username: a.profiles?.username || 'אנונימי',
         avatar_url: a.profiles?.avatar_url || null,
         reputation: a.profiles?.reputation || 0,
+        lastSeenAt: a.profiles?.last_seen_at ?? null,
       },
     }));
 

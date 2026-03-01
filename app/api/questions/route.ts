@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
         profiles!questions_author_id_fkey (
           id,
           username,
-          avatar_url
+          avatar_url,
+          last_seen_at
         ),
         question_tags (
           tags (
@@ -110,6 +111,7 @@ export async function GET(request: NextRequest) {
         id: q.profiles?.id || q.author_id,
         username: q.profiles?.username || 'אנונימי',
         avatar_url: q.profiles?.avatar_url || null,
+        lastSeenAt: q.profiles?.last_seen_at ?? null,
       },
       tags: (q.question_tags || [])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

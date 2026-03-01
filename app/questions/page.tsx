@@ -26,7 +26,8 @@ import { useForcedAuthModal } from "../components/useForcedAuthModal";
 import Drawer from "../components/Drawer";
 import NavHeader from "../components/NavHeader";
 import NewQuestionModal from "../components/NewQuestionModal";
-import Image from "next/image";
+import { UserAvatar } from "../components/UserAvatar";
+import { isOnline } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -38,6 +39,7 @@ interface Question {
     id: string;
     username: string;
     avatar_url: string | null;
+    lastSeenAt?: string | null;
   };
   replies: number;
   votes: number;
@@ -556,35 +558,21 @@ const QuestionsPage = () => {
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
                         >
-                          {question.author.avatar_url ? (
-                            <Image
-                              src={question.author.avatar_url}
-                              alt={question.author.username}
-                              width={40}
-                              height={40}
-                              className="h-9 w-9 rounded-full object-cover border border-gray-200 dark:border-gray-600 sm:h-11 sm:w-11"
-                            />
-                          ) : (
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
-                              <User size={22} className="text-white" />
-                            </div>
-                          )}
+                          <UserAvatar
+                            avatarUrl={question.author.avatar_url}
+                            username={question.author.username}
+                            size="lg"
+                            isOnline={isOnline(question.author.lastSeenAt)}
+                          />
                         </Link>
                       ) : (
                         <>
-                          {question.author.avatar_url ? (
-                            <Image
-                              src={question.author.avatar_url}
-                              alt=""
-                              width={40}
-                              height={40}
-                              className="h-9 w-9 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-600 sm:h-11 sm:w-11"
-                            />
-                          ) : (
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-11 sm:w-11">
-                              <User size={22} className="text-white" />
-                            </div>
-                          )}
+                          <UserAvatar
+                            avatarUrl={question.author.avatar_url}
+                            username={question.author.username}
+                            size="lg"
+                            isOnline={isOnline(question.author.lastSeenAt)}
+                          />
                         </>
                       )}
                       <span className="text-[0.9075rem] font-medium text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">

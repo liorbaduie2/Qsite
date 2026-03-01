@@ -14,9 +14,10 @@ import {
   Settings,
   MessageCircle,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { UserAvatar } from "@/app/components/UserAvatar";
+import { isOnline } from "@/lib/utils";
 
 interface MenuItem {
   label: string;
@@ -40,6 +41,7 @@ interface Profile {
   is_verified?: boolean; // Added verified field
   created_at?: string;
   updated_at?: string;
+  last_seen_at?: string | null;
 }
 
 interface DrawerProps {
@@ -220,22 +222,13 @@ const Drawer: React.FC<DrawerProps> = ({
               <div className="flex items-center gap-4 mb-4">
                 {/* Profile Circle - muted lavender when no avatar */}
                 <div className="relative">
-                  {profile?.avatar_url ? (
-                    <Image
-                      src={profile.avatar_url}
-                      alt={profile.username}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-600 shadow-md"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#d8c8eb] dark:bg-gray-700">
-                      <User
-                        size={20}
-                        className="text-purple-700 dark:text-purple-300"
-                      />
-                    </div>
-                  )}
+                  <UserAvatar
+                    avatarUrl={profile?.avatar_url ?? null}
+                    username={profile?.username}
+                    size="xl"
+                    isOnline={isOnline(profile?.last_seen_at)}
+                    className="border-2 border-white dark:border-gray-600 shadow-md"
+                  />
                   {profile?.is_verified && (
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
                       <span className="text-white text-xs">✓</span>

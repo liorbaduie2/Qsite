@@ -116,3 +116,19 @@ select option {
   background: rgb(55 65 81);
   color: rgb(243 244 246);
 }
+
+/* User avatar online aura – bluish-green subtle pulse */
+@keyframes avatar-aura-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(34, 197, 194, 0.35);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 194, 0.2);
+    opacity: 0.95;
+  }
+}
+.avatar-aura-online {
+  animation: avatar-aura-pulse 2.5s ease-in-out infinite;
+}
