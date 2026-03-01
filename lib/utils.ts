@@ -13,19 +13,19 @@ export const hasEnvVars =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-/** Online = last activity within this many minutes. Keep short so offline shows quickly. */
-export const ONLINE_THRESHOLD_MINUTES = 2;
+/** Online = last activity within this many seconds. ~10s keeps status accurate with 5–10s delay. */
+export const ONLINE_THRESHOLD_SECONDS = 10;
 
 /**
  * Returns true if the user is considered "online" based on last_seen_at
- * (within the given threshold in minutes). Uses a short default so users
- * who close the tab are shown offline within ~2 minutes.
+ * (within the given threshold in seconds). Uses a short default so status
+ * updates within ~5–10 seconds when users go offline.
  */
 export function isOnline(
   lastSeenAt: string | null | undefined,
-  thresholdMinutes = ONLINE_THRESHOLD_MINUTES
+  thresholdSeconds = ONLINE_THRESHOLD_SECONDS
 ): boolean {
   if (!lastSeenAt) return false;
   const diff = Date.now() - new Date(lastSeenAt).getTime();
-  return diff >= 0 && diff < thresholdMinutes * 60 * 1000;
+  return diff >= 0 && diff < thresholdSeconds * 1000;
 }

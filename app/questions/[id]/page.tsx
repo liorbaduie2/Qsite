@@ -368,7 +368,7 @@ export default function QuestionDetailPage() {
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       refetch();
-    }, 90 * 1000);
+    }, 10 * 1000); // 10s so other users' online status updates within ~5–10s
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(interval);

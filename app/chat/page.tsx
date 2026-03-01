@@ -84,9 +84,11 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'conversations' | 'requests' | 'pending'>('conversations');
+  /** Presence-only updates: userId -> lastSeenAt. Updated by lightweight polling so the online indicator updates without refetching the whole list. */
+  const [presenceMap, setPresenceMap] = useState<Record<string, string | null>>({});
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
-  usePresenceTick(); // re-evaluate isOnline every 30s so indicators update when users go offline
+  usePresenceTick(); // re-evaluate isOnline every 5s so indicators update when users go offline
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -130,22 +132,36 @@ export default function ChatPage() {
     fetchData();
   }, [fetchData]);
 
-  // Re-fetch conversations/requests when tab visible and periodically so online status stays accurate
+  // Update only presence (online indicator) every 10s when tab visible — no full refetch, no disrupting chat
+  const fetchPresence = useCallback(() => {
+    if (!user) return;
+    const ids = new Set<string>();
+    conversations.forEach((c) => ids.add(c.otherUser.id));
+    incoming.forEach((r) => ids.add(r.sender.id));
+    sent.forEach((r) => ids.add(r.receiver.id));
+    if (ids.size === 0) return;
+    const idsParam = Array.from(ids).join(",");
+    fetch(`/api/presence?ids=${encodeURIComponent(idsParam)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.presence && setPresenceMap((prev) => ({ ...prev, ...data.presence })))
+      .catch(() => {});
+  }, [user, conversations, incoming, sent]);
+
   useEffect(() => {
     if (!user) return;
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchData();
+      if (document.visibilityState === "visible") fetchPresence();
     };
     document.addEventListener("visibilitychange", onVisible);
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      fetchData();
-    }, 90 * 1000);
+      fetchPresence();
+    }, 10 * 1000); // 10s — updates only online indicator, not list/messages
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(interval);
     };
-  }, [user, fetchData]);
+  }, [user, fetchPresence]);
 
   const handleRespond = async (requestId: string, action: 'accept' | 'decline' | 'block') => {
     setRespondingId(requestId);
@@ -268,7 +284,7 @@ export default function ChatPage() {
                               avatarUrl={c.otherUser.avatar_url}
                               username={c.otherUser.username}
                               size="lg"
-                              isOnline={isOnline(c.otherUser.lastSeenAt)}
+                              isOnline={isOnline(presenceMap[c.otherUser.id] ?? c.otherUser.lastSeenAt)}
                             />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{c.otherUser.full_name || c.otherUser.username}</p>
@@ -310,7 +326,7 @@ export default function ChatPage() {
                               avatarUrl={r.sender.avatar_url}
                               username={r.sender.username}
                               size="lg"
-                              isOnline={isOnline(r.sender.lastSeenAt)}
+                              isOnline={isOnline(presenceMap[r.sender.id] ?? r.sender.lastSeenAt)}
                             />
                           </Link>
                           <div className="flex-1 min-w-0">
@@ -372,7 +388,7 @@ export default function ChatPage() {
                               avatarUrl={r.receiver.avatar_url}
                               username={r.receiver.username}
                               size="lg"
-                              isOnline={isOnline(r.receiver.lastSeenAt)}
+                              isOnline={isOnline(presenceMap[r.receiver.id] ?? r.receiver.lastSeenAt)}
                             />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{r.receiver.full_name || r.receiver.username}</p>

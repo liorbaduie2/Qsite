@@ -38,6 +38,8 @@ export default function ChatThreadPage() {
     created_at: string;
   } | null>(null);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
+  /** Presence-only update for the other user so the online indicator updates without refetching the whole conversation. */
+  const [otherUserLastSeenAt, setOtherUserLastSeenAt] = useState<string | null | undefined>(undefined);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +70,7 @@ export default function ChatThreadPage() {
     }
     setConversation(data.conversation);
     setOtherUser(data.otherUser);
+    setOtherUserLastSeenAt(data.otherUser?.lastSeenAt ?? undefined);
     setError(null);
   }, [conversationId, user]);
 
@@ -97,22 +100,31 @@ export default function ChatThreadPage() {
     );
   }, [conversationId, user, router, fetchConversation, fetchMessages]);
 
-  // Re-fetch conversation when tab visible and periodically so other user's online status stays accurate
+  // Update only the other user's presence (online indicator) every 10s — no refetch of conversation/messages
   useEffect(() => {
-    if (!conversationId || !user) return;
+    if (!conversationId || !user || !otherUser?.id) return;
+    const fetchPresence = () => {
+      fetch(`/api/presence?ids=${encodeURIComponent(otherUser.id)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const lastSeen = data?.presence?.[otherUser.id];
+          if (lastSeen !== undefined) setOtherUserLastSeenAt(lastSeen ?? null);
+        })
+        .catch(() => {});
+    };
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchConversation();
+      if (document.visibilityState === "visible") fetchPresence();
     };
     document.addEventListener("visibilitychange", onVisible);
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      fetchConversation();
-    }, 90 * 1000);
+      fetchPresence();
+    }, 10 * 1000);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(interval);
     };
-  }, [conversationId, user, fetchConversation]);
+  }, [conversationId, user, otherUser?.id]);
 
   // Mark conversation as read when loaded (user is participant)
   useEffect(() => {
@@ -346,7 +358,7 @@ export default function ChatThreadPage() {
                 avatarUrl={otherUser.avatar_url}
                 username={otherUser.username}
                 size="md"
-                isOnline={isOnline(otherUser.lastSeenAt)}
+                isOnline={isOnline(otherUserLastSeenAt ?? otherUser.lastSeenAt)}
                 className="border-2 border-white dark:border-gray-700 shadow"
               />
               <span className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate max-w-[140px] sm:max-w-[200px] hover:underline">
