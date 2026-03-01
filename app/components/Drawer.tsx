@@ -18,6 +18,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { UserAvatar } from "@/app/components/UserAvatar";
 import { isOnline } from "@/lib/utils";
+import { usePresenceTick } from "@/app/hooks/usePresenceTick";
 
 interface MenuItem {
   label: string;
@@ -67,6 +68,7 @@ const Drawer: React.FC<DrawerProps> = ({
   onOpenLoginModal,
   headerExtra,
 }) => {
+  usePresenceTick(); // re-evaluate isOnline(profile?.last_seen_at) every 30s
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);

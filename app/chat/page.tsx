@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  MessageSquare, HelpCircle, BookOpen, Home, Users, User, LogIn,
+  MessageSquare, HelpCircle, BookOpen, Home, Users, LogIn,
   CheckCircle, X, Shield, UserPlus, Clock
 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
@@ -10,7 +10,9 @@ import LoginModal from '../components/LoginModal';
 import RegisterModal from '../components/RegisterModal';
 import Drawer from '../components/Drawer';
 import NavHeader from '../components/NavHeader';
-import Image from 'next/image';
+import { UserAvatar } from '../components/UserAvatar';
+import { isOnline } from '@/lib/utils';
+import { usePresenceTick } from '../hooks/usePresenceTick';
 import Link from 'next/link';
 
 type IncomingRequest = {
@@ -19,7 +21,7 @@ type IncomingRequest = {
   receiver_id: string;
   status: string;
   created_at: string;
-  sender: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+  sender: { id: string; username: string; full_name: string | null; avatar_url: string | null; lastSeenAt?: string | null };
 };
 
 type OutgoingRequest = {
@@ -28,12 +30,12 @@ type OutgoingRequest = {
   receiver_id: string;
   status: string;
   created_at: string;
-  receiver: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+  receiver: { id: string; username: string; full_name: string | null; avatar_url: string | null; lastSeenAt?: string | null };
 };
 
 type Conversation = {
   id: string;
-  otherUser: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+  otherUser: { id: string; username: string; full_name: string | null; avatar_url: string | null; lastSeenAt?: string | null };
   lastMessage: { content: string; created_at: string; sender_id: string } | null;
   created_at: string;
   unread_count: number;
@@ -84,6 +86,7 @@ export default function ChatPage() {
   const [activeTab, setActiveTab] = useState<'conversations' | 'requests' | 'pending'>('conversations');
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
+  usePresenceTick(); // re-evaluate isOnline every 30s so indicators update when users go offline
 
   const menuItems = [
     { label: 'ראשי', icon: Home, href: '/' },
@@ -126,6 +129,23 @@ export default function ChatPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Re-fetch conversations/requests when tab visible and periodically so online status stays accurate
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchData();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      fetchData();
+    }, 90 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
+    };
+  }, [user, fetchData]);
 
   const handleRespond = async (requestId: string, action: 'accept' | 'decline' | 'block') => {
     setRespondingId(requestId);
@@ -244,13 +264,12 @@ export default function ChatPage() {
                             href={`/chat/${c.id}`}
                             className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                           >
-                            {c.otherUser.avatar_url ? (
-                              <Image src={c.otherUser.avatar_url} alt="" width={44} height={44} className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-600 flex-shrink-0" />
-                            ) : (
-                              <div className="w-11 h-11 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center flex-shrink-0">
-                                <User size={22} className="text-indigo-700 dark:text-indigo-300" />
-                              </div>
-                            )}
+                            <UserAvatar
+                              avatarUrl={c.otherUser.avatar_url}
+                              username={c.otherUser.username}
+                              size="lg"
+                              isOnline={isOnline(c.otherUser.lastSeenAt)}
+                            />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{c.otherUser.full_name || c.otherUser.username}</p>
                               {c.lastMessage && (
@@ -287,13 +306,12 @@ export default function ChatPage() {
                       {incoming.map((r) => (
                         <li key={r.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <Link href={`/profile/${encodeURIComponent(r.sender.username)}`} className="flex-shrink-0">
-                            {r.sender.avatar_url ? (
-                              <Image src={r.sender.avatar_url} alt="" width={44} height={44} className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-600" />
-                            ) : (
-                              <div className="w-11 h-11 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center">
-                                <User size={22} className="text-indigo-700 dark:text-indigo-300" />
-                              </div>
-                            )}
+                            <UserAvatar
+                              avatarUrl={r.sender.avatar_url}
+                              username={r.sender.username}
+                              size="lg"
+                              isOnline={isOnline(r.sender.lastSeenAt)}
+                            />
                           </Link>
                           <div className="flex-1 min-w-0">
                             <Link href={`/profile/${encodeURIComponent(r.sender.username)}`} className="font-medium text-gray-800 dark:text-gray-100 hover:underline">
@@ -350,13 +368,12 @@ export default function ChatPage() {
                             href={`/profile/${encodeURIComponent(r.receiver.username)}`}
                             className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                           >
-                            {r.receiver.avatar_url ? (
-                              <Image src={r.receiver.avatar_url} alt="" width={44} height={44} className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-600 flex-shrink-0" />
-                            ) : (
-                              <div className="w-11 h-11 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center flex-shrink-0">
-                                <User size={22} className="text-indigo-700 dark:text-indigo-300" />
-                              </div>
-                            )}
+                            <UserAvatar
+                              avatarUrl={r.receiver.avatar_url}
+                              username={r.receiver.username}
+                              size="lg"
+                              isOnline={isOnline(r.receiver.lastSeenAt)}
+                            />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{r.receiver.full_name || r.receiver.username}</p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">@{r.receiver.username}</p>

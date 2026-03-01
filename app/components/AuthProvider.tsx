@@ -635,7 +635,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     ping();
-    const interval = setInterval(ping, 2.5 * 60 * 1000); // 2.5 minutes
+    const interval = setInterval(ping, 60 * 1000); // 1 minute when tab visible
     return () => clearInterval(interval);
   }, [user?.id, refreshProfile]);
 

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       receiver_id: string;
       status: string;
       created_at: string;
-      sender: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+      sender: { id: string; username: string; full_name: string | null; avatar_url: string | null; lastSeenAt: string | null };
     }> = [];
     const sent: Array<{
       id: string;
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       receiver_id: string;
       status: string;
       created_at: string;
-      receiver: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+      receiver: { id: string; username: string; full_name: string | null; avatar_url: string | null; lastSeenAt: string | null };
     }> = [];
 
     if (scope === 'incoming' || scope === 'all') {
@@ -52,14 +52,15 @@ export async function GET(request: Request) {
         const senderIds = [...new Set(rows.map((r) => r.sender_id))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, username, full_name, avatar_url')
+          .select('id, username, full_name, avatar_url, last_seen_at')
           .in('id', senderIds);
         const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
         rows.forEach((r) => {
+          const p = profileMap.get(r.sender_id);
           incoming.push({
             ...r,
             created_at: r.created_at,
-            sender: profileMap.get(r.sender_id) || { id: r.sender_id, username: '', full_name: null, avatar_url: null },
+            sender: p ? { id: p.id, username: p.username, full_name: p.full_name, avatar_url: p.avatar_url, lastSeenAt: p.last_seen_at ?? null } : { id: r.sender_id, username: '', full_name: null, avatar_url: null, lastSeenAt: null },
           });
         });
       }
@@ -83,14 +84,15 @@ export async function GET(request: Request) {
         const receiverIds = [...new Set(rows.map((r) => r.receiver_id))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, username, full_name, avatar_url')
+          .select('id, username, full_name, avatar_url, last_seen_at')
           .in('id', receiverIds);
         const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
         rows.forEach((r) => {
+          const p = profileMap.get(r.receiver_id);
           sent.push({
             ...r,
             created_at: r.created_at,
-            receiver: profileMap.get(r.receiver_id) || { id: r.receiver_id, username: '', full_name: null, avatar_url: null },
+            receiver: p ? { id: p.id, username: p.username, full_name: p.full_name, avatar_url: p.avatar_url, lastSeenAt: p.last_seen_at ?? null } : { id: r.receiver_id, username: '', full_name: null, avatar_url: null, lastSeenAt: null },
           });
         });
       }

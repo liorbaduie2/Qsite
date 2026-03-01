@@ -28,6 +28,7 @@ import NavHeader from "../components/NavHeader";
 import NewQuestionModal from "../components/NewQuestionModal";
 import { UserAvatar } from "../components/UserAvatar";
 import { isOnline } from "@/lib/utils";
+import { usePresenceTick } from "../hooks/usePresenceTick";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -118,6 +119,7 @@ const QuestionsPage = () => {
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
+  usePresenceTick(); // re-evaluate isOnline every 30s
 
   const isGuest = !user;
   const {

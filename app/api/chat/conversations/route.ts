@@ -26,7 +26,7 @@ export async function GET() {
 
     const list: Array<{
       id: string;
-      otherUser: { id: string; username: string; full_name: string | null; avatar_url: string | null };
+      otherUser: { id: string; username: string; full_name: string | null; avatar_url: string | null; lastSeenAt: string | null };
       lastMessage: { content: string; created_at: string; sender_id: string } | null;
       created_at: string;
       unread_count: number;
@@ -36,7 +36,7 @@ export async function GET() {
       const otherId = c.user1_id === user.id ? c.user2_id : c.user1_id;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, username, full_name, avatar_url')
+        .select('id, username, full_name, avatar_url, last_seen_at')
         .eq('id', otherId)
         .single();
 
@@ -76,7 +76,9 @@ export async function GET() {
 
       list.push({
         id: c.id,
-        otherUser: profile || { id: otherId, username: '', full_name: null, avatar_url: null },
+        otherUser: profile
+          ? { id: profile.id, username: profile.username, full_name: profile.full_name, avatar_url: profile.avatar_url, lastSeenAt: profile.last_seen_at ?? null }
+          : { id: otherId, username: '', full_name: null, avatar_url: null, lastSeenAt: null },
         lastMessage: lastMsg ? { content: lastMsg.content, created_at: lastMsg.created_at, sender_id: lastMsg.sender_id } : null,
         created_at: c.created_at,
         unread_count,

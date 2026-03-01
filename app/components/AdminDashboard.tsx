@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { useAuth } from './AuthProvider';
 import { suspendUser } from '@/lib/permissions';
+import { isOnline } from '@/lib/utils';
+import { usePresenceTick } from '@/app/hooks/usePresenceTick';
 
 import {
     Users,
@@ -87,6 +89,7 @@ interface AdminUserView {
     status: string;
     active_suspensions: number;
     created_at: string;
+    last_seen_at?: string | null;
 }
 
 interface QuestionRemovalRequest {
@@ -819,6 +822,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
 // --- Main AdminDashboard Component --- //
 const AdminDashboard: React.FC = () => {
     const { user: currentUser, userPermissions } = useAuth();
+    usePresenceTick(); // re-evaluate isOnline(user.last_seen_at) every 30s in user list
     
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [applications, setApplications] = useState<UserApplication[]>([]);
@@ -1273,7 +1277,12 @@ const AdminDashboard: React.FC = () => {
                                         <div className="flex items-center gap-4 mb-3">
                                             <div className="bg-slate-200 dark:bg-slate-600 p-2 rounded-full"><User className="w-6 h-6 text-slate-500 dark:text-slate-300" /></div>
                                             <div>
-                                                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{user.username}</h3>
+                                                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                                    {user.username}
+                                                    {isOnline(user.last_seen_at) && (
+                                                        <span className="online-dot flex-shrink-0" title="מחובר כעת" aria-hidden />
+                                                    )}
+                                                </h3>
                                                 <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.status === 'suspended' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'}`}>{user.status === 'suspended' ? 'מושעה' : 'פעיל'}</span>

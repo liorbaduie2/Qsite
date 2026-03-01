@@ -63,13 +63,15 @@ export async function GET(
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, username, full_name, avatar_url')
+      .select('id, username, full_name, avatar_url, last_seen_at')
       .eq('id', otherId)
       .single();
 
     return NextResponse.json({
       conversation: { id: conv.id, created_at: conv.created_at },
-      otherUser: profile || { id: otherId, username: '', full_name: null, avatar_url: null },
+      otherUser: profile
+        ? { id: profile.id, username: profile.username, full_name: profile.full_name, avatar_url: profile.avatar_url, lastSeenAt: profile.last_seen_at ?? null }
+        : { id: otherId, username: '', full_name: null, avatar_url: null, lastSeenAt: null },
     });
   } catch (e) {
     console.error('Conversation GET API error:', e);

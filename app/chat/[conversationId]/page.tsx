@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { User, Send, ArrowRight, MoreVertical, Flag, Shield, UserCircle } from "lucide-react";
+import { Send, ArrowRight, MoreVertical, Flag, Shield, UserCircle } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
-import Image from "next/image";
+import { UserAvatar } from "../../components/UserAvatar";
+import { isOnline } from "@/lib/utils";
+import { usePresenceTick } from "../../hooks/usePresenceTick";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -21,6 +23,7 @@ type OtherUser = {
   username: string;
   full_name: string | null;
   avatar_url: string | null;
+  lastSeenAt?: string | null;
 };
 
 export default function ChatThreadPage() {
@@ -51,6 +54,7 @@ export default function ChatThreadPage() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { user, loading: authLoading } = useAuth();
+  usePresenceTick(); // re-evaluate isOnline(otherUser.lastSeenAt) every 30s
 
   const fetchConversation = useCallback(async () => {
     if (!conversationId || !user) return;
@@ -92,6 +96,23 @@ export default function ChatThreadPage() {
       setLoading(false),
     );
   }, [conversationId, user, router, fetchConversation, fetchMessages]);
+
+  // Re-fetch conversation when tab visible and periodically so other user's online status stays accurate
+  useEffect(() => {
+    if (!conversationId || !user) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchConversation();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      fetchConversation();
+    }, 90 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
+    };
+  }, [conversationId, user, fetchConversation]);
 
   // Mark conversation as read when loaded (user is participant)
   useEffect(() => {
@@ -321,22 +342,13 @@ export default function ChatThreadPage() {
               href={`/profile/${encodeURIComponent(otherUser.username)}`}
               className="flex items-center gap-2 min-w-0 flex-shrink-0 cursor-pointer hover:opacity-90"
             >
-              {otherUser.avatar_url ? (
-                <Image
-                  src={otherUser.avatar_url}
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center border-2 border-white dark:border-gray-700 shadow">
-                  <User
-                    size={18}
-                    className="text-indigo-700 dark:text-indigo-300"
-                  />
-                </div>
-              )}
+              <UserAvatar
+                avatarUrl={otherUser.avatar_url}
+                username={otherUser.username}
+                size="md"
+                isOnline={isOnline(otherUser.lastSeenAt)}
+                className="border-2 border-white dark:border-gray-700 shadow"
+              />
               <span className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate max-w-[140px] sm:max-w-[200px] hover:underline">
                 {otherUser.full_name || otherUser.username || "צ'אט"}
               </span>

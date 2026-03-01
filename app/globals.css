@@ -132,3 +132,12 @@ select option {
 .avatar-aura-online {
   animation: avatar-aura-pulse 2.5s ease-in-out infinite;
 }
+
+/* Small online indicator dot (e.g. admin list) */
+.online-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: rgba(34, 197, 194, 0.8);
+  animation: avatar-aura-pulse 2.5s ease-in-out infinite;
+}

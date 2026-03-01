@@ -36,6 +36,7 @@ import Drawer from "../../components/Drawer";
 import NavHeader from "../../components/NavHeader";
 import { UserAvatar } from "../../components/UserAvatar";
 import { isOnline } from "@/lib/utils";
+import { usePresenceTick } from "../../hooks/usePresenceTick";
 
 interface QuestionDetail {
   id: string;
@@ -236,6 +237,7 @@ export default function QuestionDetailPage() {
     signOut,
   } = useAuth();
   const isGuest = !user;
+  usePresenceTick(); // re-evaluate isOnline() every 30s so indicators update when users go offline
 
   useEffect(() => {
     if (isLoginModalOpen || isRegisterModalOpen) {
@@ -348,6 +350,30 @@ export default function QuestionDetailPage() {
   useEffect(() => {
     fetchAnswers();
   }, [fetchAnswers]);
+
+  // Re-fetch question and answers periodically when tab visible so online status stays accurate
+  useEffect(() => {
+    if (!id || !user) return;
+    const refetch = () => {
+      fetch(`/api/questions/${id}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => data?.question && setQuestion(data.question))
+        .catch(() => {});
+      fetchAnswers();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refetch();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      refetch();
+    }, 90 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
+    };
+  }, [id, user, fetchAnswers]);
 
   const handleSubmitAnswer = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -23,6 +23,7 @@ import Drawer from "./components/Drawer";
 import NavHeader from "./components/NavHeader";
 import { UserAvatar } from "./components/UserAvatar";
 import { isOnline } from "@/lib/utils";
+import { usePresenceTick } from "./hooks/usePresenceTick";
 import AuthStatusDisplay from "./components/AuthStatusDisplay";
 import { SimpleThemeToggle } from "./components/SimpleThemeToggle";
 import Link from "next/link";
@@ -98,6 +99,7 @@ function ForumHomepage() {
   const { user, profile, loading, signOut } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  usePresenceTick(); // re-evaluate isOnline every 30s
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
   const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
   const isGuest = !user;
