@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/app/components/AuthProvider";
 import { FileQuestion, ArrowRight } from "lucide-react";
 
-export default function AppealQuestionDeletionPage() {
+function AppealQuestionDeletionContent() {
   const searchParams = useSearchParams();
   const activityLogId = searchParams.get("activity_log_id") ?? "";
   const { user, loading: authLoading } = useAuth();
@@ -140,5 +140,19 @@ export default function AppealQuestionDeletionPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function AppealQuestionDeletionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+        </div>
+      }
+    >
+      <AppealQuestionDeletionContent />
+    </Suspense>
   );
 }
