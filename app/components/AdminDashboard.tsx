@@ -31,7 +31,10 @@ import {
     Wrench,
     Save,
     EyeOff,
-    PlusCircle
+    PlusCircle,
+    FileQuestion,
+    Trash2,
+    Check
 } from 'lucide-react';
 
 const supabase = createBrowserClient(
@@ -80,6 +83,18 @@ interface AdminUserView {
     status: string;
     active_suspensions: number;
     created_at: string;
+}
+
+interface QuestionRemovalRequest {
+    id: string;
+    questionId: string;
+    questionTitle: string;
+    questionAuthorId: string | null;
+    requestedBy: string;
+    requesterUsername: string;
+    reason: string;
+    status: string;
+    createdAt: string;
 }
 
 interface PenaltyType {
@@ -685,7 +700,10 @@ const AdminDashboard: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'applications' | 'users'>('applications');
+    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal'>('applications');
+
+    const [removalRequests, setRemovalRequests] = useState<QuestionRemovalRequest[]>([]);
+    const [removalActionLoading, setRemovalActionLoading] = useState<string | null>(null);
     
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -726,6 +744,13 @@ const AdminDashboard: React.FC = () => {
             const { data: usersData, error: usersError } = await supabase.from('admin_user_overview').select('*');
             if (usersError) throw new Error('שגיאה בטעינת רשימת משתמשים');
             setUsers(usersData || []);
+
+            if (userPermissions.role === 'owner' || userPermissions.role === 'guardian') {
+                const res = await fetch('/api/admin/question-removal-requests');
+                const data = await res.json();
+                if (res.ok && Array.isArray(data.requests)) setRemovalRequests(data.requests);
+                else setRemovalRequests([]);
+            }
 
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'שגיאה בטעינת נתונים');
@@ -878,7 +903,34 @@ const AdminDashboard: React.FC = () => {
         setSelectedUser(null);
         // Refresh data to show changes
         loadDashboardData();
-    }
+    };
+
+    const handleRemovalDecision = async (requestId: string, action: 'approve' | 'reject') => {
+        if (userPermissions?.role !== 'owner' && userPermissions?.role !== 'guardian') return;
+        setRemovalActionLoading(requestId);
+        try {
+            const res = await fetch(`/api/admin/question-removal-requests/${requestId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'שגיאה בפעולה');
+                return;
+            }
+            setRemovalRequests((prev) => prev.filter((r) => r.id !== requestId));
+            if (action === 'approve') {
+                alert('השאלה הוסרה ויוצרה קיבל/ה הודעה.');
+            } else {
+                alert('בקשת ההסרה נדחתה.');
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'שגיאה בפעולה');
+        } finally {
+            setRemovalActionLoading(null);
+        }
+    };
 
     const filteredApplications = applications.filter(app =>
         app.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -978,6 +1030,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center space-x-4 space-x-reverse">
                         {userPermissions?.can_approve_registrations && <button onClick={() => setActiveTab('applications')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors ${activeTab === 'applications' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>בקשות ממתינות ({applications.length})</button>}
                         {userPermissions?.can_view_user_list && <button onClick={() => setActiveTab('users')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors ${activeTab === 'users' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>ניהול משתמשים ({users.length})</button>}
+                        {(userPermissions?.role === 'owner' || userPermissions?.role === 'guardian') && <button onClick={() => setActiveTab('removal')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'removal' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><FileQuestion className="w-4 h-4" />בקשות להסרת שאלות ({removalRequests.length})</button>}
                     </div>
                 </div>
 
@@ -985,7 +1038,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
                             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                {activeTab === 'applications' ? `בקשות ממתינות (${filteredApplications.length})` : `כל המשתמשים (${filteredUsers.length})`}
+                                {activeTab === 'applications' ? `בקשות ממתינות (${filteredApplications.length})` : activeTab === 'removal' ? `בקשות להסרת שאלות (${removalRequests.length})` : `כל המשתמשים (${filteredUsers.length})`}
                             </h2>
                             <button onClick={loadDashboardData} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border dark:border-slate-600" disabled={loading}>
                                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />רענן
@@ -1043,6 +1096,37 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                </div>
                             )) : <div className="p-12 text-center"><Users className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">לא נמצאו משתמשים</h3></div>}
+                         </div>
+                    )}
+
+                    {activeTab === 'removal' && (
+                         <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                            {removalRequests.length > 0 ? removalRequests.map((req) => (
+                                <div key={req.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-200 flex flex-col sm:flex-row items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1 line-clamp-2">{req.questionTitle || 'שאלה (ללא כותרת)'}</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">בקשה מ: {req.requesterUsername}</p>
+                                        {req.reason && <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">{req.reason}</p>}
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">נוצר {timeAgo(req.createdAt)}</div>
+                                    </div>
+                                    <div className="flex-shrink-0 flex items-center gap-2 mt-3 sm:mt-0">
+                                        <button
+                                            onClick={() => handleRemovalDecision(req.id, 'approve')}
+                                            disabled={removalActionLoading === req.id}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 transition-all"
+                                        >
+                                            {removalActionLoading === req.id ? 'מאשר...' : <><Check className="w-4 h-4" />אשר הסרה</>}
+                                        </button>
+                                        <button
+                                            onClick={() => handleRemovalDecision(req.id, 'reject')}
+                                            disabled={removalActionLoading === req.id}
+                                            className="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg font-semibold hover:bg-slate-600 disabled:opacity-50 transition-all"
+                                        >
+                                            <XCircle className="w-4 h-4" />דחה
+                                        </button>
+                                    </div>
+                                </div>
+                            )) : <div className="p-12 text-center"><FileQuestion className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">אין בקשות להסרת שאלות ממתינות</h3></div>}
                          </div>
                     )}
                 </main>

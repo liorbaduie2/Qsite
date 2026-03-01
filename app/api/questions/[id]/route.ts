@@ -82,3 +82,88 @@ export async function GET(
     return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'יש להתחבר כדי לערוך' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { title, content } = body;
+    if (!title?.trim() || title.trim().length < 5) {
+      return NextResponse.json({ error: 'הכותרת חייבת להכיל לפחות 5 תווים' }, { status: 400 });
+    }
+    if (!content?.trim()) {
+      return NextResponse.json({ error: 'תוכן השאלה הוא שדה חובה' }, { status: 400 });
+    }
+
+    const { data: result, error } = await supabase.rpc('update_question_with_permission', {
+      p_question_id: id,
+      p_title: title.trim(),
+      p_content: content.trim(),
+    });
+
+    if (error) {
+      console.error('Question PATCH RPC error:', error);
+      return NextResponse.json({ error: 'שגיאה בעדכון השאלה' }, { status: 500 });
+    }
+
+    const res = result as { success?: boolean; error?: string };
+    if (!res?.success) {
+      return NextResponse.json(
+        { error: res?.error || 'אין הרשאה לערוך שאלה זו' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Question PATCH error:', error);
+    return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
+    }
+
+    const { data: result, error } = await supabase.rpc('delete_question_as_admin', {
+      p_question_id: id,
+    });
+
+    if (error) {
+      console.error('Question DELETE RPC error:', error);
+      return NextResponse.json({ error: 'שגיאה בהסרת השאלה' }, { status: 500 });
+    }
+
+    const res = result as { success?: boolean; error?: string };
+    if (!res?.success) {
+      return NextResponse.json(
+        { error: res?.error || 'אין הרשאה להסיר שאלה' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Question DELETE error:', error);
+    return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
+  }
+}

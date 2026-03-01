@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   MessageSquare, Users, HelpCircle, BookOpen, Home,
   ArrowUp, ArrowDown, Star, User, LogIn, Eye, MessageCircle,
-  ChevronRight, Clock, Shield, Send, CheckCircle, Pencil, X, Plus, Reply
+  ChevronRight, Clock, Shield, Send, CheckCircle, Pencil, X, Plus, Reply,
+  MoreVertical, Trash2, FileQuestion
 } from 'lucide-react';
 import { useAuth } from '../../components/AuthProvider';
 import LoginModal from '../../components/LoginModal';
@@ -186,7 +187,20 @@ export default function QuestionDetailPage() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const [questionMenuOpen, setQuestionMenuOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [showRequestRemovalModal, setShowRequestRemovalModal] = useState(false);
+  const [requestRemovalReason, setRequestRemovalReason] = useState('');
+  const [submittingRemovalRequest, setSubmittingRemovalRequest] = useState(false);
+  const questionMenuRef = useRef<HTMLDivElement>(null);
+
+  const router = useRouter();
+  const { user, profile, userPermissions, loading: authLoading, signOut } = useAuth();
   const isGuest = !user;
 
   useEffect(() => {
@@ -204,6 +218,26 @@ export default function QuestionDetailPage() {
     { label: 'שאלות', icon: HelpCircle, href: '/questions', active: true },
     { label: 'סיפורי', icon: BookOpen, href: '/stories' },
   ];
+
+  const canEditAny = !!userPermissions?.can_edit_delete_content;
+  const isAuthor = !!user && !!question && user.id === question.author.id;
+  const authorRep = profile?.reputation ?? 0;
+  const canEditOwn = isAuthor && authorRep > 50;
+  const canEdit = question && user && (canEditAny || canEditOwn);
+  const canRemove = question && user && (userPermissions?.role === 'owner' || userPermissions?.role === 'guardian');
+  const canRequestRemoval = question && user && userPermissions?.role === 'admin';
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (questionMenuRef.current && !questionMenuRef.current.contains(e.target as Node)) {
+        setQuestionMenuOpen(false);
+      }
+    }
+    if (questionMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [questionMenuOpen]);
 
   useEffect(() => {
     async function fetchQuestion() {
@@ -358,6 +392,95 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const handleStartEdit = () => {
+    if (question) {
+      setEditTitle(question.title);
+      setEditContent(question.content);
+      setIsEditMode(true);
+      setQuestionMenuOpen(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditTitle('');
+    setEditContent('');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !editTitle.trim() || editTitle.trim().length < 5 || !editContent.trim()) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/questions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle.trim(), content: editContent.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'שגיאה בעדכון השאלה');
+        return;
+      }
+      setQuestion((q) => (q ? { ...q, title: editTitle.trim(), content: editContent.trim() } : null));
+      handleCancelEdit();
+    } catch {
+      alert('שגיאה בחיבור לשרת');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!id) return;
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/questions/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'שגיאה בהסרת השאלה');
+        return;
+      }
+      router.push('/questions');
+    } catch {
+      alert('שגיאה בחיבור לשרת');
+    } finally {
+      setRemoving(false);
+      setShowRemoveConfirm(false);
+      setQuestionMenuOpen(false);
+    }
+  };
+
+  const handleOpenRequestRemoval = () => {
+    setRequestRemovalReason('');
+    setShowRequestRemovalModal(true);
+    setQuestionMenuOpen(false);
+  };
+
+  const handleSubmitRequestRemoval = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setSubmittingRemovalRequest(true);
+    try {
+      const res = await fetch(`/api/questions/${id}/request-removal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: requestRemovalReason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'שגיאה בשליחת הבקשה');
+        return;
+      }
+      setShowRequestRemovalModal(false);
+      setRequestRemovalReason('');
+    } catch {
+      alert('שגיאה בחיבור לשרת');
+    } finally {
+      setSubmittingRemovalRequest(false);
+    }
+  };
+
   // If a non‑logged‑in user lands directly on a question page,
   // immediately show the login modal and treat the page as restricted.
   useEffect(() => {
@@ -471,34 +594,120 @@ export default function QuestionDetailPage() {
 
                 {/* Content */}
                 <div className="flex-1 p-6">
-                  {/* Status badges */}
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    {question.isAnswered && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
-                        נענתה
-                      </span>
-                    )}
-                    {question.isPinned && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700">
-                        נעוצה
-                      </span>
-                    )}
-                    {question.isClosed && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700">
-                        סגורה
-                      </span>
+                  {/* Status badges and question menu */}
+                  <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {question.isAnswered && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
+                          נענתה
+                        </span>
+                      )}
+                      {question.isPinned && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700">
+                          נעוצה
+                        </span>
+                      )}
+                      {question.isClosed && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700">
+                          סגורה
+                        </span>
+                      )}
+                    </div>
+                    {(canEdit || canRemove || canRequestRemoval) && (
+                      <div className="relative" ref={questionMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => setQuestionMenuOpen((o) => !o)}
+                          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                          aria-label="תפריט שאלה"
+                        >
+                          <MoreVertical size={20} />
+                        </button>
+                        {questionMenuOpen && (
+                          <div className="absolute left-0 top-full mt-1 min-w-[180px] py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={handleStartEdit}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              >
+                                <Pencil size={16} />
+                                ערוך שאלה
+                              </button>
+                            )}
+                            {canRemove && (
+                              <button
+                                type="button"
+                                onClick={() => { setShowRemoveConfirm(true); setQuestionMenuOpen(false); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                <Trash2 size={16} />
+                                הסר שאלה
+                              </button>
+                            )}
+                            {canRequestRemoval && (
+                              <button
+                                type="button"
+                                onClick={handleOpenRequestRemoval}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              >
+                                <FileQuestion size={16} />
+                                בקשת הסרה
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
-                  {/* Title */}
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-snug">
-                    {question.title}
-                  </h1>
+                  {/* Title (view or edit) */}
+                  {isEditMode ? (
+                    <form onSubmit={handleSaveEdit} className="mb-4 space-y-4">
+                      <input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
+                        placeholder="כותרת (לפחות 5 תווים)"
+                        minLength={5}
+                        required
+                      />
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="w-full min-h-[120px] text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 resize-y"
+                        placeholder="תוכן השאלה"
+                        required
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          disabled={savingEdit || editTitle.trim().length < 5 || !editContent.trim()}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                          {savingEdit ? 'שומר...' : 'שמור'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-500"
+                        >
+                          ביטול
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-snug">
+                      {question.title}
+                    </h1>
+                  )}
 
-                  {/* Content body */}
-                  <div className="prose prose-gray max-w-none mb-6 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-                    {question.content}
-                  </div>
+                  {/* Content body (only when not editing) */}
+                  {!isEditMode && (
+                    <div className="prose prose-gray max-w-none mb-6 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                      {question.content}
+                    </div>
+                  )}
 
                   {/* Tags */}
                   {question.tags.length > 0 && (
@@ -807,6 +1016,72 @@ export default function QuestionDetailPage() {
           </div>
         ) : null}
       </main>
+
+      {/* Remove question confirmation */}
+      {showRemoveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => !removing && setShowRemoveConfirm(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">הסרת שאלה</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">האם אתה בטוח שברצונך להסיר את השאלה? יוצרה יקבל הודעה. פעולה זו לא ניתנת לביטול.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => !removing && setShowRemoveConfirm(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRemove}
+                disabled={removing}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {removing ? 'מסיר...' : 'הסר שאלה'}
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request removal modal (שומר סף) */}
+      {showRequestRemovalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => !submittingRemovalRequest && setShowRequestRemovalModal(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">בקשת הסרת שאלה</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">בקשתך תישלח לפאנל הניהול. בעלים או ממונה מוסמך יאשרו או ידחו את ההסרה.</p>
+            <form onSubmit={handleSubmitRequestRemoval}>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">סיבה (אופציונלי)</label>
+              <textarea
+                value={requestRemovalReason}
+                onChange={(e) => setRequestRemovalReason(e.target.value)}
+                className="w-full min-h-[80px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-y"
+                placeholder="הסבר קצר לבקשת ההסרה..."
+              />
+              <div className="flex gap-3 justify-end mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowRequestRemovalModal(false)}
+                  disabled={submittingRemovalRequest}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium"
+                >
+                  ביטול
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRemovalRequest}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {submittingRemovalRequest ? 'שולח...' : 'שלח בקשת הסרה'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <LoginModal
         isOpen={isLoginModalOpen}
