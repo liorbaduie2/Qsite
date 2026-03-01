@@ -30,7 +30,7 @@ export async function POST(
 
     const { data: removalRequest, error: fetchError } = await supabase
       .from('question_removal_requests')
-      .select('id, question_id, status')
+      .select('id, question_id, status, reason')
       .eq('id', requestId)
       .single();
 
@@ -62,9 +62,15 @@ export async function POST(
     }
 
     if (action === 'approve') {
+      const deletionReason =
+        (removalRequest as { reason?: string | null }).reason?.trim() ||
+        'אושרה בקשת הסרה';
       const { data: deleteResult, error: deleteError } = await supabase.rpc(
         'delete_question_as_admin',
-        { p_question_id: removalRequest.question_id }
+        {
+          p_question_id: removalRequest.question_id,
+          p_deletion_reason: deletionReason,
+        }
       );
 
       if (deleteError) {

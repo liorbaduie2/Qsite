@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data: rows, error } = await supabase
       .from('notifications')
-      .select('id, type, title, message, question_id, answer_id, status_id, from_user_id, is_read, created_at')
+      .select('id, type, title, message, question_id, answer_id, status_id, from_user_id, is_read, metadata, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);

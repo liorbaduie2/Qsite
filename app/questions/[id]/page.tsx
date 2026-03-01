@@ -193,6 +193,7 @@ export default function QuestionDetailPage() {
   const [editContent, setEditContent] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [deletionReason, setDeletionReason] = useState('');
   const [removing, setRemoving] = useState(false);
   const [showRequestRemovalModal, setShowRequestRemovalModal] = useState(false);
   const [requestRemovalReason, setRequestRemovalReason] = useState('');
@@ -431,16 +432,27 @@ export default function QuestionDetailPage() {
     }
   };
 
-  const handleConfirmRemove = async () => {
+  const handleConfirmRemove = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!id) return;
+    const reason = deletionReason.trim();
+    if (!reason) {
+      alert('נא לציין סיבת ההסרה');
+      return;
+    }
     setRemoving(true);
     try {
-      const res = await fetch(`/api/questions/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/questions/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || 'שגיאה בהסרת השאלה');
         return;
       }
+      setDeletionReason('');
       router.push('/questions');
     } catch {
       alert('שגיאה בחיבור לשרת');
@@ -638,7 +650,7 @@ export default function QuestionDetailPage() {
                             {canRemove && (
                               <button
                                 type="button"
-                                onClick={() => { setShowRemoveConfirm(true); setQuestionMenuOpen(false); }}
+                                onClick={() => { setDeletionReason(''); setShowRemoveConfirm(true); setQuestionMenuOpen(false); }}
                                 className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                               >
                                 <Trash2 size={16} />
@@ -1023,7 +1035,17 @@ export default function QuestionDetailPage() {
           <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => !removing && setShowRemoveConfirm(false)} />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">הסרת שאלה</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">האם אתה בטוח שברצונך להסיר את השאלה? יוצרה יקבל הודעה. פעולה זו לא ניתנת לביטול.</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-3">האם אתה בטוח שברצונך להסיר את השאלה? יוצרה יקבל הודעה הכוללת את סיבת ההסרה ויוכל להגיש ערעור.</p>
+            <form onSubmit={handleConfirmRemove} className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">סיבת ההסרה (חובה)</label>
+              <textarea
+                value={deletionReason}
+                onChange={(e) => setDeletionReason(e.target.value)}
+                className="w-full min-h-[80px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-y"
+                placeholder="נא להסביר מדוע השאלה מוסרת..."
+                required
+              />
+            </form>
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
@@ -1034,8 +1056,8 @@ export default function QuestionDetailPage() {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmRemove}
-                disabled={removing}
+                onClick={() => handleConfirmRemove()}
+                disabled={removing || !deletionReason.trim()}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {removing ? 'מסיר...' : 'הסר שאלה'}

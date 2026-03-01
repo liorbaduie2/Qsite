@@ -1,6 +1,7 @@
 // app/api/permissions/deduct-reputation/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -113,6 +114,18 @@ export async function POST(request: NextRequest) {
         error: 'חסר סוג עונש או כמות ניכוי'
       }, { status: 400 })
     }
+
+    const userClient = await createClient()
+    await userClient.rpc('log_admin_activity', {
+      p_action_type: 'reputation_deducted',
+      p_target_type: 'user',
+      p_target_id: targetUserId,
+      p_details: {
+        reason: reason || reasonHebrew || '',
+        penaltyType: penaltyType ?? null,
+        customAmount: customAmount ?? null,
+      },
+    })
 
     return NextResponse.json({
       success: true,

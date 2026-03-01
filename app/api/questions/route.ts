@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
             name
           )
         )
-      `);
+      `)
+      .is('deleted_at', null);
 
     if (search) {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);

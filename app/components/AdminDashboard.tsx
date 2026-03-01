@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, ElementType } from 'react';
+import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { useAuth } from './AuthProvider';
 import { suspendUser } from '@/lib/permissions';
@@ -34,7 +35,10 @@ import {
     PlusCircle,
     FileQuestion,
     Trash2,
-    Check
+    Check,
+    ScrollText,
+    History,
+    ArrowRight
 } from 'lucide-react';
 
 const supabase = createBrowserClient(
@@ -97,6 +101,34 @@ interface QuestionRemovalRequest {
     createdAt: string;
 }
 
+interface QuestionDeletionAppeal {
+    id: string;
+    activityLogId: string;
+    userId: string;
+    username: string;
+    appealMessage: string;
+    status: string;
+    decidedBy?: string;
+    decidedByUsername?: string | null;
+    decidedAt?: string | null;
+    createdAt: string;
+    questionTitle: string;
+    deletionReason: string;
+    deletionDate?: string | null;
+}
+
+interface ActivityLogEntry {
+    id: string;
+    actionType: string;
+    actionLabel: string;
+    actorId: string | null;
+    actorUsername: string;
+    targetType: string | null;
+    targetId: string | null;
+    details: unknown;
+    createdAt: string;
+}
+
 interface PenaltyType {
     penalty_type: string;
     points_deduction: number;
@@ -120,6 +152,19 @@ interface UserManagementModalProps {
     loading: boolean;
     onAction: (message: string, isError: boolean) => void;
 }
+
+/** Default reason template for suspension. Admin can edit before confirming. */
+const DEFAULT_PUNISHMENT_REASON_TEMPLATE = 'חשבונך קיבל פעולה זו בשל הפרת כללי הפלטפורמה. אנא עיין בכללים הרלוונטיים כדי למנוע בעיות בעתיד.';
+
+/** Per–penalty-type default reason templates for ניכוי מוניטין. Admin can edit before confirming. */
+const PENALTY_REASON_TEMPLATES: Record<string, string> = {
+    spam: 'חשבונך קיבל פעולה זו בשל פרסום ספאם. אנא הימנע מכך בעתיד ועיין בכללי הפלטפורמה.',
+    inappropriate_content: 'חשבונך קיבל פעולה זו בשל תוכן לא הולם. אנא עיין בכללי הקהילה כדי למנוע בעיות בעתיד.',
+    rule_violation: 'חשבונך קיבל פעולה זו בשל הפרת חוקי האתר. אנא עיין בכללים הרלוונטיים כדי למנוע בעיות בעתיד.',
+    harassment: 'חשבונך קיבל פעולה זו בשל הטרדה. אנא כבד משתמשים אחרים ועיין בכללי הפלטפורמה.',
+    plagiarism: 'חשבונך קיבל פעולה זו בשל העתקת תוכן. אנא ציין מקורות וזכויות יוצרים בהתאם לכללים.',
+    abuse: 'חשבונך קיבל פעולה זו בשל שימוש לרעה בפלטפורמה. אנא עיין בכללים הרלוונטיים כדי למנוע בעיות בעתיד.',
+};
 
 interface StatCardProps {
   title: string;
@@ -313,7 +358,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, colorClas
 
 const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen, onClose, loading, onAction }) => {
     const { userPermissions } = useAuth();
-    const [activeTab, setActiveTab] = useState<'role' | 'actions'>('role');
+    const [activeTab, setActiveTab] = useState<'role' | 'actions' | 'logs'>('role');
 
     // Suspension state
     const [suspensionHours, setSuspensionHours] = useState(24);
@@ -334,6 +379,10 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
     const [selectedRole, setSelectedRole] = useState('user');
     const [roleReason, setRoleReason] = useState('');
     const [isHiddenRole, setIsHiddenRole] = useState(false);
+
+    // User activity log (owner only)
+    const [userActivityLog, setUserActivityLog] = useState<ActivityLogEntry[]>([]);
+    const [userLogsLoading, setUserLogsLoading] = useState(false);
 
     const roleOptions = [
         { value: 'owner', label: 'בעלים', description: 'גישה מלאה לכל הפונקציות', icon: Crown, color: 'text-yellow-500' },
@@ -364,16 +413,44 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
         };
 
         if (isOpen && user) {
-            // Reset states on modal open
+            // Reset states on modal open; pre-fill suspension reason; penalty reason set per type in effect below
             setSelectedRole(user.role || 'user');
             setIsHiddenRole(user.is_hidden || false);
             setRoleReason('');
-            setSuspensionReason('');
+            setSuspensionReason(DEFAULT_PUNISHMENT_REASON_TEMPLATE);
             setPenaltyReason('');
             setActiveTab(userPermissions?.can_manage_user_ranks ? 'role' : 'actions');
+            setUserActivityLog([]);
             loadPenaltyTypes();
         }
     }, [isOpen, user, userPermissions]);
+
+    // When penalty type (סוג עונש) changes, pre-fill reason with that type's template
+    useEffect(() => {
+        if (isOpen && user && selectedPenaltyType) {
+            setPenaltyReason(PENALTY_REASON_TEMPLATES[selectedPenaltyType] ?? DEFAULT_PUNISHMENT_REASON_TEMPLATE);
+        }
+    }, [isOpen, user, selectedPenaltyType]);
+
+    // Load user activity log when logs tab is selected (owner only)
+    useEffect(() => {
+        if (!isOpen || !user || activeTab !== 'logs' || userPermissions?.role !== 'owner') return;
+        let cancelled = false;
+        const load = async () => {
+            setUserLogsLoading(true);
+            try {
+                const res = await fetch(`/api/admin/activity-log?actor_id=${encodeURIComponent(user.id)}&limit=100`);
+                const data = await res.json();
+                if (!cancelled && res.ok && data.entries) setUserActivityLog(data.entries);
+            } catch {
+                if (!cancelled) setUserActivityLog([]);
+            } finally {
+                if (!cancelled) setUserLogsLoading(false);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
+    }, [isOpen, user?.id, activeTab, userPermissions?.role]);
 
     if (!isOpen || !user) return null;
 
@@ -493,6 +570,10 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
 
     const selectedPenalty = penaltyTypes.find(p => p.penalty_type === selectedPenaltyType);
 
+    // Require admin to edit the reason so it is unique and serious (cannot submit the default template as-is)
+    const currentPenaltyTemplate = (PENALTY_REASON_TEMPLATES[selectedPenaltyType] ?? DEFAULT_PUNISHMENT_REASON_TEMPLATE).trim();
+    const isPenaltyReasonUnchanged = usePenaltyType && !!selectedPenaltyType && penaltyReason.trim() === currentPenaltyTemplate;
+
     return (
         <div className="fixed inset-0 bg-black/60 dark:bg-black/70 flex items-center justify-center z-50 transition-opacity duration-300" dir="rtl">
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[95vh] flex flex-col transform transition-all duration-300 scale-95 animate-in fade-in-0 zoom-in-95">
@@ -530,6 +611,12 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                          <button onClick={() => setActiveTab('actions')} className={`flex-1 py-3 px-4 font-semibold text-center transition-colors duration-200 flex items-center justify-center gap-2 ${activeTab === 'actions' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500 bg-white dark:bg-slate-800' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}>
                             <AlertTriangle className="w-5 h-5" />
                             פעולות משמעתיות
+                        </button>
+                    )}
+                    {userPermissions?.role === 'owner' && (
+                        <button onClick={() => setActiveTab('logs')} className={`flex-1 py-3 px-4 font-semibold text-center transition-colors duration-200 flex items-center justify-center gap-2 ${activeTab === 'logs' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500 bg-white dark:bg-slate-800' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}>
+                            <History className="w-5 h-5" />
+                            יומן פעילות
                         </button>
                     )}
                 </div>
@@ -627,8 +714,11 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                                     <div>
                                         <label className="text-sm font-medium text-slate-600 dark:text-slate-400">סיבה <span className="text-red-500">*</span></label>
                                         <textarea value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} className="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" rows={3} placeholder="הסבר מדוע הנקודות מנוכות..."></textarea>
+                                        {isPenaltyReasonUnchanged && (
+                                            <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">יש לערוך את הסיבה (להתאים למקרה הספציפי) לפני אישור העונש.</p>
+                                        )}
                                     </div>
-                                    <button onClick={handleApplyPenalty} disabled={loading || !penaltyReason.trim() || (!usePenaltyType && customAmount > (userPermissions.max_reputation_deduction || 0))} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-all shadow-sm disabled:opacity-50">
+                                    <button onClick={handleApplyPenalty} disabled={loading || !penaltyReason.trim() || isPenaltyReasonUnchanged || (!usePenaltyType && customAmount > (userPermissions.max_reputation_deduction || 0))} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-all shadow-sm disabled:opacity-50">
                                         {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'החל עונש'}
                                     </button>
                                 </div>
@@ -682,6 +772,44 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                             )}
                         </div>
                     )}
+
+                    {/* User Activity Log Tab (owner only) */}
+                    {activeTab === 'logs' && userPermissions?.role === 'owner' && (
+                        <div className="animate-in fade-in-0 duration-500">
+                            <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">פעולות ניהול שבוצעו על ידי משתמש זה</h4>
+                            {userLogsLoading ? (
+                                <div className="flex items-center justify-center py-8 gap-2 text-slate-500">
+                                    <RefreshCw className="w-5 h-5 animate-spin" />
+                                    <span>טוען יומן פעילות...</span>
+                                </div>
+                            ) : userActivityLog.length === 0 ? (
+                                <p className="text-slate-500 dark:text-slate-400 py-4">אין רשומות יומן פעילות עבור משתמש זה.</p>
+                            ) : (
+                                <div className="overflow-x-auto -mx-1">
+                                    <table className="w-full text-sm text-right border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 dark:border-slate-600">
+                                                <th className="py-2 px-2 font-semibold text-slate-700 dark:text-slate-300">תאריך</th>
+                                                <th className="py-2 px-2 font-semibold text-slate-700 dark:text-slate-300">פעולה</th>
+                                                <th className="py-2 px-2 font-semibold text-slate-700 dark:text-slate-300">פרטים</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {userActivityLog.map(entry => (
+                                                <tr key={entry.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                                    <td className="py-2 px-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">{new Date(entry.createdAt).toLocaleString('he-IL')}</td>
+                                                    <td className="py-2 px-2 font-medium text-slate-800 dark:text-slate-200">{entry.actionLabel}</td>
+                                                    <td className="py-2 px-2 text-slate-600 dark:text-slate-400">
+                                                        {entry.details && typeof entry.details === 'object' && 'reason' in entry.details ? String((entry.details as { reason?: string }).reason) : entry.targetType ? `${entry.targetType}: ${entry.targetId || ''}` : '—'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -700,12 +828,17 @@ const AdminDashboard: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal'>('applications');
+    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal' | 'appeals' | 'activityLog'>('applications');
 
     const [removalRequests, setRemovalRequests] = useState<QuestionRemovalRequest[]>([]);
     const [removalActionLoading, setRemovalActionLoading] = useState<string | null>(null);
+
+    const [appeals, setAppeals] = useState<QuestionDeletionAppeal[]>([]);
+    const [appealActionLoading, setAppealActionLoading] = useState<string | null>(null);
+    const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
     
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterUsersWithPermissions, setFilterUsersWithPermissions] = useState(false);
 
     const [selectedApplication, setSelectedApplication] = useState<UserApplication | null>(null);
     const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -750,6 +883,17 @@ const AdminDashboard: React.FC = () => {
                 const data = await res.json();
                 if (res.ok && Array.isArray(data.requests)) setRemovalRequests(data.requests);
                 else setRemovalRequests([]);
+            }
+
+            if (userPermissions.role === 'owner') {
+                const appealsRes = await fetch('/api/admin/question-deletion-appeals');
+                const appealsData = await appealsRes.json();
+                if (appealsRes.ok && Array.isArray(appealsData.appeals)) setAppeals(appealsData.appeals);
+                else setAppeals([]);
+                const logRes = await fetch('/api/admin/activity-log?limit=100');
+                const logData = await logRes.json();
+                if (logRes.ok && Array.isArray(logData.entries)) setActivityLog(logData.entries);
+                else setActivityLog([]);
             }
 
         } catch (err: unknown) {
@@ -932,15 +1076,47 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    const handleAppealDecision = async (appealId: string, action: 'approve' | 'reject') => {
+        if (userPermissions?.role !== 'owner') return;
+        setAppealActionLoading(appealId);
+        try {
+            const res = await fetch(`/api/admin/question-deletion-appeals/${appealId}/decision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'שגיאה בפעולה');
+                return;
+            }
+            setAppeals((prev) => prev.filter((a) => a.id !== appealId));
+            if (action === 'approve') {
+                alert('הערעור אושר והשאלה שוחזרה.');
+            } else {
+                alert('הערעור נדחה.');
+            }
+            loadDashboardData();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'שגיאה בפעולה');
+        } finally {
+            setAppealActionLoading(null);
+        }
+    };
+
     const filteredApplications = applications.filter(app =>
         app.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const filteredUsers = users.filter(user =>
-        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const ELEVATED_ROLES = ['owner', 'guardian', 'admin', 'moderator'];
+    const filteredUsers = users.filter(user => {
+        const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const hasPermissions = ELEVATED_ROLES.includes(user.role);
+        if (filterUsersWithPermissions) return matchesSearch && hasPermissions;
+        return matchesSearch;
+    });
 
     if (!userPermissions?.can_view_user_list) {
         return (
@@ -968,9 +1144,15 @@ const AdminDashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-gray-900" dir="rtl">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                 <header className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">פאנל ניהול</h1>
-                    <p className="text-slate-600 dark:text-slate-400 mt-1">ניהול בקשות הצטרפות וחברי הקהילה</p>
+                 <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">פאנל ניהול</h1>
+                        <p className="text-slate-600 dark:text-slate-400 mt-1">ניהול בקשות הצטרפות וחברי הקהילה</p>
+                    </div>
+                    <Link href="/" className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                        <ArrowRight className="w-4 h-4" />
+                        חזרה לדף הבית
+                    </Link>
                 </header>
 
                 {userPermissions && (
@@ -1031,6 +1213,8 @@ const AdminDashboard: React.FC = () => {
                         {userPermissions?.can_approve_registrations && <button onClick={() => setActiveTab('applications')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors ${activeTab === 'applications' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>בקשות ממתינות ({applications.length})</button>}
                         {userPermissions?.can_view_user_list && <button onClick={() => setActiveTab('users')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors ${activeTab === 'users' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>ניהול משתמשים ({users.length})</button>}
                         {(userPermissions?.role === 'owner' || userPermissions?.role === 'guardian') && <button onClick={() => setActiveTab('removal')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'removal' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><FileQuestion className="w-4 h-4" />בקשות להסרת שאלות ({removalRequests.length})</button>}
+                        {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('appeals')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'appeals' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><ScrollText className="w-4 h-4" />ערעורים ({appeals.filter(a => a.status === 'pending').length})</button>}
+                        {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('activityLog')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'activityLog' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><History className="w-4 h-4" />יומן פעילות</button>}
                     </div>
                 </div>
 
@@ -1038,11 +1222,19 @@ const AdminDashboard: React.FC = () => {
                     <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
                             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                {activeTab === 'applications' ? `בקשות ממתינות (${filteredApplications.length})` : activeTab === 'removal' ? `בקשות להסרת שאלות (${removalRequests.length})` : `כל המשתמשים (${filteredUsers.length})`}
+                                {activeTab === 'applications' ? `בקשות ממתינות (${filteredApplications.length})` : activeTab === 'removal' ? `בקשות להסרת שאלות (${removalRequests.length})` : activeTab === 'appeals' ? `ערעורים (${appeals.length})` : activeTab === 'activityLog' ? 'יומן פעילות' : (filterUsersWithPermissions ? `משתמשים עם הרשאות (${filteredUsers.length})` : `כל המשתמשים (${filteredUsers.length})`)}
                             </h2>
-                            <button onClick={loadDashboardData} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border dark:border-slate-600" disabled={loading}>
-                                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />רענן
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {activeTab === 'users' && (
+                                    <button onClick={() => setFilterUsersWithPermissions(prev => !prev)} className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors border ${filterUsersWithPermissions ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700' : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600'}`}>
+                                        <Shield className="w-4 h-4" />
+                                        משתמשים עם הרשאות
+                                    </button>
+                                )}
+                                <button onClick={loadDashboardData} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border dark:border-slate-600" disabled={loading}>
+                                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />רענן
+                                </button>
+                            </div>
                         </div>
                          <div className="relative">
                             <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -1109,7 +1301,15 @@ const AdminDashboard: React.FC = () => {
                                         {req.reason && <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">{req.reason}</p>}
                                         <div className="text-sm text-slate-500 dark:text-slate-400">נוצר {timeAgo(req.createdAt)}</div>
                                     </div>
-                                    <div className="flex-shrink-0 flex items-center gap-2 mt-3 sm:mt-0">
+                                    <div className="flex-shrink-0 flex items-center gap-2 mt-3 sm:mt-0 flex-wrap">
+                                        <Link
+                                            href={`/questions/${req.questionId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg font-semibold hover:bg-slate-700 transition-all"
+                                        >
+                                            <Eye className="w-4 h-4" />צפה בשאלה
+                                        </Link>
                                         <button
                                             onClick={() => handleRemovalDecision(req.id, 'approve')}
                                             disabled={removalActionLoading === req.id}
@@ -1127,6 +1327,60 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 </div>
                             )) : <div className="p-12 text-center"><FileQuestion className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">אין בקשות להסרת שאלות ממתינות</h3></div>}
+                         </div>
+                    )}
+
+                    {activeTab === 'appeals' && (
+                         <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                            {appeals.length > 0 ? appeals.map((a) => (
+                                <div key={a.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-200">
+                                    <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1">{a.questionTitle || 'שאלה'}</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">ערעור מ: {a.username}</p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-1"><span className="font-semibold">סיבת ההסרה:</span> {a.deletionReason}</p>
+                                    <p className="text-sm text-slate-700 dark:text-slate-200 mb-2">{a.appealMessage}</p>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${a.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200' : a.status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : 'bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-200'}`}>{a.status === 'pending' ? 'ממתין' : a.status === 'approved' ? 'אושר' : 'נדחה'}</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">נוצר {timeAgo(a.createdAt)}</span>
+                                    </div>
+                                    {a.status === 'pending' && (
+                                        <div className="flex gap-2 mt-3">
+                                            <button onClick={() => handleAppealDecision(a.id, 'approve')} disabled={appealActionLoading === a.id} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 text-sm">
+                                                {appealActionLoading === a.id ? '...' : <><Check className="w-4 h-4" />אשר (שחזר שאלה)</>}
+                                            </button>
+                                            <button onClick={() => handleAppealDecision(a.id, 'reject')} disabled={appealActionLoading === a.id} className="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg font-semibold hover:bg-slate-600 disabled:opacity-50 text-sm">
+                                                <XCircle className="w-4 h-4" />דחה
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )) : <div className="p-12 text-center"><ScrollText className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">אין ערעורים</h3></div>}
+                         </div>
+                    )}
+
+                    {activeTab === 'activityLog' && (
+                         <div className="divide-y divide-slate-200 dark:divide-slate-700 overflow-x-auto">
+                            {activityLog.length > 0 ? (
+                                <table className="w-full text-right">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 dark:border-slate-700">
+                                            <th className="p-3 text-sm font-semibold text-slate-700 dark:text-slate-300">תאריך</th>
+                                            <th className="p-3 text-sm font-semibold text-slate-700 dark:text-slate-300">פעולה</th>
+                                            <th className="p-3 text-sm font-semibold text-slate-700 dark:text-slate-300">מבצע</th>
+                                            <th className="p-3 text-sm font-semibold text-slate-700 dark:text-slate-300">פרטים</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {activityLog.map((entry) => (
+                                            <tr key={entry.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                                <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{timeAgo(entry.createdAt)}</td>
+                                                <td className="p-3 text-sm font-medium text-slate-800 dark:text-slate-200">{entry.actionLabel}</td>
+                                                <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{entry.actorUsername || '-'}</td>
+                                                <td className="p-3 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">{typeof entry.details === 'object' && entry.details !== null && 'reason' in entry.details ? String((entry.details as { reason?: string }).reason) : '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : <div className="p-12 text-center"><History className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">אין רשומות</h3></div>}
                          </div>
                     )}
                 </main>

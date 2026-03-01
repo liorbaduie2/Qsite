@@ -40,6 +40,7 @@ export async function GET(
         )
       `)
       .eq('id', id)
+      .is('deleted_at', null)
       .single();
 
     if (error || !question) {
@@ -144,8 +145,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
 
+    const body = await request.json().catch(() => ({}));
+    const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';
+    if (!reason) {
+      return NextResponse.json({ error: 'נא לציין סיבת ההסרה' }, { status: 400 });
+    }
+
     const { data: result, error } = await supabase.rpc('delete_question_as_admin', {
       p_question_id: id,
+      p_deletion_reason: reason,
     });
 
     if (error) {

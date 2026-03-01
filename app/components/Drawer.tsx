@@ -15,6 +15,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 interface MenuItem {
@@ -77,6 +78,7 @@ const Drawer: React.FC<DrawerProps> = ({
     status_id?: string | null;
     is_read: boolean;
     created_at: string;
+    metadata?: { activity_log_id?: string } | null;
   }>>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
@@ -391,30 +393,43 @@ const Drawer: React.FC<DrawerProps> = ({
                               : n.status_id
                                 ? "/status"
                                 : "#";
+                            const activityLogId = n.metadata?.activity_log_id;
+                            const showAppeal = n.type === "question_removed" && activityLogId;
                             return (
                               <li key={n.id}>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!n.is_read) {
-                                      try {
-                                        await fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" });
-                                        setNotificationUnreadCount((c) => Math.max(0, c - 1));
-                                      } catch {
-                                        // ignore
+                                <div className="px-3 py-2.5">
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (!n.is_read) {
+                                        try {
+                                          await fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" });
+                                          setNotificationUnreadCount((c) => Math.max(0, c - 1));
+                                        } catch {
+                                          // ignore
+                                        }
                                       }
-                                    }
-                                    setNotificationsOpen(false);
-                                    if (href !== "#") {
-                                      setIsDrawerOpen(false);
-                                      window.location.href = href;
-                                    }
-                                  }}
-                                  className={`w-full text-right px-3 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors ${!n.is_read ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400"}`}
-                                >
-                                  <span className="block truncate">{n.title}</span>
-                                  <span className="block truncate text-xs mt-0.5 opacity-80">{n.message}</span>
-                                </button>
+                                      setNotificationsOpen(false);
+                                      if (href !== "#") {
+                                        setIsDrawerOpen(false);
+                                        window.location.href = href;
+                                      }
+                                    }}
+                                    className={`w-full text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors ${!n.is_read ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400"}`}
+                                  >
+                                    <span className="block truncate">{n.title}</span>
+                                    <span className="block truncate text-xs mt-0.5 opacity-80">{n.message}</span>
+                                  </button>
+                                  {showAppeal && (
+                                    <Link
+                                      href={`/appeal/question-deletion?activity_log_id=${encodeURIComponent(activityLogId)}`}
+                                      onClick={() => { setNotificationsOpen(false); setIsDrawerOpen(false); }}
+                                      className="mt-1.5 inline-block text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                                    >
+                                      ערעור
+                                    </Link>
+                                  )}
+                                </div>
                               </li>
                             );
                           })}

@@ -1,6 +1,7 @@
 //app/api/permissions/suspend-user/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +38,14 @@ export async function POST(request: NextRequest) {
       const message = (data as { message_hebrew?: string }).message_hebrew || (data as { message?: string }).message || 'הפעולה נכשלה'
       return NextResponse.json({ error: message }, { status: 403 })
     }
+
+    const userClient = await createClient()
+    await userClient.rpc('log_admin_activity', {
+      p_action_type: 'user_suspended',
+      p_target_type: 'user',
+      p_target_id: targetUserId,
+      p_details: { reason: reason || '', hours: hours ?? 0 },
+    })
 
     return NextResponse.json({ data })
   } catch (error) {
