@@ -1,7 +1,7 @@
 //app/profile/page.tsx - Updated for Dark/Light Mode
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -22,13 +22,13 @@ import {
 import { useAuth } from "../components/AuthProvider";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useDelayedSkeleton } from "../hooks/useDelayedSkeleton";
 import {
   SkeletonBlock,
   SkeletonCircle,
   SkeletonText,
 } from "../components/ui/Skeleton";
 import { formatRelativeTime } from "../../lib/utils";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
 
 interface ProfileQuestion {
   id: string;
@@ -224,7 +224,24 @@ export default function ProfilePage() {
   const [likers, setLikers] = useState<
     { id: string; username: string; avatar_url: string | null }[]
   >([]);
-  const [likersLoading, setLikersLoading] = useState(false);
+  const [countsReady, setCountsReady] = useState(false);
+  const [preloadCounts, setPreloadCounts] = useState<{
+    questions_count: number;
+    answers_count: number;
+    profile_likes_count: number;
+  } | null>(null);
+  const [questionsTotal, setQuestionsTotal] = useState(0);
+  const [repliesTotal, setRepliesTotal] = useState(0);
+  const [likersTotal, setLikersTotal] = useState(0);
+  const [loadingMoreQuestions, setLoadingMoreQuestions] = useState(false);
+  const [loadingMoreReplies, setLoadingMoreReplies] = useState(false);
+  const [loadingMoreLikers, setLoadingMoreLikers] = useState(false);
+  const questionsScrollRef = useRef<HTMLDivElement>(null);
+  const questionsSentinelRef = useRef<HTMLDivElement>(null);
+  const repliesScrollRef = useRef<HTMLDivElement>(null);
+  const repliesSentinelRef = useRef<HTMLDivElement>(null);
+  const likersScrollRef = useRef<HTMLDivElement>(null);
+  const likersSentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -263,21 +280,52 @@ export default function ProfilePage() {
       .catch(() => setSharedStatus(null));
   }, [user]);
 
+  // Phase 1: Fetch only counts. Skeleton hides when profile + counts are ready.
   useEffect(() => {
-    if (!profile?.username) return;
-    fetch(`/api/profile/${encodeURIComponent(profile.username)}`)
+    if (!profile?.username) {
+      setCountsReady(true);
+      return;
+    }
+    setCountsReady(false);
+    fetch(`/api/profile/${encodeURIComponent(profile.username)}/counts`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setPreloadCounts({
+            questions_count: typeof data.questions_count === "number" ? data.questions_count : 0,
+            answers_count: typeof data.answers_count === "number" ? data.answers_count : 0,
+            profile_likes_count: typeof data.profile_likes_count === "number" ? data.profile_likes_count : 0,
+          });
+        }
+        setCountsReady(true);
+      })
+      .catch(() => setCountsReady(true));
+  }, [profile?.username]);
+
+  // Phase 2: After profile is visible, fetch detail lists in background. Does not affect skeleton.
+  useEffect(() => {
+    if (!profile?.username || !countsReady) return;
+    fetch(`/api/profile/${encodeURIComponent(profile.username)}/preload`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
           setUserQuestions(Array.isArray(data.questions) ? data.questions : []);
           setUserReplies(Array.isArray(data.replies) ? data.replies : []);
+          setLikers(Array.isArray(data.likers) ? data.likers : []);
+          setQuestionsTotal(typeof data.questions_total === "number" ? data.questions_total : data.questions?.length ?? 0);
+          setRepliesTotal(typeof data.replies_total === "number" ? data.replies_total : data.replies?.length ?? 0);
+          setLikersTotal(typeof data.likers_total === "number" ? data.likers_total : data.likers?.length ?? 0);
         }
       })
       .catch(() => {
         setUserQuestions([]);
         setUserReplies([]);
+        setLikers([]);
+        setQuestionsTotal(0);
+        setRepliesTotal(0);
+        setLikersTotal(0);
       });
-  }, [profile?.username]);
+  }, [profile?.username, countsReady]);
 
   useEffect(() => {
     if (!profile?.username) return;
@@ -336,8 +384,7 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
   const isProfileLoading = loading && !profile;
-  const showSkeleton = useDelayedSkeleton(isProfileLoading);
-  const isSkeleton = showSkeleton && isProfileLoading;
+  const isSkeleton = !profile || !countsReady;
 
   if (!loading && !user) {
     return (
@@ -360,12 +407,75 @@ export default function ProfilePage() {
   const joinedDate = profile?.created_at || new Date().toISOString();
   const reputation = profile?.reputation ?? 0;
   const { textClass: reputationTextClass } = getReputationVisuals(reputation);
-  const questionsAsked = Math.max(
-    userQuestions.length,
-    profile?.questions_count ?? 0,
-  );
-  const answersGiven = profile?.answers_count ?? 0;
-  const profileLikesCount = profile?.profile_likes_count ?? 0;
+  const questionsAsked = preloadCounts
+    ? preloadCounts.questions_count
+    : Math.max(userQuestions.length, profile?.questions_count ?? 0);
+  const answersGiven = preloadCounts?.answers_count ?? profile?.answers_count ?? 0;
+  const profileLikesCount = preloadCounts?.profile_likes_count ?? profile?.profile_likes_count ?? 0;
+
+  const loadMoreQuestions = useCallback(() => {
+    if (!profile?.username || loadingMoreQuestions || userQuestions.length >= questionsTotal) return;
+    setLoadingMoreQuestions(true);
+    fetch(
+      `/api/profile/${encodeURIComponent(profile.username)}/questions?limit=20&offset=${userQuestions.length}`
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.questions?.length) {
+          setUserQuestions((prev) => [...prev, ...data.questions]);
+        }
+      })
+      .finally(() => setLoadingMoreQuestions(false));
+  }, [profile?.username, loadingMoreQuestions, userQuestions.length, questionsTotal]);
+
+  const loadMoreReplies = useCallback(() => {
+    if (!profile?.username || loadingMoreReplies || userReplies.length >= repliesTotal) return;
+    setLoadingMoreReplies(true);
+    fetch(
+      `/api/profile/${encodeURIComponent(profile.username)}/replies?limit=20&offset=${userReplies.length}`
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.replies?.length) {
+          setUserReplies((prev) => [...prev, ...data.replies]);
+        }
+      })
+      .finally(() => setLoadingMoreReplies(false));
+  }, [profile?.username, loadingMoreReplies, userReplies.length, repliesTotal]);
+
+  const loadMoreLikers = useCallback(() => {
+    if (!profile?.username || loadingMoreLikers || likers.length >= likersTotal) return;
+    setLoadingMoreLikers(true);
+    fetch(
+      `/api/profile/${encodeURIComponent(profile.username)}/likes?limit=20&offset=${likers.length}`
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.likers?.length) {
+          setLikers((prev) => [...prev, ...data.likers]);
+        }
+      })
+      .finally(() => setLoadingMoreLikers(false));
+  }, [profile?.username, loadingMoreLikers, likers.length, likersTotal]);
+
+  useInfiniteScroll(questionsScrollRef, questionsSentinelRef, {
+    hasMore: userQuestions.length < questionsTotal,
+    loading: loadingMoreQuestions,
+    loadMore: loadMoreQuestions,
+    enabled: expandedSection === "questions",
+  });
+  useInfiniteScroll(repliesScrollRef, repliesSentinelRef, {
+    hasMore: userReplies.length < repliesTotal,
+    loading: loadingMoreReplies,
+    loadMore: loadMoreReplies,
+    enabled: expandedSection === "answers",
+  });
+  useInfiniteScroll(likersScrollRef, likersSentinelRef, {
+    hasMore: likers.length < likersTotal,
+    loading: loadingMoreLikers,
+    loadMore: loadMoreLikers,
+    enabled: expandedSection === "likers",
+  });
 
   const playlistInfo = getPlaylistInfo(
     isEditing ? editForm.website : profile?.website,
@@ -680,7 +790,7 @@ export default function ProfilePage() {
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
               {isSkeleton ? (
                 <div className="space-y-4">
-                  <SkeletonText className="w-48 h-5" />
+                  <SkeletonText className="w-48 h-5 mx-auto" />
                   <div className="grid grid-cols-3 gap-3">
                     {[0, 1, 2].map((idx) => (
                       <div
@@ -749,28 +859,11 @@ export default function ProfilePage() {
                     </button>
                     <button
                       type="button"
-                      onClick={async () => {
-                        const next =
-                          expandedSection === "likers" ? null : "likers";
-                        setExpandedSection(next);
-                        if (
-                          next === "likers" &&
-                          likers.length === 0 &&
-                          profile?.username
-                        ) {
-                          setLikersLoading(true);
-                          try {
-                            const res = await fetch(
-                              `/api/profile/${encodeURIComponent(profile.username)}/likes`,
-                            );
-                            const data = await res.json();
-                            if (res.ok && Array.isArray(data.likers))
-                              setLikers(data.likers);
-                          } finally {
-                            setLikersLoading(false);
-                          }
-                        }
-                      }}
+                      onClick={() =>
+                        setExpandedSection((s) =>
+                          s === "likers" ? null : "likers",
+                        )
+                      }
                       className="flex items-center gap-3 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-gradient-to-br from-purple-50 to-purple-100/80 dark:from-purple-900/20 dark:to-purple-800/20 hover:from-purple-100 hover:to-purple-200/80 dark:hover:from-purple-800/30 dark:hover:to-purple-700/30 transition-colors text-right cursor-pointer"
                     >
                       <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-500/15 dark:bg-purple-500/25">
@@ -796,7 +889,10 @@ export default function ProfilePage() {
                     }`}
                   >
                     {expandedSection === "questions" && (
-                      <div className="pt-4 mt-4 h-[280px] overflow-y-auto">
+                      <div
+                        ref={questionsScrollRef}
+                        className="pt-4 mt-4 h-[280px] overflow-y-auto"
+                      >
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                           השאלות שלי
                         </h4>
@@ -805,26 +901,37 @@ export default function ProfilePage() {
                             אין שאלות עדיין.
                           </p>
                         ) : (
-                          <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                            {userQuestions.map((q) => (
-                              <li key={q.id} className="py-3 first:pt-0">
-                                <Link
-                                  href={`/questions/${q.id}`}
-                                  className="text-indigo-600 dark:text-indigo-400 hover:underline block font-medium"
-                                >
-                                  {q.title}
-                                </Link>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
-                                  {formatRelativeTime(q.created_at)}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
+                          <>
+                            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                              {userQuestions.map((q) => (
+                                <li key={q.id} className="py-3 first:pt-0">
+                                  <Link
+                                    href={`/questions/${q.id}`}
+                                    className="text-indigo-600 dark:text-indigo-400 hover:underline block font-medium"
+                                  >
+                                    {q.title}
+                                  </Link>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                                    {formatRelativeTime(q.created_at)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div ref={questionsSentinelRef} className="h-2" />
+                            {loadingMoreQuestions && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                                טוען...
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
                     {expandedSection === "answers" && (
-                      <div className="pt-4 mt-4 h-[280px] overflow-y-auto">
+                      <div
+                        ref={repliesScrollRef}
+                        className="pt-4 mt-4 h-[280px] overflow-y-auto"
+                      >
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                           התשובות שלי
                         </h4>
@@ -833,73 +940,88 @@ export default function ProfilePage() {
                             אין תשובות עדיין.
                           </p>
                         ) : (
-                          <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                            {userReplies.map((r) => (
-                              <li key={r.id} className="py-3 first:pt-0">
-                                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                                  {r.content}
-                                </p>
-                                <Link
-                                  href={`/questions/${r.question_id}`}
-                                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 block"
-                                >
-                                  {r.question_title ?? "שאלה"}
-                                </Link>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
-                                  {formatRelativeTime(r.created_at)}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
+                          <>
+                            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                              {userReplies.map((r) => (
+                                <li key={r.id} className="py-3 first:pt-0">
+                                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                                    {r.content}
+                                  </p>
+                                  <Link
+                                    href={`/questions/${r.question_id}`}
+                                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 block"
+                                  >
+                                    {r.question_title ?? "שאלה"}
+                                  </Link>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
+                                    {formatRelativeTime(r.created_at)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div ref={repliesSentinelRef} className="h-2" />
+                            {loadingMoreReplies && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                                טוען...
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
                     {expandedSection === "likers" && (
-                      <div className="pt-4 mt-4 h-[280px] overflow-y-auto">
+                      <div
+                        ref={likersScrollRef}
+                        className="pt-4 mt-4 h-[280px] overflow-y-auto"
+                      >
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                           אנשים שאהבו את הפרופיל
                         </h4>
-                        {likersLoading ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            טוען...
-                          </p>
-                        ) : likers.length === 0 ? (
+                        {likers.length === 0 ? (
                           <p className="text-sm text-gray-500 dark:text-gray-400">
                             אין לייקים עדיין.
                           </p>
                         ) : (
-                          <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                            {likers.map((u) => (
-                              <li
-                                key={u.id}
-                                className="flex items-center gap-3 py-3 first:pt-0"
-                              >
-                                {u.avatar_url ? (
-                                  <Image
-                                    src={u.avatar_url}
-                                    alt={u.username}
-                                    width={36}
-                                    height={36}
-                                    className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                                  />
-                                ) : (
-                                  <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-                                    <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                                      {(u.username ?? "מ")
-                                        .charAt(0)
-                                        .toUpperCase()}
-                                    </span>
-                                  </div>
-                                )}
-                                <Link
-                                  href={`/profile/${encodeURIComponent(u.username)}`}
-                                  className="font-medium text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          <>
+                            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                              {likers.map((u) => (
+                                <li
+                                  key={u.id}
+                                  className="flex items-center gap-3 py-3 first:pt-0"
                                 >
-                                  {u.username}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
+                                  {u.avatar_url ? (
+                                    <Image
+                                      src={u.avatar_url}
+                                      alt={u.username}
+                                      width={36}
+                                      height={36}
+                                      className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                                    />
+                                  ) : (
+                                    <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                                      <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                                        {(u.username ?? "מ")
+                                          .charAt(0)
+                                          .toUpperCase()}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <Link
+                                    href={`/profile/${encodeURIComponent(u.username)}`}
+                                    className="font-medium text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                  >
+                                    {u.username}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                            <div ref={likersSentinelRef} className="h-2" />
+                            {loadingMoreLikers && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                                טוען...
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     )}

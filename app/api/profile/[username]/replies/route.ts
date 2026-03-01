@@ -5,9 +5,8 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 /**
- * GET /api/profile/[username]/likes
- * Returns list of users who liked this profile. Only for the profile owner (auth.uid() === profile id).
- * Query params: limit (default 20), offset (default 0). Returns { likers, total }.
+ * GET /api/profile/[username]/replies
+ * Paginated list of answers (replies) by this user. Owner only.
  */
 export async function GET(
   request: NextRequest,
@@ -36,7 +35,7 @@ export async function GET(
     }
 
     if (profileRow.id !== user.id) {
-      return NextResponse.json({ error: 'Only the profile owner can view who liked' }, { status: 403 });
+      return NextResponse.json({ error: 'Only the profile owner can view replies list' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -46,35 +45,42 @@ export async function GET(
     );
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10) || 0);
 
-    const { data: likes, count: total } = await supabase
-      .from('profile_likes')
-      .select('user_id', { count: 'exact' })
-      .eq('profile_id', profileRow.id)
+    const profileId = profileRow.id;
+
+    const { data: repliesRows, count: total } = await supabase
+      .from('answers')
+      .select('id, content, created_at, question_id', { count: 'exact' })
+      .eq('author_id', profileId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (!likes?.length) {
-      return NextResponse.json({ likers: [], total: total ?? 0 });
+    const questionIds = [...new Set((repliesRows || []).map((r) => r.question_id))];
+    let questionsById: Record<string, { title: string }> = {};
+    if (questionIds.length > 0) {
+      const { data: qRows } = await supabase
+        .from('questions')
+        .select('id, title')
+        .in('id', questionIds);
+      questionsById = (qRows || []).reduce<Record<string, { title: string }>>((acc, q) => {
+        acc[q.id] = { title: q.title };
+        return acc;
+      }, {});
     }
 
-    const userIds = likes.map((l) => l.user_id);
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, username, avatar_url')
-      .in('id', userIds);
+    const replies = (repliesRows || []).map((r) => ({
+      id: r.id,
+      content: r.content,
+      created_at: r.created_at,
+      question_id: r.question_id,
+      question_title: questionsById[r.question_id]?.title ?? null,
+    }));
 
-    const orderMap = new Map(userIds.map((id, i) => [id, i]));
-    const likers = (profiles || [])
-      .sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0))
-      .map((p) => ({
-        id: p.id,
-        username: p.username,
-        avatar_url: p.avatar_url ?? null,
-      }));
-
-    return NextResponse.json({ likers, total: total ?? likers.length });
+    return NextResponse.json({
+      replies,
+      total: total ?? replies.length,
+    });
   } catch (e) {
-    console.error('Profile likes list error:', e);
+    console.error('Profile replies list error:', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
