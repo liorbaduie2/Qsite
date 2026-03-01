@@ -14,7 +14,6 @@ import {
   Save,
   X,
   Camera,
-  BarChart3,
   Music,
   Star,
   Heart,
@@ -29,6 +28,7 @@ import {
   SkeletonCircle,
   SkeletonText,
 } from "../components/ui/Skeleton";
+import { formatRelativeTime } from "../../lib/utils";
 
 interface ProfileQuestion {
   id: string;
@@ -201,7 +201,6 @@ export default function ProfilePage() {
   const { user, profile, updateProfile, loading } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
   const [editForm, setEditForm] = useState({
     username: "",
     bio: "",
@@ -219,6 +218,13 @@ export default function ProfilePage() {
   const [userQuestions, setUserQuestions] = useState<ProfileQuestion[]>([]);
   const [userReplies, setUserReplies] = useState<ProfileReply[]>([]);
   const [profileComments, setProfileComments] = useState<ProfileComment[]>([]);
+  const [expandedSection, setExpandedSection] = useState<
+    "questions" | "answers" | "likers" | null
+  >(null);
+  const [likers, setLikers] = useState<
+    { id: string; username: string; avatar_url: string | null }[]
+  >([]);
+  const [likersLoading, setLikersLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -354,7 +360,10 @@ export default function ProfilePage() {
   const joinedDate = profile?.created_at || new Date().toISOString();
   const reputation = profile?.reputation ?? 0;
   const { textClass: reputationTextClass } = getReputationVisuals(reputation);
-  const questionsAsked = profile?.questions_count ?? 0;
+  const questionsAsked = Math.max(
+    userQuestions.length,
+    profile?.questions_count ?? 0,
+  );
   const answersGiven = profile?.answers_count ?? 0;
   const profileLikesCount = profile?.profile_likes_count ?? 0;
 
@@ -389,7 +398,7 @@ export default function ProfilePage() {
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 sticky top-8">
               {/* Profile Header */}
               <div className="text-center mb-4">
-                <div className="flex flex-col items-center justify-center mb-3">
+                <div className="flex flex-col items-center justify-center mb-2">
                   <div className="relative" style={{ width: 124, height: 124 }}>
                     {isSkeleton ? (
                       <div className="absolute inset-4 flex items-center justify-center">
@@ -433,7 +442,9 @@ export default function ProfilePage() {
                     ) : (
                       <>
                         מוניטין{" "}
-                        <span className={reputationTextClass}>{reputation}</span>{" "}
+                        <span className={reputationTextClass}>
+                          {reputation}
+                        </span>{" "}
                         נקודות
                       </>
                     )}
@@ -512,9 +523,7 @@ export default function ProfilePage() {
                           {sharedStatus.content}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                          {new Date(sharedStatus.createdAt).toLocaleDateString(
-                            "he-IL",
-                          )}
+                          {formatRelativeTime(sharedStatus.createdAt)}
                         </p>
                       </div>
                     )}
@@ -665,282 +674,352 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            {/* Tab Navigation */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 mb-6">
-              <div className="flex border-b border-gray-200 dark:border-gray-700">
-                {[
-                  { id: "overview", label: "סקירה כללית", icon: BarChart3 },
-                  { id: "questions", label: "השאלות שלי", icon: HelpCircle },
-                  { id: "answers", label: "התשובות שלי", icon: MessageSquare },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-medium transition-all duration-300 ${
-                      activeTab === tab.id
-                        ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20"
-                        : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50/50 dark:hover:bg-gray-700/50"
+          {/* Main Content - same layout as public profile */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Activity card */}
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+              {isSkeleton ? (
+                <div className="space-y-4">
+                  <SkeletonText className="w-48 h-5" />
+                  <div className="grid grid-cols-3 gap-3">
+                    {[0, 1, 2].map((idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40"
+                      >
+                        <SkeletonText className="w-16 h-6" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <HelpCircle size={20} className="text-indigo-500" />
+                    פעילות
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedSection((s) =>
+                          s === "questions" ? null : "questions",
+                        )
+                      }
+                      className="flex items-center gap-3 p-4 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-gradient-to-br from-blue-50 to-blue-100/80 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200/80 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 transition-colors text-right cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/15 dark:bg-blue-500/25">
+                        <HelpCircle
+                          size={22}
+                          className="text-blue-600 dark:text-blue-400"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 tabular-nums">
+                          {Number(questionsAsked)}
+                        </p>
+                        <p className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                          שאלות
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedSection((s) =>
+                          s === "answers" ? null : "answers",
+                        )
+                      }
+                      className="flex items-center gap-3 p-4 rounded-xl border border-emerald-200 dark:border-emerald-700/50 bg-gradient-to-br from-emerald-50 to-emerald-100/80 dark:from-emerald-900/20 dark:to-emerald-800/20 hover:from-emerald-100 hover:to-emerald-200/80 dark:hover:from-emerald-800/30 dark:hover:to-emerald-700/30 transition-colors text-right cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-500/15 dark:bg-emerald-500/25">
+                        <MessageSquare
+                          size={22}
+                          className="text-emerald-600 dark:text-emerald-400"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
+                          {answersGiven}
+                        </p>
+                        <p className="text-xs font-medium text-emerald-600/80 dark:text-emerald-400/80">
+                          תשובות
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const next =
+                          expandedSection === "likers" ? null : "likers";
+                        setExpandedSection(next);
+                        if (
+                          next === "likers" &&
+                          likers.length === 0 &&
+                          profile?.username
+                        ) {
+                          setLikersLoading(true);
+                          try {
+                            const res = await fetch(
+                              `/api/profile/${encodeURIComponent(profile.username)}/likes`,
+                            );
+                            const data = await res.json();
+                            if (res.ok && Array.isArray(data.likers))
+                              setLikers(data.likers);
+                          } finally {
+                            setLikersLoading(false);
+                          }
+                        }
+                      }}
+                      className="flex items-center gap-3 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-gradient-to-br from-purple-50 to-purple-100/80 dark:from-purple-900/20 dark:to-purple-800/20 hover:from-purple-100 hover:to-purple-200/80 dark:hover:from-purple-800/30 dark:hover:to-purple-700/30 transition-colors text-right cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-500/15 dark:bg-purple-500/25">
+                        <Heart
+                          size={22}
+                          className="text-purple-600 dark:text-purple-400"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 tabular-nums">
+                          {profileLikesCount}
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Slide-down content: fixed height, scroll inside for more */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      expandedSection
+                        ? "max-h-[320px] opacity-100"
+                        : "max-h-0 opacity-0"
                     }`}
                   >
-                    <tab.icon size={18} />
-                    {isSkeleton ? (
-                      <SkeletonText className="w-16 h-4" />
-                    ) : (
-                      tab.label
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div className="p-6">
-                {isSkeleton ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {[0, 1, 2, 3].map((idx) => (
-                        <div
-                          key={idx}
-                          className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <SkeletonCircle className="w-5 h-5" />
-                            <SkeletonText className="w-20" />
-                          </div>
-                          <SkeletonText className="w-10 h-6" />
-                        </div>
-                      ))}
-                    </div>
-                    <div>
-                      <SkeletonText className="w-32 h-5 mb-4" />
-                      <div className="space-y-3">
-                        {[0, 1, 2].map((idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
-                          >
-                            <div className="flex-1 space-y-2">
-                              <SkeletonText className="w-3/4 h-4" />
-                              <div className="flex items-center gap-4">
-                                <SkeletonText className="w-12 h-3" />
-                                <SkeletonText className="w-12 h-3" />
-                                <SkeletonText className="w-20 h-3" />
-                              </div>
-                            </div>
-                            <SkeletonCircle className="w-5 h-5" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {activeTab === "overview" && (
-                      <div className="space-y-6">
-                        {/* Statistics Cards */}
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700/50">
-                            <div className="flex items-center gap-2 mb-2">
-                              <HelpCircle
-                                className="text-blue-600 dark:text-blue-400"
-                                size={20}
-                              />
-                              <span className="font-semibold text-blue-800 dark:text-blue-200">
-                                שאלות
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                              {questionsAsked}
-                            </div>
-                          </div>
-
-                          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-200 dark:border-green-700/50">
-                            <div className="flex items-center gap-2 mb-2">
-                              <MessageSquare
-                                className="text-green-600 dark:text-green-400"
-                                size={20}
-                              />
-                              <span className="font-semibold text-green-800 dark:text-green-200">
-                                תשובות
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                              {answersGiven}
-                            </div>
-                          </div>
-
-                          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Heart
-                                className="text-purple-600 dark:text-purple-400"
-                                size={20}
-                              />
-                              <span className="font-semibold text-purple-800 dark:text-purple-200">
-                                לייקים לפרופיל
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                              {profileLikesCount}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Recent Activity */}
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                            פעילות אחרונה
-                          </h3>
-                          <div className="space-y-3">
-                            {userQuestions.length === 0 && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                אין שאלות עדיין.
-                              </p>
-                            )}
-                            {userQuestions.slice(0, 5).map((question) => (
-                              <Link
-                                key={question.id}
-                                href={`/questions/${question.id}`}
-                                className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
-                              >
-                                <h4 className="font-medium text-gray-800 dark:text-gray-200 flex-1">
-                                  {question.title}
-                                </h4>
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                  {new Date(question.created_at).toLocaleDateString("he-IL")}
-                                </span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Profile Comments (owner view with delete) */}
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                            תגובות על הפרופיל
-                          </h3>
-                          {profileComments.length === 0 && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              אין תגובות על הפרופיל שלך.
-                            </p>
-                          )}
-                          <div className="space-y-3">
-                            {profileComments.map((c) => (
-                              <div
-                                key={c.id}
-                                className="flex items-start justify-between gap-2 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-medium text-gray-800 dark:text-gray-200">
-                                      {c.author_username ?? "משתמש"}
-                                    </span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                      {new Date(c.created_at).toLocaleDateString("he-IL")}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                                    {c.content}
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!profile?.username) return;
-                                    const res = await fetch(
-                                      `/api/profile/${encodeURIComponent(profile.username)}/comments/${c.id}`,
-                                      { method: "DELETE" },
-                                    );
-                                    if (res.ok)
-                                      setProfileComments((prev) =>
-                                        prev.filter((x) => x.id !== c.id),
-                                      );
-                                  }}
-                                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                  title="מחק תגובה"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeTab === "questions" && (
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                            השאלות שלי ({userQuestions.length})
-                          </h3>
-                        </div>
-                        {userQuestions.length === 0 && (
+                    {expandedSection === "questions" && (
+                      <div className="pt-4 mt-4 h-[280px] overflow-y-auto">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          השאלות שלי
+                        </h4>
+                        {userQuestions.length === 0 ? (
                           <p className="text-sm text-gray-500 dark:text-gray-400">
                             אין שאלות עדיין.
                           </p>
+                        ) : (
+                          <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                            {userQuestions.map((q) => (
+                              <li key={q.id} className="py-3 first:pt-0">
+                                <Link
+                                  href={`/questions/${q.id}`}
+                                  className="text-indigo-600 dark:text-indigo-400 hover:underline block font-medium"
+                                >
+                                  {q.title}
+                                </Link>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                                  {formatRelativeTime(q.created_at)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
                         )}
-                        <div className="space-y-4">
-                          {userQuestions.map((question) => (
-                            <Link
-                              key={question.id}
-                              href={`/questions/${question.id}`}
-                              className="block p-4 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
-                            >
-                              <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-1">
-                                {question.title}
-                              </h4>
-                              <span className="text-sm text-gray-500 dark:text-gray-400">
-                                {new Date(question.created_at).toLocaleDateString("he-IL")}
-                              </span>
-                            </Link>
-                          ))}
-                        </div>
                       </div>
                     )}
-
-                    {activeTab === "answers" && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    {expandedSection === "answers" && (
+                      <div className="pt-4 mt-4 h-[280px] overflow-y-auto">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                           התשובות שלי
-                        </h3>
-                        {userReplies.length === 0 && (
-                          <div className="text-center py-12">
-                            <MessageSquare
-                              className="mx-auto text-gray-400 dark:text-gray-500 mb-4"
-                              size={48}
-                            />
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              התחל לענות על שאלות כדי לראות אותן כאן
-                            </p>
-                          </div>
+                        </h4>
+                        {userReplies.length === 0 ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            אין תשובות עדיין.
+                          </p>
+                        ) : (
+                          <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                            {userReplies.map((r) => (
+                              <li key={r.id} className="py-3 first:pt-0">
+                                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                                  {r.content}
+                                </p>
+                                <Link
+                                  href={`/questions/${r.question_id}`}
+                                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 block"
+                                >
+                                  {r.question_title ?? "שאלה"}
+                                </Link>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
+                                  {formatRelativeTime(r.created_at)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
                         )}
-                        <div className="space-y-3">
-                          {userReplies.map((r) => (
-                            <div
-                              key={r.id}
-                              className="p-4 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
-                            >
-                              <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 mb-2">
-                                {r.content}
-                              </p>
-                              <Link
-                                href={`/questions/${r.question_id}`}
-                                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-                              >
-                                {r.question_title ?? "שאלה"}
-                              </Link>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-                                {new Date(r.created_at).toLocaleDateString("he-IL")}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     )}
-                  </>
-                )}
-              </div>
+                    {expandedSection === "likers" && (
+                      <div className="pt-4 mt-4 h-[280px] overflow-y-auto">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          אנשים שאהבו את הפרופיל
+                        </h4>
+                        {likersLoading ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            טוען...
+                          </p>
+                        ) : likers.length === 0 ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            אין לייקים עדיין.
+                          </p>
+                        ) : (
+                          <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                            {likers.map((u) => (
+                              <li
+                                key={u.id}
+                                className="flex items-center gap-3 py-3 first:pt-0"
+                              >
+                                {u.avatar_url ? (
+                                  <Image
+                                    src={u.avatar_url}
+                                    alt={u.username}
+                                    width={36}
+                                    height={36}
+                                    className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                                    <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                                      {(u.username ?? "מ")
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
+                                <Link
+                                  href={`/profile/${encodeURIComponent(u.username)}`}
+                                  className="font-medium text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                >
+                                  {u.username}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* תגובות על הפרופיל - heading only, no box */}
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+              תגובות על הפרופיל
+            </h3>
+
+            {/* Comments list - same as public with avatar + delete */}
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+              {isSkeleton ? (
+                <div className="space-y-2">
+                  <SkeletonText className="w-full" />
+                  <SkeletonText className="w-4/5" />
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200 dark:divide-gray-600">
+                  {profileComments.length === 0 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                      אין תגובות על הפרופיל שלך.
+                    </p>
+                  )}
+                  {profileComments.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex gap-3 py-4 first:pt-0 last:pb-0"
+                    >
+                      <div className="flex-shrink-0">
+                        {c.author_username ? (
+                          <Link
+                            href={`/profile/${encodeURIComponent(c.author_username)}`}
+                            className="block"
+                          >
+                            {c.author_avatar_url ? (
+                              <Image
+                                src={c.author_avatar_url}
+                                alt={c.author_username}
+                                width={40}
+                                height={40}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600 hover:opacity-90 transition-opacity"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 border border-gray-200 dark:border-gray-600 flex items-center justify-center hover:opacity-90 transition-opacity">
+                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                                  {c.author_username.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </Link>
+                        ) : (
+                          <>
+                            {c.author_avatar_url ? (
+                              <Image
+                                src={c.author_avatar_url}
+                                alt=""
+                                width={40}
+                                height={40}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                                  מ
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {c.author_username ? (
+                            <Link
+                              href={`/profile/${encodeURIComponent(c.author_username)}`}
+                              className="font-semibold text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            >
+                              {c.author_username}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-gray-800 dark:text-gray-200">
+                              משתמש
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatRelativeTime(c.created_at)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                          {c.content}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!profile?.username) return;
+                            const res = await fetch(
+                              `/api/profile/${encodeURIComponent(profile.username)}/comments/${c.id}`,
+                              { method: "DELETE" },
+                            );
+                            if (res.ok)
+                              setProfileComments((prev) =>
+                                prev.filter((x) => x.id !== c.id),
+                              );
+                          }}
+                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="מחק תגובה"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

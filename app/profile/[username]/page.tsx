@@ -22,6 +22,7 @@ import {
   SkeletonCircle,
   SkeletonText,
 } from "../../components/ui/Skeleton";
+import { formatRelativeTime } from "../../../lib/utils";
 
 interface PublicProfile {
   id: string;
@@ -408,8 +409,8 @@ export default function PublicProfilePage() {
                         size={18}
                         className="text-gray-500 dark:text-gray-400"
                       />
-                      <span className="text-sm font-medium">
-                        {likesCount} לייקים
+                      <span className="text-sm font-medium tabular-nums">
+                        {likesCount}
                       </span>
                     </div>
                   )}
@@ -506,9 +507,7 @@ export default function PublicProfilePage() {
                           {sharedStatus.content}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                          {new Date(sharedStatus.createdAt).toLocaleDateString(
-                            "he-IL",
-                          )}
+                          {formatRelativeTime(sharedStatus.createdAt)}
                         </p>
                       </div>
                     )}
@@ -749,9 +748,7 @@ export default function PublicProfilePage() {
                             {questions[0].title}
                           </span>
                           <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-                            {new Date(
-                              questions[0].created_at,
-                            ).toLocaleDateString("he-IL")}
+                            {formatRelativeTime(questions[0].created_at)}
                           </span>
                         </Link>
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-2">
@@ -768,19 +765,12 @@ export default function PublicProfilePage() {
                               </Link>
                               <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
                                 {" "}
-                                {new Date(q.created_at).toLocaleDateString(
-                                  "he-IL",
-                                )}
+                                {formatRelativeTime(q.created_at)}
                               </span>
                             </li>
                           ))}
                         </ul>
                       </>
-                    )}
-                    {questions.length === 0 && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        אין שאלות עדיין.
-                      </p>
                     )}
                   </div>
                 </div>
@@ -788,11 +778,11 @@ export default function PublicProfilePage() {
             </div>
 
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                 תגובות על הפרופיל
               </h3>
               {isSkeleton ? (
-                <div className="space-y-2">
+                <div className="space-y-2 mt-4">
                   <SkeletonText className="w-full" />
                   <SkeletonText className="w-4/5" />
                 </div>
@@ -802,7 +792,7 @@ export default function PublicProfilePage() {
                     profile &&
                     profile.username !== authProfile?.username && (
                       <form
-                        className="mb-4"
+                        className="mt-4"
                         onSubmit={async (e) => {
                           e.preventDefault();
                           if (!commentContent.trim() || commentSubmitting)
@@ -845,32 +835,95 @@ export default function PublicProfilePage() {
                         </button>
                       </form>
                     )}
-                  <div className="space-y-3">
-                    {comments.length === 0 && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        אין תגובות עדיין.
-                      </p>
-                    )}
-                    {comments.map((c) => (
-                      <div
-                        key={c.id}
-                        className="p-3 rounded-lg bg-gray-50/80 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-gray-800 dark:text-gray-200">
-                            {c.author_username ?? "משתמש"}
-                          </span>
+                </>
+              )}
+            </div>
+
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+              {isSkeleton ? (
+                <div className="space-y-2">
+                  <SkeletonText className="w-full" />
+                  <SkeletonText className="w-4/5" />
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200 dark:divide-gray-600">
+                  {comments.length === 0 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                      אין תגובות עדיין.
+                    </p>
+                  )}
+                  {comments.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex gap-3 py-4 first:pt-0 last:pb-0"
+                    >
+                      <div className="flex-shrink-0">
+                        {c.author_username ? (
+                          <Link
+                            href={`/profile/${encodeURIComponent(c.author_username)}`}
+                            className="block"
+                          >
+                            {c.author_avatar_url ? (
+                              <Image
+                                src={c.author_avatar_url}
+                                alt={c.author_username}
+                                width={40}
+                                height={40}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600 hover:opacity-90 transition-opacity"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 border border-gray-200 dark:border-gray-600 flex items-center justify-center hover:opacity-90 transition-opacity">
+                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                                  {c.author_username.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </Link>
+                        ) : (
+                          <>
+                            {c.author_avatar_url ? (
+                              <Image
+                                src={c.author_avatar_url}
+                                alt=""
+                                width={40}
+                                height={40}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                                  מ
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {c.author_username ? (
+                            <Link
+                              href={`/profile/${encodeURIComponent(c.author_username)}`}
+                              className="font-semibold text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            >
+                              {c.author_username}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-gray-800 dark:text-gray-200">
+                              משתמש
+                            </span>
+                          )}
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(c.created_at).toLocaleDateString("he-IL")}
+                            {formatRelativeTime(c.created_at)}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                           {c.content}
                         </p>
                       </div>
-                    ))}
-                  </div>
-                </>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
