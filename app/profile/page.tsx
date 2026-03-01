@@ -292,9 +292,16 @@ export default function ProfilePage() {
       .then((data) => {
         if (data) {
           setPreloadCounts({
-            questions_count: typeof data.questions_count === "number" ? data.questions_count : 0,
-            answers_count: typeof data.answers_count === "number" ? data.answers_count : 0,
-            profile_likes_count: typeof data.profile_likes_count === "number" ? data.profile_likes_count : 0,
+            questions_count:
+              typeof data.questions_count === "number"
+                ? data.questions_count
+                : 0,
+            answers_count:
+              typeof data.answers_count === "number" ? data.answers_count : 0,
+            profile_likes_count:
+              typeof data.profile_likes_count === "number"
+                ? data.profile_likes_count
+                : 0,
           });
         }
         setCountsReady(true);
@@ -312,9 +319,21 @@ export default function ProfilePage() {
           setUserQuestions(Array.isArray(data.questions) ? data.questions : []);
           setUserReplies(Array.isArray(data.replies) ? data.replies : []);
           setLikers(Array.isArray(data.likers) ? data.likers : []);
-          setQuestionsTotal(typeof data.questions_total === "number" ? data.questions_total : data.questions?.length ?? 0);
-          setRepliesTotal(typeof data.replies_total === "number" ? data.replies_total : data.replies?.length ?? 0);
-          setLikersTotal(typeof data.likers_total === "number" ? data.likers_total : data.likers?.length ?? 0);
+          setQuestionsTotal(
+            typeof data.questions_total === "number"
+              ? data.questions_total
+              : (data.questions?.length ?? 0),
+          );
+          setRepliesTotal(
+            typeof data.replies_total === "number"
+              ? data.replies_total
+              : (data.replies?.length ?? 0),
+          );
+          setLikersTotal(
+            typeof data.likers_total === "number"
+              ? data.likers_total
+              : (data.likers?.length ?? 0),
+          );
         }
       })
       .catch(() => {
@@ -410,14 +429,21 @@ export default function ProfilePage() {
   const questionsAsked = preloadCounts
     ? preloadCounts.questions_count
     : Math.max(userQuestions.length, profile?.questions_count ?? 0);
-  const answersGiven = preloadCounts?.answers_count ?? profile?.answers_count ?? 0;
-  const profileLikesCount = preloadCounts?.profile_likes_count ?? profile?.profile_likes_count ?? 0;
+  const answersGiven =
+    preloadCounts?.answers_count ?? profile?.answers_count ?? 0;
+  const profileLikesCount =
+    preloadCounts?.profile_likes_count ?? profile?.profile_likes_count ?? 0;
 
   const loadMoreQuestions = useCallback(() => {
-    if (!profile?.username || loadingMoreQuestions || userQuestions.length >= questionsTotal) return;
+    if (
+      !profile?.username ||
+      loadingMoreQuestions ||
+      userQuestions.length >= questionsTotal
+    )
+      return;
     setLoadingMoreQuestions(true);
     fetch(
-      `/api/profile/${encodeURIComponent(profile.username)}/questions?limit=20&offset=${userQuestions.length}`
+      `/api/profile/${encodeURIComponent(profile.username)}/questions?limit=20&offset=${userQuestions.length}`,
     )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -426,13 +452,23 @@ export default function ProfilePage() {
         }
       })
       .finally(() => setLoadingMoreQuestions(false));
-  }, [profile?.username, loadingMoreQuestions, userQuestions.length, questionsTotal]);
+  }, [
+    profile?.username,
+    loadingMoreQuestions,
+    userQuestions.length,
+    questionsTotal,
+  ]);
 
   const loadMoreReplies = useCallback(() => {
-    if (!profile?.username || loadingMoreReplies || userReplies.length >= repliesTotal) return;
+    if (
+      !profile?.username ||
+      loadingMoreReplies ||
+      userReplies.length >= repliesTotal
+    )
+      return;
     setLoadingMoreReplies(true);
     fetch(
-      `/api/profile/${encodeURIComponent(profile.username)}/replies?limit=20&offset=${userReplies.length}`
+      `/api/profile/${encodeURIComponent(profile.username)}/replies?limit=20&offset=${userReplies.length}`,
     )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -444,10 +480,11 @@ export default function ProfilePage() {
   }, [profile?.username, loadingMoreReplies, userReplies.length, repliesTotal]);
 
   const loadMoreLikers = useCallback(() => {
-    if (!profile?.username || loadingMoreLikers || likers.length >= likersTotal) return;
+    if (!profile?.username || loadingMoreLikers || likers.length >= likersTotal)
+      return;
     setLoadingMoreLikers(true);
     fetch(
-      `/api/profile/${encodeURIComponent(profile.username)}/likes?limit=20&offset=${likers.length}`
+      `/api/profile/${encodeURIComponent(profile.username)}/likes?limit=20&offset=${likers.length}`,
     )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
