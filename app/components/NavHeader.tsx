@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Menu } from 'lucide-react';
+import React from "react";
+import { Menu } from "lucide-react";
 
 interface NavHeaderProps {
   title: string;
@@ -17,13 +17,22 @@ interface NavHeaderProps {
  * Shared navigation header matching the Status page design.
  * Use across all pages for consistent "תפריט ניווט" experience.
  */
-export default function NavHeader({ title, onMenuClick, rightContent, topContent, titleContent, wide }: NavHeaderProps) {
+export default function NavHeader({
+  title,
+  onMenuClick,
+  rightContent,
+  topContent,
+  titleContent,
+  wide,
+}: NavHeaderProps) {
   return (
     <header className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl shadow-xl border-b border-gray-200/20 dark:border-gray-700/50">
       {topContent}
-      <div className={`mx-auto px-4 sm:px-5 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
-        <div className="flex justify-between items-center gap-2 py-3 sm:py-4">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+      <div
+        className={`mx-auto px-4 sm:px-5 ${wide ? "max-w-6xl" : "max-w-4xl"}`}
+      >
+        <div className="flex items-center gap-2 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
               type="button"
               onClick={onMenuClick}
@@ -32,6 +41,8 @@ export default function NavHeader({ title, onMenuClick, rightContent, topContent
             >
               <Menu size={20} />
             </button>
+          </div>
+          <div className="flex-1 flex justify-center min-w-0">
             {titleContent != null ? (
               <div className="flex items-center gap-3 min-w-0">
                 {titleContent}

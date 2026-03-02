@@ -213,7 +213,14 @@ function ForumHomepage() {
       style={{ fontFamily: "'Assistant', 'Heebo', system-ui, sans-serif" }}
     >
       <NavHeader
-        title="Q&A פלטפורמה"
+        title=""
+        titleContent={
+          <img
+            src="/פטפטו.svg"
+            alt="פטפטו"
+            className="h-8 sm:h-10 w-auto scale-110"
+          />
+        }
         wide
         onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
         topContent={

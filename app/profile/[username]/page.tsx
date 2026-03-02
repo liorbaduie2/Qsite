@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import Image from "next/image";
+import { RoleBadge } from "../../components/RoleBadge";
 import {
   SkeletonBlock,
   SkeletonCircle,
@@ -36,6 +37,8 @@ interface PublicProfile {
   is_verified: boolean;
   is_moderator: boolean;
   created_at: string | null;
+  role?: string;
+  role_hebrew?: string;
   questions_count?: number;
   profile_likes_count?: number;
 }
@@ -451,18 +454,31 @@ export default function PublicProfilePage() {
                       </>
                     )}
                   </div>
-                  <div className="mt-2 text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {isSkeleton ? (
-                      <SkeletonText className="w-32 mx-auto" />
-                    ) : (
-                      <>
-                        מוניטין{" "}
-                        <span className={reputationTextClass}>
-                          {profile?.reputation ?? 0}
-                        </span>{" "}
-                        נקודות
-                      </>
-                    )}
+                  <div className="mt-2 space-y-1">
+                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {isSkeleton ? (
+                        <SkeletonText className="w-32 mx-auto" />
+                      ) : (
+                        <>
+                          מוניטין{" "}
+                          <span className={reputationTextClass}>
+                            {profile?.reputation ?? 0}
+                          </span>{" "}
+                          נקודות
+                        </>
+                      )}
+                    </div>
+                    {!isSkeleton &&
+                      profile?.role &&
+                      profile.role_hebrew && (
+                        <div className="mt-1">
+                          <RoleBadge
+                            role={profile.role}
+                            roleHebrew={profile.role_hebrew}
+                            size="sm"
+                          />
+                        </div>
+                      )}
                   </div>
                 </div>
                 {isSkeleton ? (

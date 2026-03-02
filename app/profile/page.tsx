@@ -29,6 +29,7 @@ import {
 } from "../components/ui/Skeleton";
 import { formatRelativeTime } from "../../lib/utils";
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
+import { RoleBadge } from "../components/RoleBadge";
 
 interface ProfileQuestion {
   id: string;
@@ -198,7 +199,7 @@ function ReputationArc({ value, max = 100, size = 120 }: ReputationArcProps) {
 }
 
 export default function ProfilePage() {
-  const { user, profile, updateProfile, loading } = useAuth();
+  const { user, profile, updateProfile, loading, userPermissions } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -583,18 +584,32 @@ export default function ProfilePage() {
                       </>
                     )}
                   </div>
-                  <div className="mt-2 text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {isSkeleton ? (
-                      <SkeletonText className="w-32 mx-auto" />
-                    ) : (
-                      <>
-                        מוניטין{" "}
-                        <span className={reputationTextClass}>
-                          {reputation}
-                        </span>{" "}
-                        נקודות
-                      </>
-                    )}
+                  <div className="mt-2 space-y-1">
+                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {isSkeleton ? (
+                        <SkeletonText className="w-32 mx-auto" />
+                      ) : (
+                        <>
+                          מוניטין{" "}
+                          <span className={reputationTextClass}>
+                            {reputation}
+                          </span>{" "}
+                          נקודות
+                        </>
+                      )}
+                    </div>
+                    {!isSkeleton &&
+                      userPermissions &&
+                      userPermissions.role !== "user" &&
+                      !userPermissions.is_hidden && (
+                        <div className="mt-1">
+                          <RoleBadge
+                            role={userPermissions.role}
+                            roleHebrew={userPermissions.role_hebrew}
+                            size="sm"
+                          />
+                        </div>
+                      )}
                   </div>
                 </div>
 

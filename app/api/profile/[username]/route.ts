@@ -29,6 +29,28 @@ export async function GET(
 
     const profileId = data.id;
 
+    // Resolve admin role info (for public badge) via permissions helper
+    let role: string | undefined;
+    let roleHebrew: string | undefined;
+    let isHiddenRole = false;
+    try {
+      const { data: perms } = await supabase.rpc('get_user_admin_permissions', {
+        user_id: profileId,
+      });
+      if (perms && typeof perms.role === 'string') {
+        role = perms.role;
+        roleHebrew = perms.role_hebrew as string | undefined;
+        isHiddenRole = Boolean(perms.is_hidden);
+      }
+    } catch {
+      // If permissions lookup fails, skip exposing role info on public profile
+    }
+
+    const includePublicRole =
+      role &&
+      role !== 'user' &&
+      !isHiddenRole;
+
     const profile = {
       id: String(data.id),
       username: String(data.username),
@@ -45,6 +67,9 @@ export async function GET(
       profile_likes_count: typeof (data as { profile_likes_count?: number }).profile_likes_count === 'number'
         ? (data as { profile_likes_count: number }).profile_likes_count
         : 0,
+      ...(includePublicRole && role && roleHebrew
+        ? { role, role_hebrew: roleHebrew }
+        : {}),
     };
 
     const { data: sharedRow } = await supabase

@@ -5,6 +5,7 @@ import React, { useState, useEffect, ElementType } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { useAuth } from './AuthProvider';
+import { UserAvatar } from './UserAvatar';
 import { suspendUser } from '@/lib/permissions';
 import { isOnline } from '@/lib/utils';
 import { usePresenceTick } from '@/app/hooks/usePresenceTick';
@@ -382,6 +383,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
     const [selectedRole, setSelectedRole] = useState('user');
     const [roleReason, setRoleReason] = useState('');
     const [isHiddenRole, setIsHiddenRole] = useState(false);
+    const [visibilitySaving, setVisibilitySaving] = useState(false);
 
     // User activity log (owner only)
     const [userActivityLog, setUserActivityLog] = useState<ActivityLogEntry[]>([]);
@@ -422,7 +424,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
             setRoleReason('');
             setSuspensionReason(DEFAULT_PUNISHMENT_REASON_TEMPLATE);
             setPenaltyReason('');
-            setActiveTab(userPermissions?.can_manage_user_ranks ? 'role' : 'actions');
+            const isOwner = userPermissions?.role === 'owner';
+            setActiveTab(isOwner ? 'role' : 'actions');
             setUserActivityLog([]);
             loadPenaltyTypes();
         }
@@ -577,6 +580,43 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
     const currentPenaltyTemplate = (PENALTY_REASON_TEMPLATES[selectedPenaltyType] ?? DEFAULT_PUNISHMENT_REASON_TEMPLATE).trim();
     const isPenaltyReasonUnchanged = usePenaltyType && !!selectedPenaltyType && penaltyReason.trim() === currentPenaltyTemplate;
 
+    const handleSaveTagVisibility = async () => {
+        if (!user) return;
+        if (isHiddenRole === user.is_hidden) return;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('לא מחובר למערכת');
+
+            setVisibilitySaving(true);
+
+            const response = await fetch('/api/admin/set-role-visibility', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                    targetUserId: user.id,
+                    isHidden: isHiddenRole,
+                }),
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'שגיאה בעדכון נראות התג');
+            }
+
+            onAction(`נראות תג התפקיד של ${user.username} עודכנה בהצלחה`, false);
+        } catch (err: unknown) {
+            onAction(
+                err instanceof Error ? err.message : 'שגיאה בעדכון נראות התג',
+                true,
+            );
+        } finally {
+            setVisibilitySaving(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black/60 dark:bg-black/70 flex items-center justify-center z-50 transition-opacity duration-300" dir="rtl">
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[95vh] flex flex-col transform transition-all duration-300 scale-95 animate-in fade-in-0 zoom-in-95">
@@ -593,7 +633,14 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right">
-                             <span className="font-semibold text-slate-700 dark:text-slate-300">{user.role_hebrew}</span>
+                             <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                 {user.role_hebrew}
+                             </span>
+                             {user.is_hidden && (
+                                 <span className="text-xs text-slate-500 mr-2">
+                                     (תג מוסתר)
+                                 </span>
+                             )}
                              <p className="text-sm text-slate-500">מוניטין: {user.reputation}</p>
                         </div>
                          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
@@ -604,7 +651,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
 
                 {/* Tabs */}
                 <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
-                    {userPermissions?.can_manage_user_ranks && (
+                    {userPermissions?.role === 'owner' && (
                         <button onClick={() => setActiveTab('role')} className={`flex-1 py-3 px-4 font-semibold text-center transition-colors duration-200 flex items-center justify-center gap-2 ${activeTab === 'role' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500 bg-white dark:bg-slate-800' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}>
                             <Shield className="w-5 h-5" />
                             ניהול תפקיד
@@ -626,8 +673,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto">
-                    {/* Role Management Tab */}
-                    {activeTab === 'role' && userPermissions?.can_manage_user_ranks && (
+                    {/* Role Management Tab (owner only) */}
+                    {activeTab === 'role' && userPermissions?.role === 'owner' && (
                         <div className="animate-in fade-in-0 duration-500">
                             <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">בחר תפקיד חדש</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -645,16 +692,6 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                                 })}
                             </div>
 
-                            {selectedRole !== 'user' && (
-                                <div className="flex items-center gap-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg mb-6">
-                                    <input type="checkbox" id="hiddenRole" checked={isHiddenRole} onChange={e => setIsHiddenRole(e.target.checked)} className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
-                                    <label htmlFor="hiddenRole" className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                        {isHiddenRole ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        הסתר תג (התפקיד לא יוצג למשתמשים אחרים)
-                                    </label>
-                                </div>
-                            )}
-
                             <div>
                                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">סיבה לשינוי <span className="text-red-500">*</span></label>
                                 <textarea value={roleReason} onChange={e => setRoleReason(e.target.value)} className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} placeholder="הסבר מדוע התפקיד משתנה..."></textarea>
@@ -665,6 +702,47 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                                     {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                                     <span>עדכון תפקיד</span>
                                 </button>
+                            </div>
+
+                            {/* Independent role-tag visibility control (owner only) */}
+                            <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 space-y-3">
+                                <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                    <EyeOff className="w-4 h-4" />
+                                    נראות תג תפקיד
+                                </h5>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    כבעלים, באפשרותך להסתיר או להציג את תג התפקיד בפרופיל הציבורי של המשתמש, בלי לשנות את התפקיד עצמו.
+                                </p>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                                    <label htmlFor="hiddenRoleToggle" className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                        <input
+                                            id="hiddenRoleToggle"
+                                            type="checkbox"
+                                            checked={isHiddenRole}
+                                            onChange={(e) => setIsHiddenRole(e.target.checked)}
+                                            className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="flex items-center gap-1.5">
+                                            {isHiddenRole ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            הסתר תג תפקיד מהפרופיל הציבורי
+                                        </span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveTagVisibility}
+                                        disabled={visibilitySaving || isHiddenRole === user.is_hidden}
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {visibilitySaving ? (
+                                            <>
+                                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                                שומר...
+                                            </>
+                                        ) : (
+                                            'שמור נראות תג'
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -821,7 +899,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
 
 // --- Main AdminDashboard Component --- //
 const AdminDashboard: React.FC = () => {
-    const { user: currentUser, userPermissions } = useAuth();
+    const { user: currentUser, profile, userPermissions, refreshPermissions } = useAuth();
     usePresenceTick(); // re-evaluate isOnline(user.last_seen_at) every 30s in user list
     
     const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -1042,7 +1120,8 @@ const AdminDashboard: React.FC = () => {
     };
 
     const handleUserAction = (message: string, isError: boolean) => {
-        if(isError) {
+        const affectedUserId = selectedUser?.id;
+        if (isError) {
             setError(message);
         } else {
              // You can show a success toast/message here if you like
@@ -1051,6 +1130,10 @@ const AdminDashboard: React.FC = () => {
         setSelectedUser(null);
         // Refresh data to show changes
         loadDashboardData();
+        // If the current admin's own role/visibility changed, refresh permissions as well
+        if (affectedUserId && currentUser && affectedUserId === currentUser.id) {
+            refreshPermissions?.();
+        }
     };
 
     const handleRemovalDecision = async (requestId: string, action: 'approve' | 'reject') => {
@@ -1162,7 +1245,26 @@ const AdminDashboard: React.FC = () => {
                 {userPermissions && (
                     <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4">הרשאות שלך</h2>
+                            <div className="flex items-center justify-between mb-4 gap-4">
+                                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">הרשאות שלך</h2>
+                                {profile && (
+                                    <Link
+                                        href="/profile"
+                                        className="inline-flex items-center gap-3 px-3 py-2 rounded-full bg-slate-50 dark:bg-slate-700/70 border border-slate-200 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                    >
+                                        <UserAvatar
+                                            avatarUrl={profile.avatar_url ?? null}
+                                            username={profile.username}
+                                            size="sm2"
+                                        />
+                                        <div className="text-right">
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                                {profile.full_name || profile.username}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                )}
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-slate-700 dark:text-slate-300">
                                 <div>
                                     <span className="font-semibold">תפקיד: </span>

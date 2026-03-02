@@ -72,18 +72,20 @@ const Drawer: React.FC<DrawerProps> = ({
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notificationsList, setNotificationsList] = useState<Array<{
-    id: string;
-    type: string;
-    title: string;
-    message: string;
-    question_id?: string | null;
-    answer_id?: string | null;
-    status_id?: string | null;
-    is_read: boolean;
-    created_at: string;
-    metadata?: { activity_log_id?: string } | null;
-  }>>([]);
+  const [notificationsList, setNotificationsList] = useState<
+    Array<{
+      id: string;
+      type: string;
+      title: string;
+      message: string;
+      question_id?: string | null;
+      answer_id?: string | null;
+      status_id?: string | null;
+      is_read: boolean;
+      created_at: string;
+      metadata?: { activity_log_id?: string } | null;
+    }>
+  >([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const fetchUnreadCount = useCallback(async () => {
@@ -231,11 +233,6 @@ const Drawer: React.FC<DrawerProps> = ({
                     isOnline={isOnline(profile?.last_seen_at)}
                     className="border-2 border-white dark:border-gray-600 shadow-md"
                   />
-                  {profile?.is_verified && (
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
-                      <span className="text-white text-xs">✓</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Profile Info - email-style and reputation */}
@@ -366,7 +363,9 @@ const Drawer: React.FC<DrawerProps> = ({
                     <span>התראות</span>
                     {notificationUnreadCount > 0 && (
                       <span className="mr-auto bg-[#6633cc] text-white text-xs min-w-[1.25rem] h-5 px-2 flex items-center justify-center rounded-full font-medium">
-                        {notificationUnreadCount > 99 ? "99+" : notificationUnreadCount}
+                        {notificationUnreadCount > 99
+                          ? "99+"
+                          : notificationUnreadCount}
                       </span>
                     )}
                   </button>
@@ -389,7 +388,8 @@ const Drawer: React.FC<DrawerProps> = ({
                                 ? "/status"
                                 : "#";
                             const activityLogId = n.metadata?.activity_log_id;
-                            const showAppeal = n.type === "question_removed" && activityLogId;
+                            const showAppeal =
+                              n.type === "question_removed" && activityLogId;
                             return (
                               <li key={n.id}>
                                 <div className="px-3 py-2.5">
@@ -398,8 +398,13 @@ const Drawer: React.FC<DrawerProps> = ({
                                     onClick={async () => {
                                       if (!n.is_read) {
                                         try {
-                                          await fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" });
-                                          setNotificationUnreadCount((c) => Math.max(0, c - 1));
+                                          await fetch(
+                                            `/api/notifications/${n.id}/read`,
+                                            { method: "PATCH" },
+                                          );
+                                          setNotificationUnreadCount((c) =>
+                                            Math.max(0, c - 1),
+                                          );
                                         } catch {
                                           // ignore
                                         }
@@ -412,13 +417,20 @@ const Drawer: React.FC<DrawerProps> = ({
                                     }}
                                     className={`w-full text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors ${!n.is_read ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400"}`}
                                   >
-                                    <span className="block truncate">{n.title}</span>
-                                    <span className="block truncate text-xs mt-0.5 opacity-80">{n.message}</span>
+                                    <span className="block truncate">
+                                      {n.title}
+                                    </span>
+                                    <span className="block truncate text-xs mt-0.5 opacity-80">
+                                      {n.message}
+                                    </span>
                                   </button>
                                   {showAppeal && (
                                     <Link
                                       href={`/appeal/question-deletion?activity_log_id=${encodeURIComponent(activityLogId)}`}
-                                      onClick={() => { setNotificationsOpen(false); setIsDrawerOpen(false); }}
+                                      onClick={() => {
+                                        setNotificationsOpen(false);
+                                        setIsDrawerOpen(false);
+                                      }}
                                       className="mt-1.5 inline-block text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                                     >
                                       ערעור

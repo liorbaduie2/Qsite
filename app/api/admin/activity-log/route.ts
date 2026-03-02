@@ -10,6 +10,10 @@ const ACTION_LABELS: Record<string, string> = {
   content_removed: 'הסרת תוכן',
   user_suspended: 'השעיית משתמש',
   reputation_deducted: 'ניכוי מוניטין',
+  role_granted: 'מתן תפקיד',
+  role_updated: 'עדכון תפקיד',
+  role_revoked: 'ביטול תפקיד',
+  role_visibility_changed: 'שינוי נראות תג תפקיד',
 };
 
 export async function GET(request: NextRequest) {
