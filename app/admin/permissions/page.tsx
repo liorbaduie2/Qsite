@@ -298,10 +298,9 @@ function PermissionsMatrixInner() {
                           className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
                           value={draft.maxReputation}
                           onChange={(e) =>
-                            setDraft((d) => ({
-                              ...d,
+                            updateDraft({
                               maxReputation: Number(e.target.value || 0),
-                            }))
+                            })
                           }
                         />
                       </td>
@@ -312,10 +311,9 @@ function PermissionsMatrixInner() {
                           className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
                           value={draft.maxSuspension}
                           onChange={(e) =>
-                            setDraft((d) => ({
-                              ...d,
+                            updateDraft({
                               maxSuspension: Number(e.target.value || 0),
-                            }))
+                            })
                           }
                         />
                       </td>
@@ -326,10 +324,9 @@ function PermissionsMatrixInner() {
                           className="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
                           value={draft.defaultSuspension}
                           onChange={(e) =>
-                            setDraft((d) => ({
-                              ...d,
+                            updateDraft({
                               defaultSuspension: Number(e.target.value || 0),
-                            }))
+                            })
                           }
                         />
                       </td>
@@ -340,10 +337,9 @@ function PermissionsMatrixInner() {
                           className="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
                           value={draft.defaultReputation}
                           onChange={(e) =>
-                            setDraft((d) => ({
-                              ...d,
+                            updateDraft({
                               defaultReputation: Number(e.target.value || 0),
-                            }))
+                            })
                           }
                         />
                       </td>
