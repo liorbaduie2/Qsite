@@ -7,12 +7,6 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useAuth } from './AuthProvider';
 import { UserAvatar } from './UserAvatar';
 import { suspendUser } from '@/lib/permissions';
-import {
-  ADMIN_ROLE_LABELS,
-  PERMISSION_DEFINITIONS,
-  type AdminRoleKey,
-  type PermissionKey,
-} from '@/lib/permissionKeys';
 import { isOnline } from '@/lib/utils';
 import { usePresenceTick } from '@/app/hooks/usePresenceTick';
 
@@ -916,7 +910,7 @@ const AdminDashboard: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal' | 'appeals' | 'activityLog' | 'permissions'>('applications');
+    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal' | 'appeals' | 'activityLog'>('applications');
 
     const [removalRequests, setRemovalRequests] = useState<QuestionRemovalRequest[]>([]);
     const [removalActionLoading, setRemovalActionLoading] = useState<string | null>(null);
@@ -924,9 +918,6 @@ const AdminDashboard: React.FC = () => {
     const [appeals, setAppeals] = useState<QuestionDeletionAppeal[]>([]);
     const [appealActionLoading, setAppealActionLoading] = useState<string | null>(null);
     const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
-    const [permissionMatrix, setPermissionMatrix] = useState<Record<PermissionKey, Record<AdminRoleKey, boolean>> | null>(null);
-    const [permissionMatrixLoading, setPermissionMatrixLoading] = useState(false);
-    const [permissionMatrixError, setPermissionMatrixError] = useState<string | null>(null);
     
     const [searchTerm, setSearchTerm] = useState('');
     const [filterUsersWithPermissions, setFilterUsersWithPermissions] = useState(false);
@@ -1007,58 +998,6 @@ const AdminDashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser, userPermissions]);
 
-    const loadPermissionMatrix = async () => {
-        if (!userPermissions || userPermissions.role !== 'owner') return;
-        try {
-            setPermissionMatrixLoading(true);
-            setPermissionMatrixError(null);
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                throw new Error('לא מחובר למערכת');
-            }
-            const res = await fetch('/api/admin/config/permissions-matrix', {
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                },
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || 'שגיאה בטעינת מטריצת הרשאות');
-            }
-            const rows: { role: AdminRoleKey; permission_key: PermissionKey; allowed: boolean }[] =
-                Array.isArray(data.rows) ? data.rows : [];
-            const matrix: Record<PermissionKey, Record<AdminRoleKey, boolean>> = {} as any;
-            for (const def of PERMISSION_DEFINITIONS) {
-                matrix[def.key] = {
-                    owner: false,
-                    guardian: false,
-                    admin: false,
-                    moderator: false,
-                    user: false,
-                };
-            }
-            for (const row of rows) {
-                if (matrix[row.permission_key]) {
-                    matrix[row.permission_key][row.role] = !!row.allowed;
-                }
-            }
-            setPermissionMatrix(matrix);
-        } catch (err) {
-            setPermissionMatrixError(
-                err instanceof Error ? err.message : 'שגיאה בטעינת מטריצת הרשאות',
-            );
-        } finally {
-            setPermissionMatrixLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (activeTab === 'permissions' && userPermissions?.role === 'owner') {
-            loadPermissionMatrix();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab, userPermissions?.role]);
-    
     const handleApprove = async (applicationId: string, reason?: string) => {
       if (!userPermissions?.can_approve_registrations || !currentUser) {
         setError('אין הרשאות לביצוע פעולה זו');
@@ -1342,8 +1281,21 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4">פעולות מותרות</h3>
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm flex flex-col gap-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                    פעולות מותרות
+                                </h3>
+                                {userPermissions.role === 'owner' && (
+                                    <Link
+                                        href="/admin/permissions"
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-300 dark:border-blue-600 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors"
+                                    >
+                                        <Shield className="w-4 h-4" />
+                                        מטריצת הרשאות
+                                    </Link>
+                                )}
+                            </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                                 {permissionLabels.map(p => (
                                     userPermissions[p.key as keyof typeof userPermissions] && (
@@ -1382,19 +1334,6 @@ const AdminDashboard: React.FC = () => {
                         {(userPermissions?.role === 'owner' || userPermissions?.role === 'guardian') && <button onClick={() => setActiveTab('removal')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'removal' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><FileQuestion className="w-4 h-4" />בקשות להסרת שאלות ({removalRequests.length})</button>}
                         {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('appeals')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'appeals' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><ScrollText className="w-4 h-4" />ערעורים ({appeals.filter(a => a.status === 'pending').length})</button>}
                         {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('activityLog')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'activityLog' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><History className="w-4 h-4" />יומן פעילות</button>}
-                        {userPermissions?.role === 'owner' && (
-                            <button
-                                onClick={() => setActiveTab('permissions')}
-                                className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${
-                                    activeTab === 'permissions'
-                                        ? 'bg-white dark:bg-slate-800 text-blue-600'
-                                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                                }`}
-                            >
-                                <Shield className="w-4 h-4" />
-                                מטריצת הרשאות
-                            </button>
-                        )}
                     </div>
                 </div>
 
@@ -1410,8 +1349,6 @@ const AdminDashboard: React.FC = () => {
                                     ? `ערעורים (${appeals.length})`
                                     : activeTab === 'activityLog'
                                     ? 'יומן פעילות'
-                                    : activeTab === 'permissions'
-                                    ? 'מטריצת הרשאות'
                                     : filterUsersWithPermissions
                                     ? `משתמשים עם הרשאות (${filteredUsers.length})`
                                     : `כל המשתמשים (${filteredUsers.length})`}

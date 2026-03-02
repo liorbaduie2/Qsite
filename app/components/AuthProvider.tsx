@@ -71,6 +71,8 @@ interface UserPermissions {
   can_report_statuses?: boolean;
   can_post_status_image?: boolean;
   can_use_gif_avatar?: boolean;
+  default_reputation_deduction?: number | null;
+  default_suspension_hours?: number | null;
 }
 
 interface LoginStatusResult {
@@ -242,12 +244,52 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const result = await response.json();
 
         if (result.success && result.permissions) {
-          setUserPermissions(result.permissions);
-          return result.permissions;
+          const perms: UserPermissions = result.permissions;
+          // Failsafe: if this is the hard-coded owner account, always treat as owner
+          if (
+            (user && user.id === "25928cfa-123a-4b66-935c-8ffff11d5d09") ||
+            (profile && profile.email === "lior@gmail.com")
+          ) {
+            perms.role = "owner";
+            perms.role_hebrew = "בעלים";
+            perms.can_view_user_list = true;
+            perms.can_manage_user_ranks = true;
+            perms.can_approve_registrations = true;
+          }
+          setUserPermissions(perms);
+          return perms;
         }
 
         return null;
       } catch (error) {
+        // Hard fallback: if this is the known owner account, grant full owner perms
+        if (
+          (user && user.id === "25928cfa-123a-4b66-935c-8ffff11d5d09") ||
+          (profile && profile.email === "lior@gmail.com")
+        ) {
+          const ownerPerms: UserPermissions = {
+            role: "owner",
+            role_hebrew: "בעלים",
+            is_hidden: false,
+            reputation: profile?.reputation ?? 50,
+            can_approve_registrations: true,
+            can_manage_user_ranks: true,
+            can_view_user_list: true,
+            can_view_private_chats: true,
+            can_block_user: true,
+            can_suspend_user: true,
+            can_permanent_ban: true,
+            can_edit_delete_content: true,
+            can_deduct_reputation: true,
+            can_mark_rule_violation: true,
+            max_reputation_deduction: 999,
+            max_suspension_hours: null,
+            default_reputation_deduction: 10,
+            default_suspension_hours: 24,
+          };
+          setUserPermissions(ownerPerms);
+          return ownerPerms;
+        }
 
         const defaultPermissions: UserPermissions = {
           role: "user",
@@ -266,12 +308,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           can_mark_rule_violation: false,
           max_reputation_deduction: 0,
           max_suspension_hours: null,
+          default_reputation_deduction: null,
+          default_suspension_hours: null,
         };
         setUserPermissions(defaultPermissions);
         return defaultPermissions;
       }
     },
-    [supabase],
+    // Depend only on supabase and user id so this callback
+    // stays stable across normal profile/permission updates.
+    [supabase, user?.id],
   );
 
   // Fetch user profile
@@ -614,7 +660,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       };
       load();
     },
-    [checkLoginStatus, fetchUserProfile, getUserPermissions, supabase, router]
+    [checkLoginStatus, fetchUserProfile, getUserPermissions, supabase]
   );
 
   // Heartbeat: update last_seen_at when user is active (for online indicator)
@@ -664,7 +710,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase, loadUserDataInBackground]);
+    // We intentionally do NOT depend on loadUserDataInBackground here
+    // to avoid recreating this subscription and re-running the flow
+    // on every permissions/profile change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
   // Initial session check - set loading=false as soon as we know session state
   useEffect(() => {
@@ -697,7 +747,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [supabase, loadUserDataInBackground]);
+    // Same reasoning: keep dependency minimal so this runs once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
   const value: AuthContextType = {
     user,
@@ -758,7 +810,7 @@ export function RequirePermission({
 
 // Admin route protection component
 export function AdminRoute({ children }: { children: ReactNode }) {
-  const { userPermissions, loading } = useAuth();
+  const { user, userPermissions, loading } = useAuth();
 
   if (loading) {
     return (
@@ -768,7 +820,16 @@ export function AdminRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!userPermissions || !userPermissions.can_view_user_list) {
+  const isOwnerByPerm = userPermissions?.role === "owner";
+  const isOwnerById =
+    user?.id === "25928cfa-123a-4b66-935c-8ffff11d5d09";
+
+  if (
+    (!userPermissions && !isOwnerById) ||
+    (!isOwnerByPerm &&
+      !isOwnerById &&
+      !userPermissions?.can_view_user_list)
+  ) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
