@@ -7,6 +7,12 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useAuth } from './AuthProvider';
 import { UserAvatar } from './UserAvatar';
 import { suspendUser } from '@/lib/permissions';
+import {
+  ADMIN_ROLE_LABELS,
+  PERMISSION_DEFINITIONS,
+  type AdminRoleKey,
+  type PermissionKey,
+} from '@/lib/permissionKeys';
 import { isOnline } from '@/lib/utils';
 import { usePresenceTick } from '@/app/hooks/usePresenceTick';
 
@@ -910,7 +916,7 @@ const AdminDashboard: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal' | 'appeals' | 'activityLog'>('applications');
+    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal' | 'appeals' | 'activityLog' | 'permissions'>('applications');
 
     const [removalRequests, setRemovalRequests] = useState<QuestionRemovalRequest[]>([]);
     const [removalActionLoading, setRemovalActionLoading] = useState<string | null>(null);
@@ -918,6 +924,9 @@ const AdminDashboard: React.FC = () => {
     const [appeals, setAppeals] = useState<QuestionDeletionAppeal[]>([]);
     const [appealActionLoading, setAppealActionLoading] = useState<string | null>(null);
     const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+    const [permissionMatrix, setPermissionMatrix] = useState<Record<PermissionKey, Record<AdminRoleKey, boolean>> | null>(null);
+    const [permissionMatrixLoading, setPermissionMatrixLoading] = useState(false);
+    const [permissionMatrixError, setPermissionMatrixError] = useState<string | null>(null);
     
     const [searchTerm, setSearchTerm] = useState('');
     const [filterUsersWithPermissions, setFilterUsersWithPermissions] = useState(false);
@@ -997,6 +1006,58 @@ const AdminDashboard: React.FC = () => {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser, userPermissions]);
+
+    const loadPermissionMatrix = async () => {
+        if (!userPermissions || userPermissions.role !== 'owner') return;
+        try {
+            setPermissionMatrixLoading(true);
+            setPermissionMatrixError(null);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                throw new Error('לא מחובר למערכת');
+            }
+            const res = await fetch('/api/admin/config/permissions-matrix', {
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'שגיאה בטעינת מטריצת הרשאות');
+            }
+            const rows: { role: AdminRoleKey; permission_key: PermissionKey; allowed: boolean }[] =
+                Array.isArray(data.rows) ? data.rows : [];
+            const matrix: Record<PermissionKey, Record<AdminRoleKey, boolean>> = {} as any;
+            for (const def of PERMISSION_DEFINITIONS) {
+                matrix[def.key] = {
+                    owner: false,
+                    guardian: false,
+                    admin: false,
+                    moderator: false,
+                    user: false,
+                };
+            }
+            for (const row of rows) {
+                if (matrix[row.permission_key]) {
+                    matrix[row.permission_key][row.role] = !!row.allowed;
+                }
+            }
+            setPermissionMatrix(matrix);
+        } catch (err) {
+            setPermissionMatrixError(
+                err instanceof Error ? err.message : 'שגיאה בטעינת מטריצת הרשאות',
+            );
+        } finally {
+            setPermissionMatrixLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'permissions' && userPermissions?.role === 'owner') {
+            loadPermissionMatrix();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, userPermissions?.role]);
     
     const handleApprove = async (applicationId: string, reason?: string) => {
       if (!userPermissions?.can_approve_registrations || !currentUser) {
@@ -1321,6 +1382,19 @@ const AdminDashboard: React.FC = () => {
                         {(userPermissions?.role === 'owner' || userPermissions?.role === 'guardian') && <button onClick={() => setActiveTab('removal')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'removal' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><FileQuestion className="w-4 h-4" />בקשות להסרת שאלות ({removalRequests.length})</button>}
                         {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('appeals')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'appeals' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><ScrollText className="w-4 h-4" />ערעורים ({appeals.filter(a => a.status === 'pending').length})</button>}
                         {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('activityLog')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'activityLog' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><History className="w-4 h-4" />יומן פעילות</button>}
+                        {userPermissions?.role === 'owner' && (
+                            <button
+                                onClick={() => setActiveTab('permissions')}
+                                className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${
+                                    activeTab === 'permissions'
+                                        ? 'bg-white dark:bg-slate-800 text-blue-600'
+                                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                }`}
+                            >
+                                <Shield className="w-4 h-4" />
+                                מטריצת הרשאות
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -1328,7 +1402,19 @@ const AdminDashboard: React.FC = () => {
                     <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
                             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                {activeTab === 'applications' ? `בקשות ממתינות (${filteredApplications.length})` : activeTab === 'removal' ? `בקשות להסרת שאלות (${removalRequests.length})` : activeTab === 'appeals' ? `ערעורים (${appeals.length})` : activeTab === 'activityLog' ? 'יומן פעילות' : (filterUsersWithPermissions ? `משתמשים עם הרשאות (${filteredUsers.length})` : `כל המשתמשים (${filteredUsers.length})`)}
+                                {activeTab === 'applications'
+                                    ? `בקשות ממתינות (${filteredApplications.length})`
+                                    : activeTab === 'removal'
+                                    ? `בקשות להסרת שאלות (${removalRequests.length})`
+                                    : activeTab === 'appeals'
+                                    ? `ערעורים (${appeals.length})`
+                                    : activeTab === 'activityLog'
+                                    ? 'יומן פעילות'
+                                    : activeTab === 'permissions'
+                                    ? 'מטריצת הרשאות'
+                                    : filterUsersWithPermissions
+                                    ? `משתמשים עם הרשאות (${filteredUsers.length})`
+                                    : `כל המשתמשים (${filteredUsers.length})`}
                             </h2>
                             <div className="flex items-center gap-2">
                                 {activeTab === 'users' && (
@@ -1493,6 +1579,156 @@ const AdminDashboard: React.FC = () => {
                                 </table>
                             ) : <div className="p-12 text-center"><History className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">אין רשומות</h3></div>}
                          </div>
+                    )}
+
+                    {activeTab === 'permissions' && userPermissions?.role === 'owner' && (
+                        <div className="p-6 space-y-4">
+                            {permissionMatrixError && (
+                                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/60 rounded text-sm text-red-700 dark:text-red-200">
+                                    {permissionMatrixError}
+                                </div>
+                            )}
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                                כאן תוכל להגדיר אילו הרשאות ניהוליות זמינות לכל תפקיד. סימון התא מציין שהתפקיד מחזיק בהרשאה זו.
+                            </p>
+                            {permissionMatrixLoading || !permissionMatrix ? (
+                                <div className="flex items-center justify-center py-10 gap-2 text-slate-500">
+                                    <RefreshCw className="w-5 h-5 animate-spin" />
+                                    <span>טוען מטריצת הרשאות...</span>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto max-h-[520px]">
+                                    <table className="min-w-full text-sm text-right border-collapse">
+                                        <thead className="sticky top-0 bg-slate-100 dark:bg-slate-900 z-10">
+                                            <tr>
+                                                <th className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 w-40">
+                                                    קטגוריה
+                                                </th>
+                                                <th className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 w-80">
+                                                    הרשאה
+                                                </th>
+                                                {(['owner', 'guardian', 'admin', 'moderator', 'user'] as AdminRoleKey[]).map(
+                                                    (roleKey) => (
+                                                        <th
+                                                            key={roleKey}
+                                                            className="px-2 py-2 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 text-center"
+                                                        >
+                                                            {ADMIN_ROLE_LABELS[roleKey]}
+                                                        </th>
+                                                    ),
+                                                )}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {PERMISSION_DEFINITIONS.map((perm, index) => {
+                                                const prev = PERMISSION_DEFINITIONS[index - 1];
+                                                const showCategory =
+                                                    !prev || prev.category !== perm.category;
+                                                const rowMatrix = permissionMatrix[perm.key];
+                                                return (
+                                                    <React.Fragment key={perm.key}>
+                                                        {showCategory && (
+                                                            <tr className="bg-slate-50 dark:bg-slate-800">
+                                                                <td
+                                                                    colSpan={7}
+                                                                    className="px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 border-t border-slate-200 dark:border-slate-700"
+                                                                >
+                                                                    {perm.category}
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/80">
+                                                            <td className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                                                                &nbsp;
+                                                            </td>
+                                                            <td className="px-3 py-2 border-t border-slate-100 dark:border-slate-700">
+                                                                <div className="font-semibold text-slate-800 dark:text-slate-100">
+                                                                    {perm.label}
+                                                                </div>
+                                                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                                    {perm.description}
+                                                                </div>
+                                                            </td>
+                                                            {(['owner', 'guardian', 'admin', 'moderator', 'user'] as AdminRoleKey[]).map(
+                                                                (roleKey) => {
+                                                                    const checked =
+                                                                        rowMatrix?.[roleKey] ?? false;
+                                                                    const toggle = async () => {
+                                                                        if (!permissionMatrix) return;
+                                                                        const snapshot = permissionMatrix;
+                                                                        const next = {
+                                                                            ...snapshot,
+                                                                            [perm.key]: {
+                                                                                ...rowMatrix,
+                                                                                [roleKey]: !checked,
+                                                                            },
+                                                                        };
+                                                                        setPermissionMatrix(next);
+                                                                        try {
+                                                                            const {
+                                                                                data: { session },
+                                                                            } = await supabase.auth.getSession();
+                                                                            if (!session) {
+                                                                                throw new Error('לא מחובר למערכת');
+                                                                            }
+                                                                            const res = await fetch(
+                                                                                '/api/admin/config/permissions-matrix',
+                                                                                {
+                                                                                    method: 'PUT',
+                                                                                    headers: {
+                                                                                        'Content-Type': 'application/json',
+                                                                                        Authorization: `Bearer ${session.access_token}`,
+                                                                                    },
+                                                                                    body: JSON.stringify({
+                                                                                        role: roleKey,
+                                                                                        permissionKey: perm.key,
+                                                                                        allowed: !checked,
+                                                                                    }),
+                                                                                },
+                                                                            );
+                                                                            if (!res.ok) {
+                                                                                const data =
+                                                                                    await res.json().catch(
+                                                                                        () => ({}),
+                                                                                    );
+                                                                                throw new Error(
+                                                                                    data.error ||
+                                                                                        'שגיאה בעדכון הרשאה',
+                                                                                );
+                                                                            }
+                                                                        } catch (err) {
+                                                                            setPermissionMatrix(snapshot);
+                                                                            setPermissionMatrixError(
+                                                                                err instanceof Error
+                                                                                    ? err.message
+                                                                                    : 'שגיאה בעדכון הרשאה',
+                                                                            );
+                                                                        }
+                                                                    };
+                                                                    return (
+                                                                        <td
+                                                                            key={roleKey}
+                                                                            className="px-2 py-2 border-t border-slate-100 dark:border-slate-700 text-center align-middle"
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={checked}
+                                                                                onChange={toggle}
+                                                                                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                                                            />
+                                                                        </td>
+                                                                    );
+                                                                },
+                                                            )}
+                                                        </tr>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </main>
             </div>
