@@ -218,6 +218,11 @@ export default function ProfilePage() {
     avatar_url: "",
   });
 
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+
   const [sharedStatus, setSharedStatus] = useState<{
     id: string;
     content: string;
@@ -239,12 +244,17 @@ export default function ProfilePage() {
   const [loadingMoreQuestions, setLoadingMoreQuestions] = useState(false);
   const [loadingMoreReplies, setLoadingMoreReplies] = useState(false);
   const [loadingMoreLikers, setLoadingMoreLikers] = useState(false);
+  const [commentsOffset, setCommentsOffset] = useState(0);
+  const [commentsTotal, setCommentsTotal] = useState(0);
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
   const questionsScrollRef = useRef<HTMLDivElement>(null);
   const questionsSentinelRef = useRef<HTMLDivElement>(null);
   const repliesScrollRef = useRef<HTMLDivElement>(null);
   const repliesSentinelRef = useRef<HTMLDivElement>(null);
   const likersScrollRef = useRef<HTMLDivElement>(null);
   const likersSentinelRef = useRef<HTMLDivElement>(null);
+  const commentsScrollRef = useRef<HTMLDivElement>(null);
+  const commentsSentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -293,8 +303,7 @@ export default function ProfilePage() {
     if (
       !myProfilePreload ||
       myProfilePreload.username !== profile.username ||
-      (myProfilePreload.status !== "loaded" &&
-        myProfilePreload.status !== "error")
+      myProfilePreload.status !== "loaded"
     ) {
       return;
     }
@@ -305,9 +314,7 @@ export default function ProfilePage() {
         : [],
     );
     setUserReplies(
-      Array.isArray(myProfilePreload.replies)
-        ? myProfilePreload.replies
-        : [],
+      Array.isArray(myProfilePreload.replies) ? myProfilePreload.replies : [],
     );
     setLikers(
       Array.isArray(myProfilePreload.likers) ? myProfilePreload.likers : [],
@@ -334,9 +341,16 @@ export default function ProfilePage() {
           : 0,
     );
 
-    if (Array.isArray(myProfilePreload.comments)) {
-      setProfileComments(myProfilePreload.comments);
-    }
+    const initialComments = Array.isArray(myProfilePreload.comments)
+      ? myProfilePreload.comments
+      : [];
+    setProfileComments(initialComments);
+    setCommentsOffset(initialComments.length);
+    setCommentsTotal(
+      typeof myProfilePreload.comments_total === "number"
+        ? myProfilePreload.comments_total
+        : initialComments.length,
+    );
   }, [profile?.username, myProfilePreload]);
 
   const removeSharedFromProfile = async () => {
@@ -356,16 +370,20 @@ export default function ProfilePage() {
 
   const handleInputChange = (field: string, value: string) => {
     setEditForm((prev) => ({ ...prev, [field]: value }));
+    if (field === "username") {
+      setUsernameError(null);
+      setUsernameStatus("idle");
+    }
   };
 
   const handleEditToggle = async () => {
     if (isEditing) {
-      // Save changes
-      if (updateProfile) {
-        const success = await updateProfile(editForm);
-        if (success) {
-          setIsEditing(false);
-        }
+      if (!canSaveProfile || !updateProfile) {
+        return;
+      }
+      const success = await updateProfile(editForm);
+      if (success) {
+        setIsEditing(false);
       }
     } else {
       setIsEditing(true);
@@ -385,8 +403,121 @@ export default function ProfilePage() {
     }
     setIsEditing(false);
   };
-  const isProfileLoading = loading && !profile;
-  const isSkeleton = !profile;
+  const originalUsername = profile?.username || "";
+  const currentUsername = editForm.username.trim();
+  const isUsernameDirty =
+    isEditing &&
+    currentUsername.length > 0 &&
+    currentUsername !== originalUsername;
+
+  let canChangeUsername = true;
+  let nextUsernameChangeDate: Date | null = null;
+
+  if (profile?.last_username_change_at) {
+    const lastChange = new Date(profile.last_username_change_at);
+    if (!Number.isNaN(lastChange.getTime())) {
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+      const diffMs = Date.now() - lastChange.getTime();
+      if (diffMs < THIRTY_DAYS_MS) {
+        canChangeUsername = false;
+        nextUsernameChangeDate = new Date(
+          lastChange.getTime() + THIRTY_DAYS_MS,
+        );
+      }
+    }
+  }
+
+  const hasUsernameError = !!usernameError || usernameStatus === "taken";
+  const isCheckingUsername = usernameStatus === "checking";
+
+  const canSaveProfile =
+    !loading &&
+    !!profile &&
+    !isCheckingUsername &&
+    (!isUsernameDirty || (!hasUsernameError && canChangeUsername));
+
+  useEffect(() => {
+    if (!isEditing) {
+      setUsernameStatus("idle");
+      return;
+    }
+
+    if (!canChangeUsername) {
+      setUsernameStatus("idle");
+      return;
+    }
+
+    if (!isUsernameDirty) {
+      setUsernameStatus("idle");
+      return;
+    }
+
+    if (currentUsername.length < 3) {
+      setUsernameStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    setUsernameStatus("checking");
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const res = await fetch("/api/auth/check-availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ field: "username", value: currentUsername }),
+          signal: controller.signal,
+        });
+
+        const text = await res.text();
+        let data: { available?: boolean; error?: string; message?: string } =
+          {};
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch {
+          if (!cancelled) {
+            setUsernameStatus("idle");
+            setUsernameError("שגיאה בבדיקת שם משתמש");
+          }
+          return;
+        }
+
+        if (!res.ok) {
+          if (!cancelled) {
+            setUsernameStatus("idle");
+            setUsernameError(data.error || "שגיאה בבדיקת שם משתמש");
+          }
+          return;
+        }
+
+        if (cancelled) return;
+
+        if (data.available) {
+          setUsernameStatus("available");
+          setUsernameError(null);
+        } else {
+          setUsernameStatus("taken");
+          setUsernameError(data.message || "שם משתמש כבר תפוס");
+        }
+      } catch (err) {
+        if ((err as { name?: string } | undefined)?.name === "AbortError") {
+          return;
+        }
+        if (!cancelled) {
+          setUsernameStatus("idle");
+          setUsernameError("שגיאת רשת בבדיקת שם משתמש");
+        }
+      }
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [isEditing, canChangeUsername, isUsernameDirty, currentUsername]);
 
   if (!loading && !user) {
     return (
@@ -415,6 +546,11 @@ export default function ProfilePage() {
     myProfilePreload.username === profile.username
       ? myProfilePreload
       : null;
+
+  const hasPreloadForCurrentUser =
+    !!preloadForUser && preloadForUser.status === "loaded";
+
+  const isSkeleton = loading || !profile || !hasPreloadForCurrentUser;
 
   const questionsAsked = preloadForUser
     ? preloadForUser.counts.questions_count
@@ -487,6 +623,33 @@ export default function ProfilePage() {
       .finally(() => setLoadingMoreLikers(false));
   }, [profile?.username, loadingMoreLikers, likers.length, likersTotal]);
 
+  const loadMoreComments = useCallback(() => {
+    if (
+      !profile?.username ||
+      loadingMoreComments ||
+      commentsOffset >= commentsTotal
+    )
+      return;
+    setLoadingMoreComments(true);
+    fetch(
+      `/api/profile/${encodeURIComponent(
+        profile.username,
+      )}/comments?limit=10&offset=${commentsOffset}`,
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.comments) && data.comments.length > 0) {
+          setProfileComments((prev) => [...prev, ...data.comments]);
+          const nextOffset = commentsOffset + data.comments.length;
+          setCommentsOffset(nextOffset);
+          if (typeof data.total === "number") {
+            setCommentsTotal(data.total);
+          }
+        }
+      })
+      .finally(() => setLoadingMoreComments(false));
+  }, [profile?.username, loadingMoreComments, commentsOffset, commentsTotal]);
+
   useInfiniteScroll(questionsScrollRef, questionsSentinelRef, {
     hasMore: userQuestions.length < questionsTotal,
     loading: loadingMoreQuestions,
@@ -504,6 +667,13 @@ export default function ProfilePage() {
     loading: loadingMoreLikers,
     loadMore: loadMoreLikers,
     enabled: expandedSection === "likers",
+  });
+
+  useInfiniteScroll(commentsScrollRef, commentsSentinelRef, {
+    hasMore: commentsOffset < commentsTotal,
+    loading: loadingMoreComments,
+    loadMore: loadMoreComments,
+    enabled: !isSkeleton,
   });
 
   const playlistInfo = getPlaylistInfo(
@@ -566,7 +736,10 @@ export default function ProfilePage() {
                               </div>
                             )}
                             {isEditing && (
-                              <button className="absolute bottom-0 right-0 w-8 h-8 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors">
+                              <button
+                                className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 dark:bg-orange-400 text-white rounded-full flex items-center justify-center hover:bg-orange-600 dark:hover:bg-orange-500 transition-colors"
+                                title="עדכן תמונת פרופיל"
+                              >
                                 <Camera size={16} />
                               </button>
                             )}
@@ -615,15 +788,35 @@ export default function ProfilePage() {
                   </div>
                 ) : isEditing ? (
                   <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={editForm.username}
-                      onChange={(e) =>
-                        handleInputChange("username", e.target.value)
-                      }
-                      placeholder="שם משתמש"
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editForm.username}
+                        onChange={(e) =>
+                          handleInputChange("username", e.target.value)
+                        }
+                        placeholder="שם משתמש"
+                        disabled={!canChangeUsername}
+                        className={`w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:border-transparent ${
+                          !canChangeUsername
+                            ? "bg-gray-100 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-600"
+                            : hasUsernameError
+                              ? "border border-red-500 dark:border-red-400 bg-red-50/60 dark:bg-red-900/30 focus:ring-red-500"
+                              : "border border-gray-300 dark:border-gray-600 focus:ring-indigo-500"
+                        } pr-16`}
+                      />
+                      {canChangeUsername && usernameError && (
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs font-medium text-red-600 dark:text-red-400">
+                          {usernameError}
+                        </span>
+                      )}
+                    </div>
+                    {!canChangeUsername && nextUsernameChangeDate && (
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        תוכל לשנות שוב שם משתמש ב־
+                        {nextUsernameChangeDate.toLocaleDateString("he-IL")}
+                      </p>
+                    )}
                     <textarea
                       value={editForm.bio}
                       onChange={(e) => handleInputChange("bio", e.target.value)}
@@ -1078,7 +1271,7 @@ export default function ProfilePage() {
               תגובות על הפרופיל
             </h3>
 
-            {/* Comments list - same as public with avatar + delete */}
+            {/* Comments list - latest 10 blocking, older lazy-loaded on scroll */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
               {isSkeleton ? (
                 <div className="space-y-2">
@@ -1086,7 +1279,10 @@ export default function ProfilePage() {
                   <SkeletonText className="w-4/5" />
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200 dark:divide-gray-600">
+                <div
+                  ref={commentsScrollRef}
+                  className="divide-y divide-gray-200 dark:divide-gray-600 max-h-96 overflow-y-auto"
+                >
                   {profileComments.length === 0 && (
                     <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
                       אין תגובות על הפרופיל שלך.
@@ -1183,6 +1379,12 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ))}
+                  <div ref={commentsSentinelRef} className="h-2" />
+                  {loadingMoreComments && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2 text-center">
+                      טוען תגובות נוספות...
+                    </p>
+                  )}
                 </div>
               )}
             </div>

@@ -46,10 +46,6 @@ export async function GET(
     }
 
     const profileId = profileRow.id;
-    const answers_count =
-      typeof profileRow.answers_count === "number"
-        ? profileRow.answers_count
-        : 0;
     const profile_likes_count =
       typeof (profileRow as { profile_likes_count?: number })
         .profile_likes_count === "number"
@@ -135,6 +131,13 @@ export async function GET(
           avatar_url: p.avatar_url ?? null,
         }));
     }
+
+    const answers_count =
+      typeof repliesTotal === "number"
+        ? repliesTotal
+        : typeof profileRow.answers_count === "number"
+          ? profileRow.answers_count
+          : 0;
 
     return NextResponse.json({
       questions_count,

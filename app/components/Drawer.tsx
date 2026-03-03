@@ -240,7 +240,7 @@ const Drawer: React.FC<DrawerProps> = ({
 
                 {/* Profile Info - email-style and reputation */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1">
                     <span className="font-semibold text-gray-900 dark:text-gray-100 truncate min-h-[1.5rem] text-lg">
                       {profile ? (
                         profile.full_name || profile.username
@@ -255,11 +255,13 @@ const Drawer: React.FC<DrawerProps> = ({
                       userPermissions.role &&
                       userPermissions.role !== "user" &&
                       !userPermissions.is_hidden && (
-                        <RoleBadge
-                          role={userPermissions.role}
-                          roleHebrew={userPermissions.role_hebrew}
-                          size="sm"
-                        />
+                        <div>
+                          <RoleBadge
+                            role={userPermissions.role}
+                            roleHebrew={userPermissions.role_hebrew}
+                            size="sm"
+                          />
+                        </div>
                       )}
                   </div>
                   <div className="flex items-center gap-1 mt-1">

@@ -49,6 +49,7 @@ interface Profile {
   created_at?: string;
   updated_at?: string;
   last_seen_at?: string | null;
+  last_username_change_at?: string;
 }
 
 interface UserPermissions {
@@ -134,6 +135,7 @@ interface MyProfilePreloadState {
   likers: MyProfilePreloadLiker[];
   likers_total: number;
   comments: MyProfilePreloadComment[];
+  comments_total: number;
   status: "idle" | "loading" | "loaded" | "error";
   lastFetchedAt: number;
 }
@@ -388,7 +390,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           approved_at, approved_by, rejection_reason, is_moderator,
           is_verified, created_at, updated_at, email,
           questions_count, answers_count, best_answers_count, total_views,
-          profile_likes_count, last_seen_at
+          profile_likes_count, last_seen_at, last_username_change_at
         `,
           )
           .eq("id", userId)
@@ -450,6 +452,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             typeof (data as { profile_likes_count?: number }).profile_likes_count === "number"
               ? (data as { profile_likes_count: number }).profile_likes_count
               : undefined,
+          last_username_change_at: data.last_username_change_at
+            ? String(data.last_username_change_at)
+            : undefined,
           last_seen_at: data.last_seen_at ? String(data.last_seen_at) : null,
         };
 
@@ -668,6 +673,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 likers: [],
                 likers_total: 0,
                 comments: [],
+                comments_total: 0,
                 status: "idle",
                 lastFetchedAt: 0,
               };
@@ -678,7 +684,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const encodedUsername = encodeURIComponent(username);
         const [preloadRes, commentsRes] = await Promise.all([
           fetch(`/api/profile/${encodedUsername}/preload`),
-          fetch(`/api/profile/${encodedUsername}/comments`),
+          fetch(`/api/profile/${encodedUsername}/comments?limit=10&offset=0`),
         ]);
 
         if (!preloadRes.ok) {
@@ -743,6 +749,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             ? (commentsJson as { comments: MyProfilePreloadComment[] }).comments
             : previousForUser?.comments ?? [];
 
+          const comments_total =
+            typeof (commentsJson as { total?: number }).total === "number"
+              ? (commentsJson as { total: number }).total
+              : comments.length;
+
           return {
             username,
             counts,
@@ -753,6 +764,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             likers,
             likers_total,
             comments,
+            comments_total,
             status: "loaded",
             lastFetchedAt: now,
           };
@@ -781,6 +793,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             likers: [],
             likers_total: 0,
             comments: [],
+            comments_total: 0,
             status: "error",
             lastFetchedAt: Date.now(),
           };
@@ -801,22 +814,56 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setLoading(true);
         setError(null);
 
+        const currentUsername = profile?.username || "";
+        const submittedUsername =
+          typeof profileData.username === "string"
+            ? profileData.username.trim()
+            : undefined;
+        const isUsernameChanging =
+          submittedUsername &&
+          submittedUsername.length > 0 &&
+          submittedUsername !== currentUsername;
+
+        // Enforce 30‑day cooldown on username changes (app‑side guard;
+        // database trigger enforces this as the final source of truth).
+        if (isUsernameChanging && profile?.last_username_change_at) {
+          const lastChange = new Date(profile.last_username_change_at);
+          if (!Number.isNaN(lastChange.getTime())) {
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const diffMs = Date.now() - lastChange.getTime();
+            if (diffMs < THIRTY_DAYS_MS) {
+              setError("ניתן לשנות שם משתמש פעם ב-30 ימים");
+              return false;
+            }
+          }
+        }
+
+        const updatePayload: Record<string, unknown> = {
+          bio: profileData.bio || undefined,
+          location: profileData.location || undefined,
+          website: profileData.website || undefined,
+          avatar_url: profileData.avatar_url || undefined,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (isUsernameChanging) {
+          updatePayload.username = submittedUsername;
+        }
+
         const { error } = await supabase
           .from("profiles")
-          .update({
-            username: profileData.username || undefined,
-            bio: profileData.bio || undefined,
-            location: profileData.location || undefined,
-            website: profileData.website || undefined,
-            avatar_url: profileData.avatar_url || undefined,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq("id", user.id);
 
         if (error) {
           console.error("Profile update error:", error);
 
-          if (error.message.includes("username")) {
+          if (
+            typeof error.message === "string" &&
+            error.message.includes("username_change_cooldown_violation")
+          ) {
+            setError("ניתן לשנות שם משתמש פעם ב-30 ימים");
+          } else if (error.message.includes("username")) {
             setError("שם משתמש כבר תפוס");
           } else if (error.code === "23505") {
             setError("הערך כבר קיים במערכת");
@@ -837,7 +884,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setLoading(false);
       }
     },
-    [user?.id, supabase, refreshProfile, setError, setLoading, ensureMyProfilePreload],
+    [
+      user?.id,
+      supabase,
+      refreshProfile,
+      setError,
+      setLoading,
+      ensureMyProfilePreload,
+      profile?.username,
+      profile?.last_username_change_at,
+    ],
   );
 
   // Load profile + permissions in background (non-blocking)

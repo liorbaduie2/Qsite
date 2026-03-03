@@ -4,12 +4,26 @@ import { createClient } from '@/lib/supabase/server';
 /**
  * GET /api/profile/[username]/comments
  * Returns profile comments for the given username (newest first).
+ * Supports basic pagination via `limit` and `offset` query parameters.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ username: string }> }
 ) {
   try {
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
+    const limitParam = searchParams.get('limit');
+    const offsetParam = searchParams.get('offset');
+
+    let limit = Number(limitParam ?? '10');
+    if (!Number.isFinite(limit) || limit <= 0) limit = 10;
+    // Hard cap to avoid fetching too many at once
+    if (limit > 50) limit = 50;
+
+    let offset = Number(offsetParam ?? '0');
+    if (!Number.isFinite(offset) || offset < 0) offset = 0;
+
     const { username } = await context.params;
     if (!username || typeof username !== 'string') {
       return NextResponse.json({ error: 'Username required' }, { status: 400 });
@@ -26,11 +40,12 @@ export async function GET(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    const { data: rows, error } = await supabase
+    const { data: rows, error, count } = await supabase
       .from('profile_comments')
-      .select('id, content, created_at, author_id')
+      .select('id, content, created_at, author_id', { count: 'exact' })
       .eq('profile_id', profileRow.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       console.error('Profile comments GET error:', error);
@@ -49,6 +64,13 @@ export async function GET(
       });
     }
 
+    const total =
+      typeof count === 'number'
+        ? count
+        : Array.isArray(rows)
+          ? rows.length
+          : 0;
+
     const comments = (rows || []).map((r) => {
       const author = authorProfiles[r.author_id];
       return {
@@ -61,7 +83,7 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({ comments });
+    return NextResponse.json({ comments, total });
   } catch (e) {
     console.error('Profile comments API error:', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
