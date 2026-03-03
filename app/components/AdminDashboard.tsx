@@ -1322,7 +1322,11 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                                 <div>
                                     <span className="font-semibold">ניכוי מוניטין מקסימלי: </span>
-                                    <span>{userPermissions.max_reputation_deduction}</span>
+                                    <span>
+                                        {userPermissions.role === 'owner'
+                                            ? 'ללא מגבלה'
+                                            : userPermissions.max_reputation_deduction}
+                                    </span>
                                 </div>
                                 <div className="col-span-1 sm:col-span-2">
                                     <span className="font-semibold">מגבלת השעייה: </span>

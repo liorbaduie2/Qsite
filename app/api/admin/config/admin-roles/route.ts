@@ -83,6 +83,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Owner role is hard-coded at the DB layer and must not be modified via this API
+    if (roleName === 'owner') {
+      return NextResponse.json(
+        { error: 'לא ניתן לעדכן את תפקיד בעלים דרך ממשק זה' },
+        { status: 400 },
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'חסר אימות' }, { status: 401 });
