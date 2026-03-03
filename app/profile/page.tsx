@@ -199,7 +199,15 @@ function ReputationArc({ value, max = 100, size = 120 }: ReputationArcProps) {
 }
 
 export default function ProfilePage() {
-  const { user, profile, updateProfile, loading, userPermissions } = useAuth();
+  const {
+    user,
+    profile,
+    updateProfile,
+    loading,
+    userPermissions,
+    myProfilePreload,
+    ensureMyProfilePreload,
+  } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -225,12 +233,6 @@ export default function ProfilePage() {
   const [likers, setLikers] = useState<
     { id: string; username: string; avatar_url: string | null }[]
   >([]);
-  const [countsReady, setCountsReady] = useState(false);
-  const [preloadCounts, setPreloadCounts] = useState<{
-    questions_count: number;
-    answers_count: number;
-    profile_likes_count: number;
-  } | null>(null);
   const [questionsTotal, setQuestionsTotal] = useState(0);
   const [repliesTotal, setRepliesTotal] = useState(0);
   const [likersTotal, setLikersTotal] = useState(0);
@@ -281,81 +283,61 @@ export default function ProfilePage() {
       .catch(() => setSharedStatus(null));
   }, [user]);
 
-  // Phase 1: Fetch only counts. Skeleton hides when profile + counts are ready.
   useEffect(() => {
-    if (!profile?.username) {
-      setCountsReady(true);
-      return;
-    }
-    setCountsReady(false);
-    fetch(`/api/profile/${encodeURIComponent(profile.username)}/counts`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          setPreloadCounts({
-            questions_count:
-              typeof data.questions_count === "number"
-                ? data.questions_count
-                : 0,
-            answers_count:
-              typeof data.answers_count === "number" ? data.answers_count : 0,
-            profile_likes_count:
-              typeof data.profile_likes_count === "number"
-                ? data.profile_likes_count
-                : 0,
-          });
-        }
-        setCountsReady(true);
-      })
-      .catch(() => setCountsReady(true));
-  }, [profile?.username]);
-
-  // Phase 2: After profile is visible, fetch detail lists in background. Does not affect skeleton.
-  useEffect(() => {
-    if (!profile?.username || !countsReady) return;
-    fetch(`/api/profile/${encodeURIComponent(profile.username)}/preload`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          setUserQuestions(Array.isArray(data.questions) ? data.questions : []);
-          setUserReplies(Array.isArray(data.replies) ? data.replies : []);
-          setLikers(Array.isArray(data.likers) ? data.likers : []);
-          setQuestionsTotal(
-            typeof data.questions_total === "number"
-              ? data.questions_total
-              : (data.questions?.length ?? 0),
-          );
-          setRepliesTotal(
-            typeof data.replies_total === "number"
-              ? data.replies_total
-              : (data.replies?.length ?? 0),
-          );
-          setLikersTotal(
-            typeof data.likers_total === "number"
-              ? data.likers_total
-              : (data.likers?.length ?? 0),
-          );
-        }
-      })
-      .catch(() => {
-        setUserQuestions([]);
-        setUserReplies([]);
-        setLikers([]);
-        setQuestionsTotal(0);
-        setRepliesTotal(0);
-        setLikersTotal(0);
-      });
-  }, [profile?.username, countsReady]);
+    if (!user || !profile?.username) return;
+    void ensureMyProfilePreload();
+  }, [user?.id, profile?.username, ensureMyProfilePreload]);
 
   useEffect(() => {
     if (!profile?.username) return;
-    fetch(`/api/profile/${encodeURIComponent(profile.username)}/comments`)
-      .then((res) => (res.ok ? res.json() : { comments: [] }))
-      .then((data) =>
-        setProfileComments(Array.isArray(data?.comments) ? data.comments : []),
-      )
-      .catch(() => setProfileComments([]));
-  }, [profile?.username]);
+    if (
+      !myProfilePreload ||
+      myProfilePreload.username !== profile.username ||
+      (myProfilePreload.status !== "loaded" &&
+        myProfilePreload.status !== "error")
+    ) {
+      return;
+    }
+
+    setUserQuestions(
+      Array.isArray(myProfilePreload.questions)
+        ? myProfilePreload.questions
+        : [],
+    );
+    setUserReplies(
+      Array.isArray(myProfilePreload.replies)
+        ? myProfilePreload.replies
+        : [],
+    );
+    setLikers(
+      Array.isArray(myProfilePreload.likers) ? myProfilePreload.likers : [],
+    );
+    setQuestionsTotal(
+      typeof myProfilePreload.questions_total === "number"
+        ? myProfilePreload.questions_total
+        : Array.isArray(myProfilePreload.questions)
+          ? myProfilePreload.questions.length
+          : 0,
+    );
+    setRepliesTotal(
+      typeof myProfilePreload.replies_total === "number"
+        ? myProfilePreload.replies_total
+        : Array.isArray(myProfilePreload.replies)
+          ? myProfilePreload.replies.length
+          : 0,
+    );
+    setLikersTotal(
+      typeof myProfilePreload.likers_total === "number"
+        ? myProfilePreload.likers_total
+        : Array.isArray(myProfilePreload.likers)
+          ? myProfilePreload.likers.length
+          : 0,
+    );
+
+    if (Array.isArray(myProfilePreload.comments)) {
+      setProfileComments(myProfilePreload.comments);
+    }
+  }, [profile?.username, myProfilePreload]);
 
   const removeSharedFromProfile = async () => {
     if (!sharedStatus) return;
@@ -404,7 +386,7 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
   const isProfileLoading = loading && !profile;
-  const isSkeleton = !profile || !countsReady;
+  const isSkeleton = !profile;
 
   if (!loading && !user) {
     return (
@@ -427,13 +409,22 @@ export default function ProfilePage() {
   const joinedDate = profile?.created_at || new Date().toISOString();
   const reputation = profile?.reputation ?? 0;
   const { textClass: reputationTextClass } = getReputationVisuals(reputation);
-  const questionsAsked = preloadCounts
-    ? preloadCounts.questions_count
+  const preloadForUser =
+    myProfilePreload &&
+    profile?.username &&
+    myProfilePreload.username === profile.username
+      ? myProfilePreload
+      : null;
+
+  const questionsAsked = preloadForUser
+    ? preloadForUser.counts.questions_count
     : Math.max(userQuestions.length, profile?.questions_count ?? 0);
   const answersGiven =
-    preloadCounts?.answers_count ?? profile?.answers_count ?? 0;
+    preloadForUser?.counts.answers_count ?? profile?.answers_count ?? 0;
   const profileLikesCount =
-    preloadCounts?.profile_likes_count ?? profile?.profile_likes_count ?? 0;
+    preloadForUser?.counts.profile_likes_count ??
+    profile?.profile_likes_count ??
+    0;
 
   const loadMoreQuestions = useCallback(() => {
     if (
@@ -598,18 +589,6 @@ export default function ProfilePage() {
                         </>
                       )}
                     </div>
-                    {!isSkeleton &&
-                      userPermissions &&
-                      userPermissions.role !== "user" &&
-                      !userPermissions.is_hidden && (
-                        <div className="mt-1">
-                          <RoleBadge
-                            role={userPermissions.role}
-                            roleHebrew={userPermissions.role_hebrew}
-                            size="sm"
-                          />
-                        </div>
-                      )}
                   </div>
                 </div>
 
@@ -658,6 +637,18 @@ export default function ProfilePage() {
                     <h2 className="text-[1.75rem] font-bold text-gray-800 dark:text-gray-100 mb-1">
                       {profile?.full_name || profile?.username || ""}
                     </h2>
+                    {!isSkeleton &&
+                      userPermissions &&
+                      userPermissions.role !== "user" &&
+                      !userPermissions.is_hidden && (
+                        <div className="mt-1 mb-1.5 flex justify-center">
+                          <RoleBadge
+                            role={userPermissions.role}
+                            roleHebrew={userPermissions.role_hebrew}
+                            size="sm"
+                          />
+                        </div>
+                      )}
                     {profile?.bio && (
                       <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">

@@ -19,6 +19,8 @@ import { createClient } from "@/lib/supabase/client";
 import { UserAvatar } from "@/app/components/UserAvatar";
 import { isOnline } from "@/lib/utils";
 import { usePresenceTick } from "@/app/hooks/usePresenceTick";
+import { useAuth } from "@/app/components/AuthProvider";
+import { RoleBadge } from "@/app/components/RoleBadge";
 
 interface MenuItem {
   label: string;
@@ -69,6 +71,7 @@ const Drawer: React.FC<DrawerProps> = ({
   headerExtra,
 }) => {
   usePresenceTick(); // re-evaluate isOnline(profile?.last_seen_at) every 30s
+  const { userPermissions } = useAuth();
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -248,17 +251,16 @@ const Drawer: React.FC<DrawerProps> = ({
                         />
                       )}
                     </span>
-                    {profile?.is_moderator && (
-                      <div className="relative group">
-                        <Shield
-                          size={14}
-                          className="text-indigo-600 dark:text-indigo-400 flex-shrink-0"
+                    {userPermissions &&
+                      userPermissions.role &&
+                      userPermissions.role !== "user" &&
+                      !userPermissions.is_hidden && (
+                        <RoleBadge
+                          role={userPermissions.role}
+                          roleHebrew={userPermissions.role_hebrew}
+                          size="sm"
                         />
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          מנהל
-                        </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     <Award

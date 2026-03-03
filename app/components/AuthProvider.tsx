@@ -89,6 +89,57 @@ interface LoginStatusResult {
   user_id?: string;
 }
 
+interface MyProfilePreloadCounts {
+  questions_count: number;
+  answers_count: number;
+  profile_likes_count: number;
+}
+
+interface MyProfilePreloadQuestion {
+  id: string;
+  title: string;
+  created_at: string;
+}
+
+interface MyProfilePreloadReply {
+  id: string;
+  content: string;
+  created_at: string;
+  question_id: string;
+  question_title: string | null;
+}
+
+interface MyProfilePreloadLiker {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+}
+
+interface MyProfilePreloadComment {
+  id: string;
+  content: string;
+  created_at: string;
+  author_id: string;
+  author_username: string | null;
+  author_avatar_url: string | null;
+}
+
+interface MyProfilePreloadState {
+  username: string;
+  counts: MyProfilePreloadCounts;
+  questions: MyProfilePreloadQuestion[];
+  questions_total: number;
+  replies: MyProfilePreloadReply[];
+  replies_total: number;
+  likers: MyProfilePreloadLiker[];
+  likers_total: number;
+  comments: MyProfilePreloadComment[];
+  status: "idle" | "loading" | "loaded" | "error";
+  lastFetchedAt: number;
+}
+
+const MY_PROFILE_PRELOAD_TTL_MS = 5 * 60 * 1000;
+
 interface AuthResponse {
   data: {
     user: User | null;
@@ -104,6 +155,7 @@ interface AuthContextType {
   loginStatus: LoginStatusResult | null;
   loading: boolean;
   error: string | null;
+  myProfilePreload: MyProfilePreloadState | null;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signUp: (
     email: string,
@@ -117,6 +169,7 @@ interface AuthContextType {
   clearError: () => void;
   checkLoginStatus: (userId?: string) => Promise<LoginStatusResult>;
   updateProfile: (profileData: Partial<Profile>) => Promise<boolean>;
+  ensureMyProfilePreload: (options?: { force?: boolean }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -143,6 +196,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+   const [myProfilePreload, setMyProfilePreload] =
+    useState<MyProfilePreloadState | null>(null);
 
   const router = useRouter();
 
@@ -567,6 +622,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setProfile(null);
       setUserPermissions(null);
       setLoginStatus(null);
+      setMyProfilePreload(null);
       setError(null);
     } catch (error) {
       console.error("Sign out error:", error);
@@ -574,6 +630,165 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(false);
     }
   };
+
+  const ensureMyProfilePreload = useCallback(
+    async (options?: { force?: boolean }) => {
+      const force = options?.force ?? false;
+      if (!user?.id || !profile?.username) return;
+
+      const username = profile.username;
+      const now = Date.now();
+
+      if (myProfilePreload && !force) {
+        if (
+          myProfilePreload.status === "loading" ||
+          (myProfilePreload.status === "loaded" &&
+            myProfilePreload.username === username &&
+            now - myProfilePreload.lastFetchedAt < MY_PROFILE_PRELOAD_TTL_MS)
+        ) {
+          return;
+        }
+      }
+
+      setMyProfilePreload((prev) => {
+        const base: MyProfilePreloadState =
+          prev && prev.username === username
+            ? { ...prev }
+            : {
+                username,
+                counts: {
+                  questions_count: 0,
+                  answers_count: 0,
+                  profile_likes_count: 0,
+                },
+                questions: [],
+                questions_total: 0,
+                replies: [],
+                replies_total: 0,
+                likers: [],
+                likers_total: 0,
+                comments: [],
+                status: "idle",
+                lastFetchedAt: 0,
+              };
+        return { ...base, status: "loading" };
+      });
+
+      try {
+        const encodedUsername = encodeURIComponent(username);
+        const [preloadRes, commentsRes] = await Promise.all([
+          fetch(`/api/profile/${encodedUsername}/preload`),
+          fetch(`/api/profile/${encodedUsername}/comments`),
+        ]);
+
+        if (!preloadRes.ok) {
+          throw new Error("Failed to preload profile");
+        }
+
+        const preloadData = await preloadRes.json();
+        const commentsJson = commentsRes.ok ? await commentsRes.json() : {};
+
+        setMyProfilePreload((prev) => {
+          const previousForUser =
+            prev && prev.username === username ? prev : null;
+
+          const counts: MyProfilePreloadCounts = {
+            questions_count:
+              typeof preloadData.questions_count === "number"
+                ? preloadData.questions_count
+                : previousForUser?.counts.questions_count ?? 0,
+            answers_count:
+              typeof preloadData.answers_count === "number"
+                ? preloadData.answers_count
+                : previousForUser?.counts.answers_count ?? 0,
+            profile_likes_count:
+              typeof preloadData.profile_likes_count === "number"
+                ? preloadData.profile_likes_count
+                : previousForUser?.counts.profile_likes_count ?? 0,
+          };
+
+          const questions: MyProfilePreloadQuestion[] = Array.isArray(
+            preloadData.questions,
+          )
+            ? preloadData.questions
+            : previousForUser?.questions ?? [];
+          const replies: MyProfilePreloadReply[] = Array.isArray(
+            preloadData.replies,
+          )
+            ? preloadData.replies
+            : previousForUser?.replies ?? [];
+          const likers: MyProfilePreloadLiker[] = Array.isArray(
+            preloadData.likers,
+          )
+            ? preloadData.likers
+            : previousForUser?.likers ?? [];
+
+          const questions_total =
+            typeof preloadData.questions_total === "number"
+              ? preloadData.questions_total
+              : questions.length;
+          const replies_total =
+            typeof preloadData.replies_total === "number"
+              ? preloadData.replies_total
+              : replies.length;
+          const likers_total =
+            typeof preloadData.likers_total === "number"
+              ? preloadData.likers_total
+              : likers.length;
+
+          const comments: MyProfilePreloadComment[] = Array.isArray(
+            (commentsJson as { comments?: MyProfilePreloadComment[] })
+              .comments,
+          )
+            ? (commentsJson as { comments: MyProfilePreloadComment[] }).comments
+            : previousForUser?.comments ?? [];
+
+          return {
+            username,
+            counts,
+            questions,
+            questions_total,
+            replies,
+            replies_total,
+            likers,
+            likers_total,
+            comments,
+            status: "loaded",
+            lastFetchedAt: now,
+          };
+        });
+      } catch {
+        setMyProfilePreload((prev) => {
+          if (prev && prev.username === username) {
+            return {
+              ...prev,
+              status: "error",
+              lastFetchedAt: Date.now(),
+            };
+          }
+
+          return {
+            username,
+            counts: {
+              questions_count: 0,
+              answers_count: 0,
+              profile_likes_count: 0,
+            },
+            questions: [],
+            questions_total: 0,
+            replies: [],
+            replies_total: 0,
+            likers: [],
+            likers_total: 0,
+            comments: [],
+            status: "error",
+            lastFetchedAt: Date.now(),
+          };
+        });
+      }
+    },
+    [user?.id, profile?.username, myProfilePreload],
+  );
 
   const updateProfile = useCallback(
     async (profileData: Partial<Profile>): Promise<boolean> => {
@@ -612,6 +827,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
 
         await refreshProfile();
+        await ensureMyProfilePreload({ force: true });
         return true;
       } catch (error) {
         console.error("Profile update error:", error);
@@ -621,7 +837,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setLoading(false);
       }
     },
-    [user?.id, supabase, refreshProfile, setError, setLoading],
+    [user?.id, supabase, refreshProfile, setError, setLoading, ensureMyProfilePreload],
   );
 
   // Load profile + permissions in background (non-blocking)
@@ -662,6 +878,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     },
     [checkLoginStatus, fetchUserProfile, getUserPermissions, supabase]
   );
+
+  // Background preload of the logged-in user's private profile extras
+  useEffect(() => {
+    if (!user?.id || !profile?.username) return;
+    void ensureMyProfilePreload();
+  }, [user?.id, profile?.username, ensureMyProfilePreload]);
 
   // Heartbeat: update last_seen_at when user is active (for online indicator)
   useEffect(() => {
@@ -758,6 +980,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loginStatus,
     loading,
     error,
+    myProfilePreload,
     signIn,
     signUp,
     signOut,
@@ -766,6 +989,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     clearError,
     checkLoginStatus,
     updateProfile,
+    ensureMyProfilePreload,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1285,10 +1285,24 @@ const AdminDashboard: React.FC = () => {
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">פאנל ניהול</h1>
                         <p className="text-slate-600 dark:text-slate-400 mt-1">ניהול בקשות הצטרפות וחברי הקהילה</p>
                     </div>
-                    <Link href="/" className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                        <ArrowRight className="w-4 h-4" />
-                        חזרה לדף הבית
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        {userPermissions?.role === 'owner' && (
+                            <Link
+                                href="/admin/permissions"
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors shadow-sm"
+                            >
+                                <Shield className="w-4 h-4" />
+                                מטריצת הרשאות
+                            </Link>
+                        )}
+                        <Link
+                            href="/"
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                        >
+                            <ArrowRight className="w-4 h-4" />
+                            חזרה לדף הבית
+                        </Link>
+                    </div>
                 </header>
 
                 {userPermissions && (
@@ -1355,15 +1369,6 @@ const AdminDashboard: React.FC = () => {
                                 <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">
                                     פעולות מותרות
                                 </h3>
-                                {userPermissions.role === 'owner' && (
-                                    <Link
-                                        href="/admin/permissions"
-                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-300 dark:border-blue-600 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors"
-                                    >
-                                        <Shield className="w-4 h-4" />
-                                        מטריצת הרשאות
-                                    </Link>
-                                )}
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                                 {permissionLabels.map(p => (
@@ -1375,37 +1380,6 @@ const AdminDashboard: React.FC = () => {
                                     )
                                 ))}
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                {userPermissions?.role === 'owner' && rolesConfig.length > 0 && (
-                    <div className="mb-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4">הגדרות תפקידים</h2>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">מגבלות וברירות מחדל לכל תפקיד (מטריצת הרשאות).</p>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm text-right border-collapse">
-                                <thead>
-                                    <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
-                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">תפקיד</th>
-                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">ניכוי מוניטין מקסימלי</th>
-                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">מגבלת השעייה (שעות)</th>
-                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">משך ההשעיה (ברירת מחדל)</th>
-                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">ניכוי מוניטין (ברירת מחדל)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rolesConfig.map((r) => (
-                                        <tr key={r.role} className="border-b border-slate-100 dark:border-slate-700/60">
-                                            <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">{r.role_name_hebrew}</td>
-                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.max_reputation_deduction ?? '—'}</td>
-                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.max_suspension_hours != null ? `${r.max_suspension_hours} שעות` : 'ללא מגבלה'}</td>
-                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.default_suspension_hours ?? '—'}</td>
-                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.default_reputation_deduction ?? '—'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 )}

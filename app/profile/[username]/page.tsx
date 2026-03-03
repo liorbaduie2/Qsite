@@ -468,17 +468,6 @@ export default function PublicProfilePage() {
                         </>
                       )}
                     </div>
-                    {!isSkeleton &&
-                      profile?.role &&
-                      profile.role_hebrew && (
-                        <div className="mt-1">
-                          <RoleBadge
-                            role={profile.role}
-                            roleHebrew={profile.role_hebrew}
-                            size="sm"
-                          />
-                        </div>
-                      )}
                   </div>
                 </div>
                 {isSkeleton ? (
@@ -506,6 +495,17 @@ export default function PublicProfilePage() {
                     <h2 className="text-[1.75rem] font-bold text-gray-800 dark:text-gray-100 mb-1">
                       {displayName}
                     </h2>
+                    {!isSkeleton &&
+                      profile?.role &&
+                      profile.role_hebrew && (
+                        <div className="mt-1 mb-1.5 flex justify-center">
+                          <RoleBadge
+                            role={profile.role}
+                            roleHebrew={profile.role_hebrew}
+                            size="sm"
+                          />
+                        </div>
+                      )}
                     {profile?.bio && (
                       <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
