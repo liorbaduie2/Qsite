@@ -944,6 +944,7 @@ const AdminDashboard: React.FC = () => {
     const [users, setUsers] = useState<AdminUserView[]>([]);
     
     const [loading, setLoading] = useState(true);
+    const [hasLoadedData, setHasLoadedData] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -1033,17 +1034,18 @@ const AdminDashboard: React.FC = () => {
     };
     
     useEffect(() => {
-        if(userPermissions?.can_approve_registrations) {
+        if (userPermissions?.can_approve_registrations) {
             setActiveTab('applications');
         } else if (userPermissions?.can_view_user_list) {
             setActiveTab('users');
         }
-        
-        if (currentUser && userPermissions?.can_view_user_list) {
-            loadDashboardData();
+
+        if (!hasLoadedData && currentUser && userPermissions?.can_view_user_list) {
+            // Load once when admin dashboard becomes available; avoid implicit reloads on tab focus
+            loadDashboardData().finally(() => setHasLoadedData(true));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentUser, userPermissions]);
+    }, [currentUser, userPermissions, hasLoadedData]);
 
     const handleApprove = async (applicationId: string, reason?: string) => {
       if (!userPermissions?.can_approve_registrations || !currentUser) {
@@ -1328,18 +1330,18 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                                 {(userPermissions.can_suspend_user || userPermissions.can_deduct_reputation) && (
                                     <>
-                                        {typeof userPermissions.default_suspension_hours === 'number' && (
-                                            <div>
-                                                <span className="font-semibold">משך ההשעיה (ברירת מחדל, שעות): </span>
-                                                <span>{userPermissions.default_suspension_hours}</span>
-                                            </div>
-                                        )}
-                                        {typeof userPermissions.default_reputation_deduction === 'number' && (
-                                            <div>
-                                                <span className="font-semibold">ניכוי מוניטין (ברירת מחדל): </span>
-                                                <span>{userPermissions.default_reputation_deduction}</span>
-                                            </div>
-                                        )}
+                                        <div>
+                                            <span className="font-semibold">משך ההשעיה (ברירת מחדל, שעות): </span>
+                                            <span>
+                                                {userPermissions.default_suspension_hours ?? 'לא הוגדר'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="font-semibold">ניכוי מוניטין (ברירת מחדל): </span>
+                                            <span>
+                                                {userPermissions.default_reputation_deduction ?? 'לא הוגדר'}
+                                            </span>
+                                        </div>
                                     </>
                                 )}
                             </div>

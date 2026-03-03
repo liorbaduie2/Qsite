@@ -73,7 +73,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3) If the RPC itself failed, still fall back to safe defaults
+    // 3) If the RPC itself failed, still fall back to safe defaults.
+    //    For non-owner roles, we now derive limits directly from admin_roles_config
+    //    so they always match what was configured in מטריצת הרשאות.
     if (error) {
       // Special case: original owner user ID gets hard-coded full owner perms
       if (userId === "25928cfa-123a-4b66-935c-8ffff11d5d09") {
@@ -98,33 +100,64 @@ export async function POST(request: NextRequest) {
           default_suspension_hours: 24,
         };
       } else if (roleRow) {
-        // If we have a role row but RPC failed, derive perms purely from that
+        // If we have a role row but RPC failed, derive perms from admin_roles_config
         const role = roleRow.role;
         const isOwner = role === "owner";
         const isGuardian = role === "guardian";
         const isAdmin = role === "admin";
         const isModerator = role === "moderator";
 
+        const { data: roleConfig } = await supabase
+          .from("admin_roles_config")
+          .select(
+            "role, role_name_hebrew, can_approve_registrations, can_manage_user_ranks, can_view_user_list, can_view_private_chats, can_block_user, can_suspend_user, can_permanent_ban, can_edit_delete_content, can_deduct_reputation, can_mark_rule_violation, max_reputation_deduction, max_suspension_hours, default_reputation_deduction, default_suspension_hours",
+          )
+          .eq("role", role)
+          .maybeSingle();
+
         permissions = {
           role,
-          role_hebrew: roleRow.role_name_hebrew || role,
+          role_hebrew:
+            roleRow.role_name_hebrew ||
+            roleConfig?.role_name_hebrew ||
+            role ||
+            "admin",
           is_hidden: false,
           reputation: 50,
-          can_approve_registrations: isOwner || isGuardian,
-          can_manage_user_ranks: isOwner,
-          can_view_user_list: isOwner || isGuardian || isAdmin,
-          can_view_private_chats: isOwner,
-          can_block_user: isOwner || isGuardian || isAdmin,
-          can_suspend_user: isOwner || isGuardian || isAdmin,
-          can_permanent_ban: isOwner,
-          can_edit_delete_content: isOwner || isGuardian || isAdmin,
-          can_deduct_reputation: isOwner || isGuardian || isAdmin,
+          can_approve_registrations:
+            roleConfig?.can_approve_registrations ?? (isOwner || isGuardian),
+          can_manage_user_ranks:
+            roleConfig?.can_manage_user_ranks ?? isOwner,
+          can_view_user_list:
+            roleConfig?.can_view_user_list ??
+            (isOwner || isGuardian || isAdmin),
+          can_view_private_chats:
+            roleConfig?.can_view_private_chats ?? isOwner,
+          can_block_user:
+            roleConfig?.can_block_user ??
+            (isOwner || isGuardian || isAdmin),
+          can_suspend_user:
+            roleConfig?.can_suspend_user ??
+            (isOwner || isGuardian || isAdmin),
+          can_permanent_ban:
+            roleConfig?.can_permanent_ban ?? isOwner,
+          can_edit_delete_content:
+            roleConfig?.can_edit_delete_content ??
+            (isOwner || isGuardian || isAdmin),
+          can_deduct_reputation:
+            roleConfig?.can_deduct_reputation ??
+            (isOwner || isGuardian || isAdmin),
           can_mark_rule_violation:
-            isOwner || isGuardian || isAdmin || isModerator,
-          max_reputation_deduction: isOwner || isGuardian || isAdmin ? 999 : 0,
-          max_suspension_hours: null,
-          default_reputation_deduction: null,
-          default_suspension_hours: null,
+            roleConfig?.can_mark_rule_violation ??
+            (isOwner || isGuardian || isAdmin || isModerator),
+          // Limits and defaults: always mirror admin_roles_config so they match מטריצת הרשאות
+          max_reputation_deduction:
+            roleConfig?.max_reputation_deduction ?? 0,
+          max_suspension_hours: roleConfig?.max_suspension_hours ?? null,
+          default_reputation_deduction:
+            roleConfig?.default_reputation_deduction ?? null,
+          default_suspension_hours:
+            roleConfig?.default_suspension_hours ?? null,
         };
       } else {
         // No role row and RPC failed: plain user
