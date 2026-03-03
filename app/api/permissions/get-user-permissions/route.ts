@@ -64,6 +64,13 @@ export async function POST(request: NextRequest) {
       permissions.can_mark_rule_violation =
         permissions.can_mark_rule_violation ??
         (isOwner || isGuardian || isAdmin || isModerator);
+
+      // 2c) Hard guarantee: owner always has very high limits
+      if (isOwner) {
+        permissions.max_reputation_deduction = 999;
+        // null here means \"no enforced cap\" at the API level
+        permissions.max_suspension_hours = null;
+      }
     }
 
     // 3) If the RPC itself failed, still fall back to safe defaults

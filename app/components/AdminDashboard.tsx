@@ -149,12 +149,22 @@ interface ApprovalModalProps {
     loading: boolean;
 }
 
+export interface RoleConfigEntry {
+    role: string;
+    role_name_hebrew: string;
+    max_reputation_deduction: number | null;
+    max_suspension_hours: number | null;
+    default_reputation_deduction: number | null;
+    default_suspension_hours: number | null;
+}
+
 interface UserManagementModalProps {
     user: AdminUserView | null;
     isOpen: boolean;
     onClose: () => void;
     loading: boolean;
     onAction: (message: string, isError: boolean) => void;
+    roleConfig?: RoleConfigEntry[];
 }
 
 /** Default reason template for suspension. Admin can edit before confirming. */
@@ -360,7 +370,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, colorClas
     </div>
 );
 
-const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen, onClose, loading, onAction }) => {
+const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen, onClose, loading, onAction, roleConfig }) => {
     const { userPermissions } = useAuth();
     const [activeTab, setActiveTab] = useState<'role' | 'actions' | 'logs'>('role');
 
@@ -422,6 +432,19 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
             setSelectedRole(user.role || 'user');
             setIsHiddenRole(user.is_hidden || false);
             setRoleReason('');
+            // Initialize suspension hours and reputation defaults from role config (if available)
+            const defaultSuspend =
+                typeof userPermissions?.default_suspension_hours === 'number'
+                    ? userPermissions.default_suspension_hours
+                    : 24;
+            const defaultReputation =
+                typeof userPermissions?.default_reputation_deduction === 'number'
+                    ? userPermissions.default_reputation_deduction
+                    : 1;
+
+            setSuspensionHours(defaultSuspend);
+            setCustomAmount(defaultReputation);
+
             setSuspensionReason(DEFAULT_PUNISHMENT_REASON_TEMPLATE);
             setPenaltyReason('');
             const isOwner = userPermissions?.role === 'owner';
@@ -692,6 +715,20 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ user, isOpen,
                                 })}
                             </div>
 
+                            {roleConfig && roleConfig.length > 0 && (() => {
+                                const config = roleConfig.find(rc => rc.role === selectedRole);
+                                if (!config) return null;
+                                return (
+                                    <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700">
+                                        <span className="font-semibold">מגבלות תפקיד נבחר: </span>
+                                        ניכוי מוניטין מקס׳ {config.max_reputation_deduction ?? '—'} נק׳;
+                                        השעיה {config.max_suspension_hours != null ? `עד ${config.max_suspension_hours} שעות` : 'ללא מגבלה'};
+                                        {config.default_reputation_deduction != null && ` ברירת מחדל ניכוי ${config.default_reputation_deduction};`}
+                                        {config.default_suspension_hours != null && ` ברירת מחדל השעיה ${config.default_suspension_hours} שעות`}
+                                    </div>
+                                );
+                            })()}
+
                             <div>
                                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">סיבה לשינוי <span className="text-red-500">*</span></label>
                                 <textarea value={roleReason} onChange={e => setRoleReason(e.target.value)} className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} placeholder="הסבר מדוע התפקיד משתנה..."></textarea>
@@ -927,6 +964,7 @@ const AdminDashboard: React.FC = () => {
     
     const [selectedUser, setSelectedUser] = useState<AdminUserView | null>(null);
     const [showUserManagementModal, setShowUserManagementModal] = useState(false);
+    const [rolesConfig, setRolesConfig] = useState<RoleConfigEntry[]>([]);
 
     const permissionLabels = [
         { key: 'can_approve_registrations', label: 'אישור הרשמות' },
@@ -976,6 +1014,15 @@ const AdminDashboard: React.FC = () => {
                 const logData = await logRes.json();
                 if (logRes.ok && Array.isArray(logData.entries)) setActivityLog(logData.entries);
                 else setActivityLog([]);
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    const rolesRes = await fetch('/api/admin/config/admin-roles', {
+                        headers: { Authorization: `Bearer ${session.access_token}` },
+                    });
+                    const rolesJson = await rolesRes.json();
+                    if (rolesRes.ok && Array.isArray(rolesJson.roles)) setRolesConfig(rolesJson.roles);
+                    else setRolesConfig([]);
+                }
             }
 
         } catch (err: unknown) {
@@ -1279,6 +1326,22 @@ const AdminDashboard: React.FC = () => {
                                     <span className="font-semibold">מגבלת השעייה: </span>
                                     <span>{userPermissions.max_suspension_hours ? `${userPermissions.max_suspension_hours} שעות` : 'ללא מגבלה'}</span>
                                 </div>
+                                {(userPermissions.can_suspend_user || userPermissions.can_deduct_reputation) && (
+                                    <>
+                                        {typeof userPermissions.default_suspension_hours === 'number' && (
+                                            <div>
+                                                <span className="font-semibold">משך ההשעיה (ברירת מחדל, שעות): </span>
+                                                <span>{userPermissions.default_suspension_hours}</span>
+                                            </div>
+                                        )}
+                                        {typeof userPermissions.default_reputation_deduction === 'number' && (
+                                            <div>
+                                                <span className="font-semibold">ניכוי מוניטין (ברירת מחדל): </span>
+                                                <span>{userPermissions.default_reputation_deduction}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </div>
                         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm flex flex-col gap-4">
@@ -1309,7 +1372,38 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                 )}
-                
+
+                {userPermissions?.role === 'owner' && rolesConfig.length > 0 && (
+                    <div className="mb-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4">הגדרות תפקידים</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">מגבלות וברירות מחדל לכל תפקיד (מטריצת הרשאות).</p>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm text-right border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
+                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">תפקיד</th>
+                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">ניכוי מוניטין מקסימלי</th>
+                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">מגבלת השעייה (שעות)</th>
+                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">משך ההשעיה (ברירת מחדל)</th>
+                                        <th className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200">ניכוי מוניטין (ברירת מחדל)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rolesConfig.map((r) => (
+                                        <tr key={r.role} className="border-b border-slate-100 dark:border-slate-700/60">
+                                            <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">{r.role_name_hebrew}</td>
+                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.max_reputation_deduction ?? '—'}</td>
+                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.max_suspension_hours != null ? `${r.max_suspension_hours} שעות` : 'ללא מגבלה'}</td>
+                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.default_suspension_hours ?? '—'}</td>
+                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{r.default_reputation_deduction ?? '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
                 {error && (
                     <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 rounded-lg flex items-center justify-between">
                         <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5 text-red-500" /><p className="text-red-800 dark:text-red-200 font-medium">{error}</p></div>
@@ -1537,6 +1631,7 @@ const AdminDashboard: React.FC = () => {
                 onClose={() => { setShowUserManagementModal(false); setSelectedUser(null); }}
                 loading={actionLoading}
                 onAction={handleUserAction}
+                roleConfig={rolesConfig}
             />
         </div>
     );

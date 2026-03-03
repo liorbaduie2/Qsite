@@ -36,9 +36,9 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from('admin_roles_config')
       .select(
-        'role_name, role_name_hebrew, max_reputation_deduction, max_suspension_hours, default_reputation_deduction, default_suspension_hours',
+        'role, role_name_hebrew, max_reputation_deduction, max_suspension_hours, default_reputation_deduction, default_suspension_hours',
       )
-      .order('role_name');
+      .order('role');
 
     if (error) {
       console.error('Error fetching admin roles config:', error);
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest) {
         default_suspension_hours: defaultSuspensionHours,
         updated_at: new Date().toISOString(),
       })
-      .eq('role_name', roleName);
+      .eq('role', roleName);
 
     if (error) {
       console.error('Error updating admin role config:', error);

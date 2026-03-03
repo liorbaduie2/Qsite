@@ -41,12 +41,22 @@ interface AdminUserView {
   created_at: string;
 }
 
+export interface RoleConfigEntry {
+  role: string;
+  role_name_hebrew: string;
+  max_reputation_deduction: number | null;
+  max_suspension_hours: number | null;
+  default_reputation_deduction: number | null;
+  default_suspension_hours: number | null;
+}
+
 interface UserManagementModalProps {
   user: AdminUserView | null;
   isOpen: boolean;
   onClose: () => void;
   loading: boolean;
   onAction: (message: string, isError: boolean) => void;
+  roleConfig?: RoleConfigEntry[];
 }
 
 const roleOptions = [
@@ -103,7 +113,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   onClose,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   loading: _propLoading,
-  onAction
+  onAction,
+  roleConfig
 }) => {
   const [activeTab, setActiveTab] = useState<'role' | 'actions'>('role');
   const [selectedRole, setSelectedRole] = useState('user');
@@ -378,15 +389,24 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                               {role.description}
                             </div>
                             <div className="text-xs text-slate-500 dark:text-slate-500 mt-2">
-                              {role.max_rep_deduction > 0 && (
-                                <div>ניכוי מוניטין: עד {role.max_rep_deduction}</div>
-                              )}
-                              {role.max_suspension !== null && role.max_suspension > 0 && (
-                                <div>השעיה: עד {role.max_suspension} שעות</div>
-                              )}
-                              {role.max_suspension === null && role.value !== 'user' && (
-                                <div>השעיה: ללא הגבלה</div>
-                              )}
+                              {(() => {
+                                const config = roleConfig?.find(rc => rc.role === role.value);
+                                const maxRep = config?.max_reputation_deduction ?? role.max_rep_deduction;
+                                const maxSus = config?.max_suspension_hours ?? role.max_suspension;
+                                return (
+                                  <>
+                                    {maxRep > 0 && (
+                                      <div>ניכוי מוניטין: עד {maxRep}</div>
+                                    )}
+                                    {maxSus !== null && maxSus !== undefined && maxSus > 0 && (
+                                      <div>השעיה: עד {maxSus} שעות</div>
+                                    )}
+                                    {(maxSus === null || maxSus === undefined) && role.value !== 'user' && (
+                                      <div>השעיה: ללא הגבלה</div>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

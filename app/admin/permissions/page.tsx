@@ -27,7 +27,7 @@ export default function PermissionsMatrixPage() {
 }
 
 function PermissionsMatrixInner() {
-  const { userPermissions } = useAuth();
+  const { userPermissions, refreshPermissions } = useAuth();
   const [matrix, setMatrix] = useState<
     Record<PermissionKey, Record<AdminRoleKey, boolean>> | null
   >(null);
@@ -35,7 +35,7 @@ function PermissionsMatrixInner() {
   const [error, setError] = useState<string | null>(null);
   const [rolesConfig, setRolesConfig] = useState<
     {
-      role_name: AdminRoleKey;
+      role: AdminRoleKey;
       role_name_hebrew: string;
       max_reputation_deduction: number | null;
       max_suspension_hours: number | null;
@@ -88,7 +88,8 @@ function PermissionsMatrixInner() {
         > = {} as any;
         for (const def of PERMISSION_DEFINITIONS) {
           base[def.key] = {
-            owner: false,
+            // Owner always has full access; matrix cannot turn this off
+            owner: true,
             guardian: false,
             admin: false,
             moderator: false,
@@ -96,6 +97,8 @@ function PermissionsMatrixInner() {
           };
         }
         for (const row of rows) {
+          // Ignore stored values for owner: owner is always fully enabled
+          if (row.role === "owner") continue;
           if (base[row.permission_key]) {
             base[row.permission_key][row.role] = !!row.allowed;
           }
@@ -114,7 +117,35 @@ function PermissionsMatrixInner() {
             rolesJson.error || "שגיאה בטעינת הגדרות תפקידים",
           );
         }
-        setRolesConfig(rolesJson.roles ?? []);
+        const allowedRoles: AdminRoleKey[] = [
+          "owner",
+          "guardian",
+          "admin",
+          "moderator",
+          "user",
+        ];
+        const rawRoles: any[] = Array.isArray(rolesJson.roles)
+          ? rolesJson.roles
+          : [];
+        const byKey = new Map<string, any>();
+        for (const r of rawRoles) {
+          if (typeof r?.role === "string") {
+            byKey.set(r.role, r);
+          }
+        }
+        const normalized = allowedRoles.map((key) => {
+          const existing = byKey.get(key);
+          if (existing) return existing;
+          return {
+            role: key,
+            role_name_hebrew: ADMIN_ROLE_LABELS[key],
+            max_reputation_deduction: null,
+            max_suspension_hours: null,
+            default_reputation_deduction: null,
+            default_suspension_hours: null,
+          };
+        });
+        setRolesConfig(normalized);
       } catch (err) {
         setError(
           err instanceof Error
@@ -217,8 +248,9 @@ function PermissionsMatrixInner() {
               </thead>
               <tbody>
                 {rolesConfig.map((role) => {
+                  const isOwnerRole = role.role === "owner";
                   const draft =
-                    roleDrafts[role.role_name] ?? {
+                    roleDrafts[role.role] ?? {
                       maxReputation: role.max_reputation_deduction ?? 0,
                       maxSuspension: role.max_suspension_hours ?? 0,
                       defaultSuspension: role.default_suspension_hours ?? 0,
@@ -232,7 +264,7 @@ function PermissionsMatrixInner() {
                   ) => {
                     setRoleDrafts((prev) => ({
                       ...prev,
-                      [role.role_name]: { ...draft, ...patch },
+                      [role.role]: { ...draft, ...patch },
                     }));
                   };
 
@@ -245,6 +277,10 @@ function PermissionsMatrixInner() {
                       if (!session) {
                         throw new Error("לא מחובר למערכת");
                       }
+                      if (isOwnerRole) {
+                        // Owner is always treated as unlimited; do not persist limits via this UI
+                        return;
+                      }
                       const res = await fetch("/api/admin/config/admin-roles", {
                         method: "PUT",
                         headers: {
@@ -252,7 +288,7 @@ function PermissionsMatrixInner() {
                           Authorization: `Bearer ${session.access_token}`,
                         },
                         body: JSON.stringify({
-                          roleName: role.role_name,
+                          roleName: role.role,
                           maxReputationDeduction: draft.maxReputation,
                           maxSuspensionHours:
                             draft.maxSuspension > 0 ? draft.maxSuspension : null,
@@ -272,6 +308,31 @@ function PermissionsMatrixInner() {
                           data.error || "שגיאה בעדכון הגדרות תפקיד",
                         );
                       }
+                      // Update local state so the table shows saved values without reload
+                      setRolesConfig((prev) =>
+                        prev.map((r) =>
+                          r.role === role.role
+                            ? {
+                                ...r,
+                                max_reputation_deduction: draft.maxReputation,
+                                max_suspension_hours:
+                                  draft.maxSuspension > 0
+                                    ? draft.maxSuspension
+                                    : null,
+                                default_reputation_deduction:
+                                  draft.defaultReputation > 0
+                                    ? draft.defaultReputation
+                                    : null,
+                                default_suspension_hours:
+                                  draft.defaultSuspension > 0
+                                    ? draft.defaultSuspension
+                                    : null,
+                              }
+                            : r
+                        )
+                      );
+                      // Refresh current admin's permissions so dashboards immediately reflect new limits
+                      await refreshPermissions();
                     } catch (err) {
                       setError(
                         err instanceof Error
@@ -285,72 +346,100 @@ function PermissionsMatrixInner() {
 
                   return (
                     <tr
-                      key={role.role_name}
+                      key={role.role}
                       className="border-b border-slate-100 dark:border-slate-700/60"
                     >
                       <td className="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100">
                         {role.role_name_hebrew}
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          min={0}
-                          className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
-                          value={draft.maxReputation}
-                          onChange={(e) =>
-                            updateDraft({
-                              maxReputation: Number(e.target.value || 0),
-                            })
-                          }
-                        />
+                        {isOwnerRole ? (
+                          <span className="text-slate-600 dark:text-slate-200">
+                            ללא הגבלה
+                          </span>
+                        ) : (
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
+                            value={draft.maxReputation}
+                            onChange={(e) =>
+                              updateDraft({
+                                maxReputation: Number(e.target.value || 0),
+                              })
+                            }
+                          />
+                        )}
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          min={0}
-                          className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
-                          value={draft.maxSuspension}
-                          onChange={(e) =>
-                            updateDraft({
-                              maxSuspension: Number(e.target.value || 0),
-                            })
-                          }
-                        />
+                        {isOwnerRole ? (
+                          <span className="text-slate-600 dark:text-slate-200">
+                            ללא הגבלה
+                          </span>
+                        ) : (
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
+                            value={draft.maxSuspension}
+                            onChange={(e) =>
+                              updateDraft({
+                                maxSuspension: Number(e.target.value || 0),
+                              })
+                            }
+                          />
+                        )}
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          min={0}
-                          className="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
-                          value={draft.defaultSuspension}
-                          onChange={(e) =>
-                            updateDraft({
-                              defaultSuspension: Number(e.target.value || 0),
-                            })
-                          }
-                        />
+                        {isOwnerRole ? (
+                          <span className="text-slate-600 dark:text-slate-200">
+                            ללא הגבלה
+                          </span>
+                        ) : (
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
+                            value={draft.defaultSuspension}
+                            onChange={(e) =>
+                              updateDraft({
+                                defaultSuspension: Number(e.target.value || 0),
+                              })
+                            }
+                          />
+                        )}
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          min={0}
-                          className="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
-                          value={draft.defaultReputation}
-                          onChange={(e) =>
-                            updateDraft({
-                              defaultReputation: Number(e.target.value || 0),
-                            })
-                          }
-                        />
+                        {isOwnerRole ? (
+                          <span className="text-slate-600 dark:text-slate-200">
+                            ללא הגבלה
+                          </span>
+                        ) : (
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs"
+                            value={draft.defaultReputation}
+                            onChange={(e) =>
+                              updateDraft({
+                                defaultReputation: Number(e.target.value || 0),
+                              })
+                            }
+                          />
+                        )}
                       </td>
                       <td className="px-2 py-2 text-left">
                         <button
                           type="button"
                           onClick={handleSave}
-                          disabled={draft.saving}
+                          disabled={draft.saving || isOwnerRole}
                           className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
                         >
-                          {draft.saving ? "שומר..." : "שמור"}
+                          {isOwnerRole
+                            ? "ללא מגבלה"
+                            : draft.saving
+                              ? "שומר..."
+                              : "שמור"}
                         </button>
                       </td>
                     </tr>
@@ -421,8 +510,11 @@ function PermissionsMatrixInner() {
                         {(
                           ["owner", "guardian", "admin", "moderator", "user"] as AdminRoleKey[]
                         ).map((roleKey) => {
-                          const checked = row?.[roleKey] ?? false;
+                          const isOwnerCol = roleKey === "owner";
+                          const checked = isOwnerCol ? true : row?.[roleKey] ?? false;
                           const toggle = async () => {
+                            // Owner column is locked: cannot be toggled
+                            if (isOwnerCol) return;
                             const snapshot = matrix;
                             const updated: typeof matrix = {
                               ...matrix,
@@ -480,7 +572,8 @@ function PermissionsMatrixInner() {
                                 type="checkbox"
                                 checked={checked}
                                 onChange={toggle}
-                                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                disabled={isOwnerCol}
+                                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 disabled:opacity-70"
                               />
                             </td>
                           );
