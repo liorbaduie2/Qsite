@@ -690,7 +690,7 @@ export default function PublicProfilePage() {
                     {/* Questions Card */}
                     <div className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
                       <div className="text-2xl font-extrabold tabular-nums mb-1 text-center text-gray-900 dark:text-white">
-                        {profile?.questions_count ?? 0}
+                        {questions.length}
                       </div>
                       <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
                         <HelpCircle
@@ -781,13 +781,34 @@ export default function PublicProfilePage() {
                           }
                         }}
                       >
-                        <textarea
-                          value={commentContent}
-                          onChange={(e) => setCommentContent(e.target.value)}
-                          placeholder="הוסף תגובה ציבורית..."
-                          rows={2}
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-900 dark:text-white transition-all"
-                        />
+                        <div className="flex gap-3 items-start">
+                          <div className="flex-shrink-0">
+                            {authProfile?.avatar_url ? (
+                              <Image
+                                src={authProfile.avatar_url}
+                                alt={authProfile.username}
+                                width={40}
+                                height={40}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-sm"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
+                                <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">
+                                  {(authProfile?.username ?? "מ")
+                                    .charAt(0)
+                                    .toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <textarea
+                            value={commentContent}
+                            onChange={(e) => setCommentContent(e.target.value)}
+                            placeholder="הוסף תגובה ציבורית..."
+                            rows={2}
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-900 dark:text-white transition-all"
+                          />
+                        </div>
                         <div className="flex justify-end mt-2">
                           <button
                             type="submit"
