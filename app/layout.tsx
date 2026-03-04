@@ -1,7 +1,7 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { AuthProvider } from './components/AuthProvider';
-import { ThemeProvider as CustomThemeProvider } from './components/ThemeProvider';
+import { AuthProvider } from "./components/AuthProvider";
+import { ThemeProvider as CustomThemeProvider } from "./components/ThemeProvider";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -10,8 +10,9 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "פורום הקהילה - Next.js and Supabase",
-  description: "פורום קהילת המפתחים הישראלית - שאל שאלות, שתף ידע וקבל עזרה",
+  title: "פטפטוּ - קהילה מצומצמת ואיכותית",
+  description:
+    "פורום קהילה מצומצם ואיכותי ישראלי - שאל שאלות, שתפו דעות, הכירו חברים וקבל עזרה",
 };
 
 // This script runs before React to prevent theme flash.
@@ -53,8 +54,7 @@ export default function RootLayout({
       <head>
         <ThemeHydrationScript />
       </head>
-      <body
-      >
+      <body>
         <AuthProvider>
           <CustomThemeProvider>
             <main>{children}</main>
