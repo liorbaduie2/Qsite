@@ -18,6 +18,8 @@ import {
   Star,
   Heart,
   Trash2,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { SimpleThemeToggle } from "../components/SimpleThemeToggle";
 import { useAuth } from "../components/AuthProvider";
@@ -179,7 +181,7 @@ function ReputationArc({ value, max = 100, size = 120 }: ReputationArcProps) {
           cy={center}
           r={radius}
           fill="none"
-          stroke="rgba(148, 163, 184, 0.35)"
+          stroke="rgba(148, 163, 184, 0.25)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={`${arcLength} ${gapLength}`}
@@ -210,7 +212,7 @@ export default function ProfilePage() {
     ensureMyProfilePreload,
   } = useAuth();
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
+  const[isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     username: "",
     bio: "",
@@ -222,7 +224,7 @@ export default function ProfilePage() {
   const [usernameStatus, setUsernameStatus] = useState<
     "idle" | "checking" | "available" | "taken"
   >("idle");
-  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const[usernameError, setUsernameError] = useState<string | null>(null);
 
   const [sharedStatus, setSharedStatus] = useState<{
     id: string;
@@ -231,20 +233,20 @@ export default function ProfilePage() {
   } | null>(null);
   const [removingShared, setRemovingShared] = useState(false);
   const [userQuestions, setUserQuestions] = useState<ProfileQuestion[]>([]);
-  const [userReplies, setUserReplies] = useState<ProfileReply[]>([]);
+  const[userReplies, setUserReplies] = useState<ProfileReply[]>([]);
   const [profileComments, setProfileComments] = useState<ProfileComment[]>([]);
   const [expandedSection, setExpandedSection] = useState<
     "questions" | "answers" | "likers" | null
   >(null);
-  const [likers, setLikers] = useState<
+  const[likers, setLikers] = useState<
     { id: string; username: string; avatar_url: string | null }[]
   >([]);
   const [questionsTotal, setQuestionsTotal] = useState(0);
   const [repliesTotal, setRepliesTotal] = useState(0);
-  const [likersTotal, setLikersTotal] = useState(0);
+  const[likersTotal, setLikersTotal] = useState(0);
   const [loadingMoreQuestions, setLoadingMoreQuestions] = useState(false);
   const [loadingMoreReplies, setLoadingMoreReplies] = useState(false);
-  const [loadingMoreLikers, setLoadingMoreLikers] = useState(false);
+  const[loadingMoreLikers, setLoadingMoreLikers] = useState(false);
   const [commentsOffset, setCommentsOffset] = useState(0);
   const [commentsTotal, setCommentsTotal] = useState(0);
   const [loadingMoreComments, setLoadingMoreComments] = useState(false);
@@ -272,7 +274,7 @@ export default function ProfilePage() {
         avatar_url: profile.avatar_url || "",
       });
     }
-  }, [user, profile, loading, router]);
+  },[user, profile, loading, router]);
 
   useEffect(() => {
     if (!user) {
@@ -283,7 +285,7 @@ export default function ProfilePage() {
       .then((res) => res.json())
       .then((data) => {
         const active = data.active?.sharedToProfile ? data.active : null;
-        const fromHistory = (data.history || []).find(
+        const fromHistory = (data.history ||[]).find(
           (s: { sharedToProfile: boolean }) => s.sharedToProfile,
         );
         const s = active || fromHistory;
@@ -312,13 +314,13 @@ export default function ProfilePage() {
     setUserQuestions(
       Array.isArray(myProfilePreload.questions)
         ? myProfilePreload.questions
-        : [],
+        :[],
     );
     setUserReplies(
-      Array.isArray(myProfilePreload.replies) ? myProfilePreload.replies : [],
+      Array.isArray(myProfilePreload.replies) ? myProfilePreload.replies :[],
     );
     setLikers(
-      Array.isArray(myProfilePreload.likers) ? myProfilePreload.likers : [],
+      Array.isArray(myProfilePreload.likers) ? myProfilePreload.likers :[],
     );
     setQuestionsTotal(
       typeof myProfilePreload.questions_total === "number"
@@ -344,7 +346,7 @@ export default function ProfilePage() {
 
     const initialComments = Array.isArray(myProfilePreload.comments)
       ? myProfilePreload.comments
-      : [];
+      :[];
     setProfileComments(initialComments);
     setCommentsOffset(initialComments.length);
     setCommentsTotal(
@@ -370,7 +372,7 @@ export default function ProfilePage() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }));
+    setEditForm((prev) => ({ ...prev,[field]: value }));
     if (field === "username") {
       setUsernameError(null);
       setUsernameStatus("idle");
@@ -392,7 +394,6 @@ export default function ProfilePage() {
   };
 
   const handleCancelEdit = () => {
-    // Revert form to original profile data
     if (profile) {
       setEditForm({
         username: profile.username || "",
@@ -529,7 +530,7 @@ export default function ProfilePage() {
           </p>
           <button
             onClick={() => router.push("/")}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
           >
             חזור לעמוד הבית
           </button>
@@ -577,11 +578,11 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.questions?.length) {
-          setUserQuestions((prev) => [...prev, ...data.questions]);
+          setUserQuestions((prev) =>[...prev, ...data.questions]);
         }
       })
       .finally(() => setLoadingMoreQuestions(false));
-  }, [
+  },[
     profile?.username,
     loadingMoreQuestions,
     userQuestions.length,
@@ -602,7 +603,7 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.replies?.length) {
-          setUserReplies((prev) => [...prev, ...data.replies]);
+          setUserReplies((prev) =>[...prev, ...data.replies]);
         }
       })
       .finally(() => setLoadingMoreReplies(false));
@@ -622,7 +623,7 @@ export default function ProfilePage() {
         }
       })
       .finally(() => setLoadingMoreLikers(false));
-  }, [profile?.username, loadingMoreLikers, likers.length, likersTotal]);
+  },[profile?.username, loadingMoreLikers, likers.length, likersTotal]);
 
   const loadMoreComments = useCallback(() => {
     if (
@@ -640,7 +641,7 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data?.comments) && data.comments.length > 0) {
-          setProfileComments((prev) => [...prev, ...data.comments]);
+          setProfileComments((prev) =>[...prev, ...data.comments]);
           const nextOffset = commentsOffset + data.comments.length;
           setCommentsOffset(nextOffset);
           if (typeof data.total === "number") {
@@ -682,14 +683,14 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-[#0B1120] pb-12" dir="rtl">
       {/* Header */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
+      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-16">
             <button
               onClick={() => router.push("/")}
-              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors font-medium"
             >
               <ArrowRight size={20} />
               <span>חזור לעמוד הבית</span>
@@ -699,22 +700,28 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 sticky top-8">
-              {/* Profile Header */}
-              <div className="text-center mb-4">
-                <div className="flex flex-col items-center justify-center mb-2">
-                  <div className="relative" style={{ width: 124, height: 124 }}>
+      <div className="max-w-6xl mx-auto px-6 pt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+          {/* Main Sidebar (Left in LTR, Right visually in RTL) */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden relative">
+              {/* Cover Photo */}
+              <div className="h-32 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-600 dark:via-purple-600 dark:to-pink-600">
+                {isSkeleton && <div className="w-full h-full bg-gray-200 dark:bg-gray-800 animate-pulse" />}
+              </div>
+
+              <div className="px-6 pb-6 relative">
+                {/* Profile Header (Avatar + Arc overlap) */}
+                <div className="flex justify-center -mt-16 mb-4">
+                  <div className="relative bg-white dark:bg-gray-900 rounded-full p-1" style={{ width: 132, height: 132 }}>
                     {isSkeleton ? (
-                      <div className="absolute inset-4 flex items-center justify-center">
-                        <SkeletonCircle className="w-24 h-24 border-4 border-white dark:border-gray-600 shadow-lg" />
-                      </div>
+                      <SkeletonCircle className="w-full h-full border-4 border-white dark:border-gray-900 shadow-md" />
                     ) : (
                       <>
-                        <ReputationArc value={reputation} size={124} />
+                        <div className="absolute inset-1">
+                          <ReputationArc value={reputation} size={124} />
+                        </div>
                         <div className="absolute inset-4 flex items-center justify-center">
                           <div className="relative">
                             {profile?.avatar_url ? (
@@ -723,11 +730,11 @@ export default function ProfilePage() {
                                 alt={profile?.username || ""}
                                 width={96}
                                 height={96}
-                                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-600 shadow-lg"
+                                className="w-[100px] h-[100px] rounded-full object-cover border-4 border-white dark:border-gray-900 shadow-sm"
                               />
                             ) : (
-                              <div className="w-24 h-24 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-500 dark:to-purple-600 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-600 shadow-lg">
-                                <span className="text-2xl font-bold text-white">
+                              <div className="w-[100px] h-[100px] bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-900 shadow-sm">
+                                <span className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
                                   {profile?.username
                                     ? profile.username.charAt(0).toUpperCase()
                                     : ""}
@@ -736,10 +743,10 @@ export default function ProfilePage() {
                             )}
                             {isEditing && (
                               <button
-                                className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 dark:bg-orange-400 text-white rounded-full flex items-center justify-center hover:bg-orange-600 dark:hover:bg-orange-500 transition-colors"
+                                className="absolute bottom-0 right-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-md border-2 border-white dark:border-gray-900"
                                 title="עדכן תמונת פרופיל"
                               >
-                                <Camera size={16} />
+                                <Camera size={14} />
                               </button>
                             )}
                           </div>
@@ -747,649 +754,642 @@ export default function ProfilePage() {
                       </>
                     )}
                   </div>
-                  <div className="mt-2 space-y-1">
-                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {isSkeleton ? (
-                        <SkeletonText className="w-32 mx-auto" />
-                      ) : (
-                        <>
-                          מוניטין{" "}
-                          <span className={reputationTextClass}>
-                            {reputation}
-                          </span>{" "}
-                          נקודות
-                        </>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
-                {isSkeleton ? (
-                  <div className="space-y-3 mt-2">
-                    <SkeletonText className="w-40 mx-auto h-6" />
-                    <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                      <div className="space-y-2">
-                        <SkeletonText className="w-full" />
-                        <SkeletonText className="w-5/6" />
-                        <SkeletonText className="w-4/6" />
-                      </div>
+                <div className="text-center mb-6">
+                  {isSkeleton ? (
+                    <div className="space-y-3">
+                      <SkeletonText className="w-40 mx-auto h-7" />
+                      <SkeletonText className="w-24 mx-auto h-5" />
                     </div>
-                    <div className="mt-3 p-4 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700/50">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <SkeletonText className="w-32 h-4" />
-                        <SkeletonBlock className="w-20 h-6 rounded-lg" />
-                      </div>
-                      <div className="space-y-2">
-                        <SkeletonText className="w-full" />
-                        <SkeletonText className="w-3/4" />
-                      </div>
-                    </div>
-                  </div>
-                ) : isEditing ? (
-                  <div className="space-y-3">
+                  ) : (
+                    <>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                        {profile?.full_name || profile?.username || ""}
+                      </h2>
+                      {!isEditing && (
+                        <div className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center justify-center gap-1.5 mb-2">
+                          <span>מוניטין</span>
+                          <span className={`${reputationTextClass} font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full`}>
+                            {reputation}
+                          </span>
+                        </div>
+                      )}
+
+                      {!isSkeleton &&
+                        userPermissions &&
+                        userPermissions.role !== "user" &&
+                        !userPermissions.is_hidden && (
+                          <div className="mt-2 flex justify-center">
+                            <RoleBadge
+                              role={userPermissions.role}
+                              roleHebrew={userPermissions.role_hebrew}
+                              size="sm"
+                            />
+                          </div>
+                        )}
+                    </>
+                  )}
+                </div>
+
+                {/* Edit Mode vs View Mode */}
+                {isEditing ? (
+                  <div className="space-y-4 mb-6">
                     <div className="relative">
-                      <input
-                        type="text"
-                        value={editForm.username}
-                        onChange={(e) =>
-                          handleInputChange("username", e.target.value)
-                        }
-                        placeholder="שם משתמש"
-                        disabled={!canChangeUsername}
-                        className={`w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:border-transparent ${
-                          !canChangeUsername
-                            ? "bg-gray-100 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-600"
-                            : hasUsernameError
-                              ? "border border-red-500 dark:border-red-400 bg-red-50/60 dark:bg-red-900/30 focus:ring-red-500"
-                              : "border border-gray-300 dark:border-gray-600 focus:ring-indigo-500"
-                        } pr-16`}
-                      />
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">שם משתמש</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={editForm.username}
+                          onChange={(e) =>
+                            handleInputChange("username", e.target.value)
+                          }
+                          disabled={!canChangeUsername}
+                          className={`w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent transition-all ${
+                            !canChangeUsername
+                              ? "opacity-70 cursor-not-allowed border border-gray-200 dark:border-gray-700"
+                              : hasUsernameError
+                                ? "border border-red-300 dark:border-red-500/50 bg-red-50/50 dark:bg-red-900/10 focus:ring-red-500"
+                                : "border border-gray-200 dark:border-gray-700 focus:ring-indigo-500"
+                          } pr-4`}
+                        />
+                        {canChangeUsername && usernameStatus === "checking" && (
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <SkeletonCircle className="w-5 h-5" />
+                          </span>
+                        )}
+                        {canChangeUsername && usernameStatus === "available" && (
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500">
+                            <CheckCircle2 size={18} />
+                          </span>
+                        )}
+                        {canChangeUsername && usernameStatus === "taken" && (
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500">
+                            <AlertCircle size={18} />
+                          </span>
+                        )}
+                      </div>
                       {canChangeUsername && usernameError && (
-                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs font-medium text-red-600 dark:text-red-400">
-                          {usernameError}
-                        </span>
+                        <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                          <AlertCircle size={12} /> {usernameError}
+                        </p>
+                      )}
+                      {!canChangeUsername && nextUsernameChangeDate && (
+                        <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                          ניתן לשנות שוב ב־{nextUsernameChangeDate.toLocaleDateString("he-IL")}
+                        </p>
                       )}
                     </div>
-                    {!canChangeUsername && nextUsernameChangeDate && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        תוכל לשנות שוב שם משתמש ב־
-                        {nextUsernameChangeDate.toLocaleDateString("he-IL")}
-                      </p>
-                    )}
-                    <textarea
-                      value={editForm.bio}
-                      onChange={(e) => handleInputChange("bio", e.target.value)}
-                      placeholder="ביוגרפיה - ספר קצת על עצמך"
-                      rows={4}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-900 dark:text-gray-100"
-                    />
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ביוגרפיה</label>
+                      <textarea
+                        value={editForm.bio}
+                        onChange={(e) => handleInputChange("bio", e.target.value)}
+                        placeholder="ספר קצת על עצמך..."
+                        rows={3}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-900 dark:text-white transition-all"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-[1.75rem] font-bold text-gray-800 dark:text-gray-100 mb-1">
-                      {profile?.full_name || profile?.username || ""}
-                    </h2>
-                    {!isSkeleton &&
-                      userPermissions &&
-                      userPermissions.role !== "user" &&
-                      !userPermissions.is_hidden && (
-                        <div className="mt-1 mb-1.5 flex justify-center">
-                          <RoleBadge
-                            role={userPermissions.role}
-                            roleHebrew={userPermissions.role_hebrew}
-                            size="sm"
-                          />
-                        </div>
-                      )}
-                    {profile?.bio && (
-                      <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                    {!isSkeleton && profile?.bio && (
+                      <div className="mb-6">
+                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
                           {profile.bio}
                         </p>
                       </div>
                     )}
-                    {sharedStatus && (
-                      <div className="mt-3 p-4 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700/50">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium">
-                            <Star size={18} className="fill-current" />
-                            מוצג בפרופיל (Featured)
+
+                    {!isSkeleton && sharedStatus && (
+                      <div className="mb-6 p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/10 rounded-xl border border-amber-200/60 dark:border-amber-700/30 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-1 h-full bg-amber-400 dark:bg-amber-500" />
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-semibold">
+                            <Star size={16} className="fill-current" />
+                            <span>סטטוס נעוץ</span>
                           </div>
                           <button
                             type="button"
                             onClick={removeSharedFromProfile}
                             disabled={removingShared}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-50"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded-md bg-white/60 hover:bg-white dark:bg-gray-800/60 dark:hover:bg-gray-800 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700/50 disabled:opacity-50"
                           >
-                            {removingShared ? "מסיר..." : "הסר מפרופיל"}
+                            {removingShared ? "מסיר..." : "הסר"}
                           </button>
                         </div>
-                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                        <p className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed">
                           {sharedStatus.content}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        <p className="text-[11px] text-amber-600/70 dark:text-amber-400/60 mt-3 font-medium">
                           {formatRelativeTime(sharedStatus.createdAt)}
                         </p>
                       </div>
                     )}
                   </>
                 )}
-              </div>
 
-              {/* Profile Actions */}
-              <div className="flex gap-2 mb-6">
-                {isSkeleton ? (
-                  <>
-                    <SkeletonBlock className="flex-1 h-10 rounded-lg" />
-                    <SkeletonBlock className="w-10 h-10 rounded-lg" />
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleEditToggle}
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                        isEditing
-                          ? "bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600"
-                          : "bg-indigo-600 dark:bg-indigo-500 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600"
-                      }`}
-                    >
-                      {isEditing ? <Save size={16} /> : <Edit3 size={16} />}
-                      {isEditing ? "שמור" : "ערוך פרופיל"}
-                    </button>
-                    {isEditing && (
-                      <button
-                        onClick={handleCancelEdit}
-                        className="px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Profile Details */}
-              <div className="space-y-3 mb-6">
-                {isSkeleton ? (
-                  <>
-                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                      <MapPin
-                        size={18}
-                        className="text-gray-400 dark:text-gray-500"
-                      />
-                      <SkeletonText className="w-32" />
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                      <Globe
-                        size={18}
-                        className="text-gray-400 dark:text-gray-500"
-                      />
-                      <SkeletonText className="w-40" />
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                      <Calendar
-                        size={18}
-                        className="text-gray-400 dark:text-gray-500"
-                      />
-                      <SkeletonText className="w-28" />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {(profile?.location || isEditing) && (
-                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                        <MapPin
-                          size={18}
-                          className="text-gray-400 dark:text-gray-500"
-                        />
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.location}
-                            onChange={(e) =>
-                              handleInputChange("location", e.target.value)
-                            }
-                            placeholder="מיקום (אופציונלי)"
-                            className="flex-1 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100"
-                          />
-                        ) : (
-                          <span>{profile?.location}</span>
-                        )}
+                {/* Profile Details List */}
+                <div className="space-y-4 py-4 border-t border-gray-100 dark:border-gray-800">
+                  {isSkeleton ? ([1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <SkeletonCircle className="w-8 h-8 rounded-lg" />
+                        <SkeletonText className="w-32 h-4" />
                       </div>
-                    )}
+                    ))
+                  ) : (
+                    <>
+                      {(profile?.location || isEditing) && (
+                        <div className="flex items-center gap-3 text-sm">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                            <MapPin size={16} />
+                          </div>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.location}
+                              onChange={(e) => handleInputChange("location", e.target.value)}
+                              placeholder="מיקום (אופציונלי)"
+                              className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white"
+                            />
+                          ) : (
+                            <span className="text-gray-700 dark:text-gray-300 font-medium">{profile?.location}</span>
+                          )}
+                        </div>
+                      )}
 
-                    {(profile?.website || isEditing) && (
-                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                        {playlistInfo.icon}
-                        {isEditing ? (
-                          <input
-                            type="url"
-                            value={editForm.website}
-                            onChange={(e) =>
-                              handleInputChange("website", e.target.value)
-                            }
-                            placeholder="פלייליסט ספוטיפיי/אפל מיוזיק"
-                            className="flex-1 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-gray-100"
-                          />
-                        ) : (
-                          profile?.website && (
-                            <a
-                              href={profile.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-indigo-600 dark:text-indigo-400 hover:underline"
-                            >
-                              {playlistInfo.text}
-                            </a>
-                          )
-                        )}
+                      {(profile?.website || isEditing) && (
+                        <div className="flex items-center gap-3 text-sm">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800">
+                            {playlistInfo.icon}
+                          </div>
+                          {isEditing ? (
+                            <input
+                              type="url"
+                              value={editForm.website}
+                              onChange={(e) => handleInputChange("website", e.target.value)}
+                              placeholder="קישור לפלייליסט או אתר"
+                              className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white text-left"
+                              dir="ltr"
+                            />
+                          ) : (
+                            profile?.website && (
+                              <a
+                                href={profile.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium hover:underline truncate"
+                                dir="ltr"
+                              >
+                                {playlistInfo.text}
+                              </a>
+                            )
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                          <Calendar size={16} />
+                        </div>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          הצטרף ב-{new Date(joinedDate).toLocaleDateString("he-IL")}
+                        </span>
                       </div>
-                    )}
-
-                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                      <Calendar
-                        size={18}
-                        className="text-gray-400 dark:text-gray-500"
-                      />
-                      <span>
-                        הצטרף ב-
-                        {new Date(joinedDate).toLocaleDateString("he-IL")}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {reputation === 100 && !isSkeleton && (
-                <div className="mt-3 p-3 bg-emerald-50/90 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl flex items-start gap-3">
-                  <Star
-                    size={18}
-                    className="text-emerald-600 dark:text-emerald-400 mt-0.5"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                      תג כבוד – מוניטין 100
-                    </p>
-                    <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
-                      הגעת לרמת האמון הגבוהה ביותר בקהילה. תודה על התרומה שלך!
-                    </p>
-                  </div>
+                    </>
+                  )}
                 </div>
-              )}
+
+                {/* Profile Actions */}
+                <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  {isSkeleton ? (
+                    <>
+                      <SkeletonBlock className="flex-1 h-11 rounded-xl" />
+                      <SkeletonBlock className="w-11 h-11 rounded-xl" />
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleEditToggle}
+                        disabled={isEditing && (!canSaveProfile || isCheckingUsername)}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                          isEditing
+                            ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            : "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                        }`}
+                      >
+                        {isEditing ? <Save size={18} /> : <Edit3 size={18} />}
+                        {isEditing ? "שמור שינויים" : "ערוך פרופיל"}
+                      </button>
+                      {isEditing && (
+                        <button
+                          onClick={handleCancelEdit}
+                          className="px-3.5 py-2.5 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          title="ביטול"
+                        >
+                          <X size={20} />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Reputation Badge */}
+                {reputation === 100 && !isSkeleton && (
+                  <div className="mt-6 p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/5 dark:to-teal-500/5 border border-emerald-200/50 dark:border-emerald-800/50 rounded-2xl flex items-start gap-3 relative overflow-hidden">
+                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+                    <Star
+                      size={20}
+                      className="text-emerald-500 dark:text-emerald-400 mt-0.5 flex-shrink-0"
+                    />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                        מוניטין מושלם (100)
+                      </p>
+                      <p className="text-[13px] text-emerald-800/80 dark:text-emerald-200/70 mt-1 leading-relaxed">
+                        הגעת לרמת האמון הגבוהה ביותר בקהילה. תודה על תרומתך!
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Main Content - same layout as public profile */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Activity card */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+          {/* Main Content Area (Right in LTR, Left visually in RTL) */}
+          <div className="lg:col-span-8 space-y-6">
+
+            {/* Activity Dashboard */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <HelpCircle size={20} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  לוח פעילות
+                </h3>
+              </div>
+
               {isSkeleton ? (
-                <div className="space-y-4">
-                  <SkeletonText className="w-48 h-5 mx-auto" />
-                  <div className="grid grid-cols-3 gap-3">
-                    {[0, 1, 2].map((idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40"
-                      >
-                        <SkeletonText className="w-16 h-6" />
-                      </div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-3 gap-4">
+                  {[0, 1, 2].map((idx) => (
+                    <SkeletonBlock key={idx} className="h-[120px] rounded-2xl" />
+                  ))}
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                    <HelpCircle size={20} className="text-indigo-500" />
-                    פעילות
-                  </h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedSection((s) =>
-                          s === "questions" ? null : "questions",
-                        )
-                      }
-                      className="flex items-center gap-3 p-4 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-gradient-to-br from-blue-50 to-blue-100/80 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200/80 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 transition-colors text-right cursor-pointer"
-                    >
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/15 dark:bg-blue-500/25">
-                        <HelpCircle
-                          size={22}
-                          className="text-blue-600 dark:text-blue-400"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 tabular-nums">
-                          {Number(questionsAsked)}
-                        </p>
-                        <p className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
-                          שאלות
-                        </p>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedSection((s) =>
-                          s === "answers" ? null : "answers",
-                        )
-                      }
-                      className="flex items-center gap-3 p-4 rounded-xl border border-emerald-200 dark:border-emerald-700/50 bg-gradient-to-br from-emerald-50 to-emerald-100/80 dark:from-emerald-900/20 dark:to-emerald-800/20 hover:from-emerald-100 hover:to-emerald-200/80 dark:hover:from-emerald-800/30 dark:hover:to-emerald-700/30 transition-colors text-right cursor-pointer"
-                    >
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-500/15 dark:bg-emerald-500/25">
-                        <MessageSquare
-                          size={22}
-                          className="text-emerald-600 dark:text-emerald-400"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
-                          {answersGiven}
-                        </p>
-                        <p className="text-xs font-medium text-emerald-600/80 dark:text-emerald-400/80">
-                          תשובות
-                        </p>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedSection((s) =>
-                          s === "likers" ? null : "likers",
-                        )
-                      }
-                      className="flex items-center gap-3 p-4 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-gradient-to-br from-purple-50 to-purple-100/80 dark:from-purple-900/20 dark:to-purple-800/20 hover:from-purple-100 hover:to-purple-200/80 dark:hover:from-purple-800/30 dark:hover:to-purple-700/30 transition-colors text-right cursor-pointer"
-                    >
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-500/15 dark:bg-purple-500/25">
-                        <Heart
-                          size={22}
-                          className="text-purple-600 dark:text-purple-400"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 tabular-nums">
-                          {profileLikesCount}
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Slide-down content: fixed height, scroll inside for more */}
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      expandedSection
-                        ? "max-h-[320px] opacity-100"
-                        : "max-h-0 opacity-0"
+                <>
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Questions Card */}
+                  <button
+                    onClick={() => setExpandedSection((s) => s === "questions" ? null : "questions")}
+                    className={`group flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden ${
+                      expandedSection === "questions"
+                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-500/20 dark:ring-blue-400/20"
+                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
                     }`}
                   >
+                    <div className={`mb-3 transition-transform group-hover:scale-110 ${expandedSection === "questions" ? "text-blue-600 dark:text-blue-400 scale-110" : "text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400"}`}>
+                      <HelpCircle size={28} />
+                    </div>
+                    <div className={`text-3xl font-black mb-1 tabular-nums ${expandedSection === "questions" ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-white"}`}>
+                      {Number(questionsAsked)}
+                    </div>
+                    <div className={`text-sm font-medium ${expandedSection === "questions" ? "text-blue-600/80 dark:text-blue-400/80" : "text-gray-500 dark:text-gray-400"}`}>
+                      שאלות
+                    </div>
+                  </button>
+
+                  {/* Answers Card */}
+                  <button
+                    onClick={() => setExpandedSection((s) => s === "answers" ? null : "answers")}
+                    className={`group flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden ${
+                      expandedSection === "answers"
+                        ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 ring-1 ring-emerald-500/20 dark:ring-emerald-400/20"
+                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-800 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10"
+                    }`}
+                  >
+                    <div className={`mb-3 transition-transform group-hover:scale-110 ${expandedSection === "answers" ? "text-emerald-600 dark:text-emerald-400 scale-110" : "text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400"}`}>
+                      <MessageSquare size={28} />
+                    </div>
+                    <div className={`text-3xl font-black mb-1 tabular-nums ${expandedSection === "answers" ? "text-emerald-700 dark:text-emerald-300" : "text-gray-900 dark:text-white"}`}>
+                      {answersGiven}
+                    </div>
+                    <div className={`text-sm font-medium ${expandedSection === "answers" ? "text-emerald-600/80 dark:text-emerald-400/80" : "text-gray-500 dark:text-gray-400"}`}>
+                      תשובות
+                    </div>
+                  </button>
+
+                  {/* Likers Card */}
+                  <button
+                    onClick={() => setExpandedSection((s) => s === "likers" ? null : "likers")}
+                    className={`group flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden ${
+                      expandedSection === "likers"
+                        ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 ring-1 ring-purple-500/20 dark:ring-purple-400/20"
+                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800 hover:bg-purple-50/50 dark:hover:bg-purple-900/10"
+                    }`}
+                  >
+                    <div className={`mb-3 transition-transform group-hover:scale-110 ${expandedSection === "likers" ? "text-purple-600 dark:text-purple-400 scale-110" : "text-gray-400 dark:text-gray-500 group-hover:text-purple-500 dark:group-hover:text-purple-400"}`}>
+                      <Heart size={28} />
+                    </div>
+                    <div className={`text-3xl font-black mb-1 tabular-nums ${expandedSection === "likers" ? "text-purple-700 dark:text-purple-300" : "text-gray-900 dark:text-white"}`}>
+                      {profileLikesCount}
+                    </div>
+                    <div className={`text-sm font-medium ${expandedSection === "likers" ? "text-purple-600/80 dark:text-purple-400/80" : "text-gray-500 dark:text-gray-400"}`}>
+                      לייקים
+                    </div>
+                  </button>
+                </div>
+
+                {/* Expanded Activity Area */}
+                <div
+                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                    expandedSection ? "max-h-[500px] opacity-100 mt-6" : "max-h-0 opacity-0 mt-0"
+                  }`}
+                >
+                  <div className={`rounded-2xl border p-1 ${
+                    expandedSection === 'questions' ? 'bg-blue-50/50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-900/30' :
+                    expandedSection === 'answers' ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30' :
+                    'bg-purple-50/50 border-purple-100 dark:bg-purple-900/10 dark:border-purple-900/30'
+                  }`}>
                     {expandedSection === "questions" && (
-                      <div
-                        ref={questionsScrollRef}
-                        className="pt-4 mt-4 h-[280px] overflow-y-auto"
-                      >
-                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                          השאלות שלי
+                      <div ref={questionsScrollRef} className="h-[300px] overflow-y-auto p-4 custom-scrollbar">
+                        <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
+                          <HelpCircle size={16} /> השאלות שלי
                         </h4>
                         {userQuestions.length === 0 ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            אין שאלות עדיין.
-                          </p>
+                          <div className="flex flex-col items-center justify-center h-40 text-blue-800/60 dark:text-blue-200/50">
+                            <p className="text-sm">אין שאלות עדיין.</p>
+                          </div>
                         ) : (
-                          <>
-                            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                              {userQuestions.map((q) => (
-                                <li key={q.id} className="py-3 first:pt-0">
-                                  <Link
-                                    href={`/questions/${q.id}`}
-                                    className="text-indigo-600 dark:text-indigo-400 hover:underline block font-medium"
-                                  >
-                                    {q.title}
-                                  </Link>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
-                                    {formatRelativeTime(q.created_at)}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                            <div ref={questionsSentinelRef} className="h-2" />
+                          <ul className="space-y-3">
+                            {userQuestions.map((q) => (
+                              <li key={q.id} className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-blue-100 dark:border-blue-800/30 hover:shadow-md transition-shadow">
+                                <Link
+                                  href={`/questions/${q.id}`}
+                                  className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium line-clamp-2"
+                                >
+                                  {q.title}
+                                </Link>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-2 block">
+                                  {formatRelativeTime(q.created_at)}
+                                </span>
+                              </li>
+                            ))}
+                            <div ref={questionsSentinelRef} className="h-4" />
                             {loadingMoreQuestions && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                                טוען...
-                              </p>
+                              <p className="text-sm text-center text-blue-600/60 dark:text-blue-400/60 py-2">טוען...</p>
                             )}
-                          </>
+                          </ul>
                         )}
                       </div>
                     )}
+
                     {expandedSection === "answers" && (
-                      <div
-                        ref={repliesScrollRef}
-                        className="pt-4 mt-4 h-[280px] overflow-y-auto"
-                      >
-                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                          התשובות שלי
+                      <div ref={repliesScrollRef} className="h-[300px] overflow-y-auto p-4 custom-scrollbar">
+                        <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-300 mb-4 flex items-center gap-2">
+                          <MessageSquare size={16} /> התשובות שלי
                         </h4>
                         {userReplies.length === 0 ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            אין תשובות עדיין.
-                          </p>
+                          <div className="flex flex-col items-center justify-center h-40 text-emerald-800/60 dark:text-emerald-200/50">
+                            <p className="text-sm">אין תשובות עדיין.</p>
+                          </div>
                         ) : (
-                          <>
-                            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                              {userReplies.map((r) => (
-                                <li key={r.id} className="py-3 first:pt-0">
-                                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                                    {r.content}
-                                  </p>
+                          <ul className="space-y-3">
+                            {userReplies.map((r) => (
+                              <li key={r.id} className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-emerald-100 dark:border-emerald-800/30">
+                                <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2 mb-2">
+                                  {r.content}
+                                </p>
+                                <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-gray-100 dark:border-gray-700/50">
                                   <Link
                                     href={`/questions/${r.question_id}`}
-                                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 block"
+                                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium line-clamp-1"
                                   >
-                                    {r.question_title ?? "שאלה"}
+                                    בשאלה: {r.question_title ?? "שאלה ללא כותרת"}
                                   </Link>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
-                                    {formatRelativeTime(r.created_at)}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                            <div ref={repliesSentinelRef} className="h-2" />
+                                </div>
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 block">
+                                  {formatRelativeTime(r.created_at)}
+                                </span>
+                              </li>
+                            ))}
+                            <div ref={repliesSentinelRef} className="h-4" />
                             {loadingMoreReplies && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                                טוען...
-                              </p>
+                              <p className="text-sm text-center text-emerald-600/60 dark:text-emerald-400/60 py-2">טוען...</p>
                             )}
-                          </>
+                          </ul>
                         )}
                       </div>
                     )}
+
                     {expandedSection === "likers" && (
-                      <div
-                        ref={likersScrollRef}
-                        className="pt-4 mt-4 h-[280px] overflow-y-auto"
-                      >
-                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                          אנשים שאהבו את הפרופיל
+                      <div ref={likersScrollRef} className="h-[300px] overflow-y-auto p-4 custom-scrollbar">
+                        <h4 className="text-sm font-bold text-purple-900 dark:text-purple-300 mb-4 flex items-center gap-2">
+                          <Heart size={16} /> אנשים שאהבו
                         </h4>
                         {likers.length === 0 ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            אין לייקים עדיין.
-                          </p>
+                          <div className="flex flex-col items-center justify-center h-40 text-purple-800/60 dark:text-purple-200/50">
+                            <p className="text-sm">אין לייקים עדיין.</p>
+                          </div>
                         ) : (
-                          <>
-                            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                              {likers.map((u) => (
-                                <li
-                                  key={u.id}
-                                  className="flex items-center gap-3 py-3 first:pt-0"
-                                >
-                                  {u.avatar_url ? (
-                                    <Image
-                                      src={u.avatar_url}
-                                      alt={u.username}
-                                      width={36}
-                                      height={36}
-                                      className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                                    />
-                                  ) : (
-                                    <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-                                      <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                                        {(u.username ?? "מ")
-                                          .charAt(0)
-                                          .toUpperCase()}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <Link
-                                    href={`/profile/${encodeURIComponent(u.username)}`}
-                                    className="font-medium text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                  >
-                                    {u.username}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                            <div ref={likersSentinelRef} className="h-2" />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {likers.map((u) => (
+                              <Link
+                                key={u.id}
+                                href={`/profile/${encodeURIComponent(u.username)}`}
+                                className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-600 transition-colors group"
+                              >
+                                {u.avatar_url ? (
+                                  <Image
+                                    src={u.avatar_url}
+                                    alt={u.username}
+                                    width={40}
+                                    height={40}
+                                    className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 group-hover:ring-2 ring-purple-500/30 transition-all"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:ring-2 ring-purple-500/30 transition-all">
+                                    <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
+                                      {(u.username ?? "מ").charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
+                                <span className="font-medium text-gray-800 dark:text-gray-200 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                  {u.username}
+                                </span>
+                              </Link>
+                            ))}
+                            <div ref={likersSentinelRef} className="h-4 sm:col-span-2" />
                             {loadingMoreLikers && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                                טוען...
-                              </p>
+                              <p className="text-sm text-center text-purple-600/60 dark:text-purple-400/60 py-2 sm:col-span-2">טוען...</p>
                             )}
-                          </>
+                          </div>
                         )}
                       </div>
                     )}
                   </div>
                 </div>
+                </>
               )}
             </div>
 
-            {/* תגובות על הפרופיל - heading only, no box */}
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-              תגובות על הפרופיל
-            </h3>
+            {/* Profile Comments Section */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 p-6 flex flex-col h-[500px]">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <MessageSquare size={20} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  תגובות על הפרופיל
+                </h3>
+                <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-bold px-2 py-1 rounded-full mr-auto">
+                  {commentsTotal}
+                </span>
+              </div>
 
-            {/* Comments list - latest 10 blocking, older lazy-loaded on scroll */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
               {isSkeleton ? (
-                <div className="space-y-2">
-                  <SkeletonText className="w-full" />
-                  <SkeletonText className="w-4/5" />
+                <div className="space-y-6 flex-1">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex gap-4">
+                      <SkeletonCircle className="w-10 h-10 rounded-full flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <SkeletonText className="w-32 h-4" />
+                        <SkeletonBlock className="w-full h-16 rounded-xl" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div
                   ref={commentsScrollRef}
-                  className="divide-y divide-gray-200 dark:divide-gray-600 max-h-96 overflow-y-auto"
+                  className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-5 custom-scrollbar"
                 >
-                  {profileComments.length === 0 && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                      אין תגובות על הפרופיל שלך.
-                    </p>
-                  )}
-                  {profileComments.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex gap-3 py-4 first:pt-0 last:pb-0"
-                    >
-                      <div className="flex-shrink-0">
-                        {c.author_username ? (
-                          <Link
-                            href={`/profile/${encodeURIComponent(c.author_username)}`}
-                            className="block"
-                          >
-                            {c.author_avatar_url ? (
-                              <Image
-                                src={c.author_avatar_url}
-                                alt={c.author_username}
-                                width={40}
-                                height={40}
-                                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600 hover:opacity-90 transition-opacity"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 border border-gray-200 dark:border-gray-600 flex items-center justify-center hover:opacity-90 transition-opacity">
-                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                                  {c.author_username.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                          </Link>
-                        ) : (
-                          <>
-                            {c.author_avatar_url ? (
-                              <Image
-                                src={c.author_avatar_url}
-                                alt=""
-                                width={40}
-                                height={40}
-                                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
-                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                                  מ
-                                </span>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {c.author_username ? (
-                            <Link
-                              href={`/profile/${encodeURIComponent(c.author_username)}`}
-                              className="font-semibold text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400"
-                            >
-                              {c.author_username}
-                            </Link>
-                          ) : (
-                            <span className="font-semibold text-gray-800 dark:text-gray-200">
-                              משתמש
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatRelativeTime(c.created_at)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                          {c.content}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!profile?.username) return;
-                            const res = await fetch(
-                              `/api/profile/${encodeURIComponent(profile.username)}/comments/${c.id}`,
-                              { method: "DELETE" },
-                            );
-                            if (res.ok)
-                              setProfileComments((prev) =>
-                                prev.filter((x) => x.id !== c.id),
-                              );
-                          }}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          title="מחק תגובה"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                  {profileComments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                      <MessageSquare size={32} className="mb-3 opacity-50" />
+                      <p className="text-sm font-medium">אין תגובות על הפרופיל שלך.</p>
+                      <p className="text-xs mt-1">כאשר משתמשים יגיבו, התגובות יופיעו כאן.</p>
                     </div>
-                  ))}
-                  <div ref={commentsSentinelRef} className="h-2" />
-                  {loadingMoreComments && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2 text-center">
-                      טוען תגובות נוספות...
-                    </p>
+                  ) : (
+                    <>
+                      {profileComments.map((c) => (
+                        <div key={c.id} className="group flex gap-3 lg:gap-4">
+                          <div className="flex-shrink-0">
+                            {c.author_username ? (
+                              <Link
+                                href={`/profile/${encodeURIComponent(c.author_username)}`}
+                                className="block"
+                              >
+                                {c.author_avatar_url ? (
+                                  <Image
+                                    src={c.author_avatar_url}
+                                    alt={c.author_username}
+                                    width={40}
+                                    height={40}
+                                    className="w-10 h-10 lg:w-11 lg:h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-sm hover:opacity-90 transition-opacity"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center hover:opacity-90 transition-opacity">
+                                    <span className="text-sm lg:text-base font-bold text-indigo-700 dark:text-indigo-300">
+                                      {c.author_username.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
+                              </Link>
+                            ) : (
+                              <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
+                                <span className="text-sm lg:text-base font-bold text-gray-500">מ</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl rounded-tr-sm p-4 border border-gray-100 dark:border-gray-800/80 relative group-hover:border-gray-200 dark:group-hover:border-gray-700 transition-colors">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2">
+                                  {c.author_username ? (
+                                    <Link
+                                      href={`/profile/${encodeURIComponent(c.author_username)}`}
+                                      className="font-bold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-[15px]"
+                                    >
+                                      {c.author_username}
+                                    </Link>
+                                  ) : (
+                                    <span className="font-bold text-gray-900 dark:text-white text-[15px]">
+                                      משתמש מחוק
+                                    </span>
+                                  )}
+                                  <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                                    {formatRelativeTime(c.created_at)}
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!profile?.username) return;
+                                    const res = await fetch(
+                                      `/api/profile/${encodeURIComponent(profile.username)}/comments/${c.id}`,
+                                      { method: "DELETE" }
+                                    );
+                                    if (res.ok) {
+                                      setProfileComments((prev) =>
+                                        prev.filter((x) => x.id !== c.id)
+                                      );
+                                      setCommentsTotal(prev => Math.max(0, prev - 1));
+                                    }
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all focus:opacity-100"
+                                  title="מחק תגובה"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                              <p className="text-[15px] text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                {c.content}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={commentsSentinelRef} className="h-4" />
+                      {loadingMoreComments && (
+                        <div className="py-4 flex justify-center">
+                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm">
+                            <SkeletonCircle className="w-4 h-4 animate-spin border-t-indigo-600" />
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">טוען תגובות...</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
             </div>
+
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(156, 163, 175, 0.3);
+          border-radius: 20px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(75, 85, 99, 0.4);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(156, 163, 175, 0.5);
+        }
+      `}</style>
     </div>
   );
 }
