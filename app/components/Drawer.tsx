@@ -75,6 +75,7 @@ const Drawer: React.FC<DrawerProps> = ({
   const { userPermissions } = useAuth();
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [isNotificationsPage, setIsNotificationsPage] = useState(false);
+  const [isChatPage, setIsChatPage] = useState(false);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user?.id) return;
@@ -98,6 +99,7 @@ const Drawer: React.FC<DrawerProps> = ({
       setIsNotificationsPage(
         path === "/notifications" || path.startsWith("/notifications?"),
       );
+      setIsChatPage(path === "/chat" || path.startsWith("/chat?"));
     }
   }, []);
 
@@ -292,9 +294,28 @@ const Drawer: React.FC<DrawerProps> = ({
                 <>
                   <button
                     onClick={() => handleMenuClick("/chat")}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      isChatPage
+                        ? "text-white shadow-md"
+                        : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                    style={
+                      isChatPage
+                        ? {
+                            background:
+                              "linear-gradient(to left, rgb(180, 100, 255), rgb(102, 51, 204))",
+                          }
+                        : undefined
+                    }
                   >
-                    <MessageCircle size={20} />
+                    <MessageCircle
+                      size={20}
+                      className={
+                        isChatPage
+                          ? "text-white"
+                          : "text-gray-800 dark:text-gray-200"
+                      }
+                    />
                     <span className="font-medium">צ'אט</span>
                     {chatUnreadCount > 0 && (
                       <span className="mr-auto bg-[#6633cc] text-white text-xs min-w-[1.25rem] h-5 px-2 flex items-center justify-center rounded-full font-medium">

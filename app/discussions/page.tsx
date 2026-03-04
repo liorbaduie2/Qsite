@@ -19,7 +19,7 @@ export default function DiscussionsPage() {
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/" },
     { label: "סטטוסים", icon: Users, href: "/status" },
-    { label: "דיונים", icon: MessageSquare, href: "/discussions" },
+    { label: "דיונים", icon: MessageSquare, href: "/discussions", active: true },
     { label: "שאלות", icon: HelpCircle, href: "/questions" },
     { label: "סיפורים", icon: BookOpen, href: "/stories" },
   ];

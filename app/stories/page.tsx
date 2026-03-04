@@ -21,7 +21,7 @@ export default function StoriesPage() {
     { label: "סטטוסים", icon: Users, href: "/status" },
     { label: "דיונים", icon: MessageSquare, href: "/discussions" },
     { label: "שאלות", icon: HelpCircle, href: "/questions" },
-    { label: "סיפורים", icon: BookOpen, href: "/stories" },
+    { label: "סיפורים", icon: BookOpen, href: "/stories", active: true },
   ];
 
   const handleSignOut = async () => {
