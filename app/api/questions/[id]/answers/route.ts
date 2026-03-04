@@ -145,10 +145,11 @@ export async function POST(
       if (question.author_id && question.author_id !== user.id) {
         await createNotification({
           user_id: question.author_id,
-          type: 'question_comment',
-          title: 'מישהו הגיב על השאלה שלך',
-          message: 'נוספה תגובה חדשה לשאלה שלך.',
+          type: 'question_answer',
+          title: 'מישהו ענה לשאלה שלך',
+          message: 'נוספה תשובה חדשה לשאלה שלך.',
           question_id: questionId,
+          answer_id: answer.id,
           from_user_id: user.id,
         });
       }

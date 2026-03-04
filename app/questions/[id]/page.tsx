@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   MessageSquare,
@@ -227,6 +227,8 @@ export default function QuestionDetailPage() {
   const [submittingRemovalRequest, setSubmittingRemovalRequest] =
     useState(false);
   const questionMenuRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const [hasScrolledToAnswer, setHasScrolledToAnswer] = useState(false);
 
   const router = useRouter();
   const {
@@ -249,10 +251,10 @@ export default function QuestionDetailPage() {
 
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/" },
-    { label: "סטטוסי", icon: Users, href: "/status" },
-    { label: "דיוני", icon: MessageSquare, href: "/discussions" },
+    { label: "סטטוסים", icon: Users, href: "/status" },
+    { label: "דיונים", icon: MessageSquare, href: "/discussions" },
     { label: "שאלות", icon: HelpCircle, href: "/questions", active: true },
-    { label: "סיפורי", icon: BookOpen, href: "/stories" },
+    { label: "סיפורים", icon: BookOpen, href: "/stories" },
   ];
 
   const canEditAny = !!userPermissions?.can_edit_delete_content;
@@ -356,7 +358,7 @@ export default function QuestionDetailPage() {
     if (!id || !user) return;
     const refetch = () => {
       fetch(`/api/questions/${id}`)
-        .then((res) => res.ok ? res.json() : null)
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => data?.question && setQuestion(data.question))
         .catch(() => {});
       fetchAnswers();
@@ -366,7 +368,11 @@ export default function QuestionDetailPage() {
     };
     document.addEventListener("visibilitychange", onVisible);
     const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState !== "visible"
+      )
+        return;
       refetch();
     }, 10 * 1000); // 10s so other users' online status updates within ~5–10s
     return () => {
@@ -410,6 +416,17 @@ export default function QuestionDetailPage() {
   };
 
   const answerTree = React.useMemo(() => buildAnswerTree(answers), [answers]);
+
+  useEffect(() => {
+    if (!id || !answerTree.length || hasScrolledToAnswer) return;
+    const answerId = searchParams.get("answerId");
+    if (!answerId) return;
+    const el = document.getElementById(`answer-${answerId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setHasScrolledToAnswer(true);
+    }
+  }, [id, answerTree, searchParams, hasScrolledToAnswer]);
 
   const handleSubmitReply = async (
     e: React.FormEvent,
@@ -1012,6 +1029,7 @@ export default function QuestionDetailPage() {
                           }
                         >
                           <div
+                            id={isTopLevel ? `answer-${node.id}` : undefined}
                             className={`rounded-xl border transition-all ${
                               isTopLevel
                                 ? "p-4"
@@ -1074,7 +1092,9 @@ export default function QuestionDetailPage() {
                                           avatarUrl={node.author.avatar_url}
                                           username={node.author.username}
                                           size={isTopLevel ? "sm2" : "sm"}
-                                          isOnline={isOnline(node.author.lastSeenAt)}
+                                          isOnline={isOnline(
+                                            node.author.lastSeenAt,
+                                          )}
                                         />
                                         <div className="flex flex-col">
                                           <span
@@ -1096,7 +1116,9 @@ export default function QuestionDetailPage() {
                                           avatarUrl={node.author.avatar_url}
                                           username={node.author.username}
                                           size={isTopLevel ? "sm2" : "sm"}
-                                          isOnline={isOnline(node.author.lastSeenAt)}
+                                          isOnline={isOnline(
+                                            node.author.lastSeenAt,
+                                          )}
                                         />
                                         <div className="flex flex-col">
                                           <span

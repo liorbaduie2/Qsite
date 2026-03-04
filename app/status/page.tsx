@@ -153,10 +153,10 @@ export default function StatusPage() {
 
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/" },
-    { label: "סטטוסי", icon: Users, href: "/status", active: true },
-    { label: "דיוני", icon: MessageSquare, href: "/discussions" },
+    { label: "סטטוסים", icon: Users, href: "/status", active: true },
+    { label: "דיונים", icon: MessageSquare, href: "/discussions" },
     { label: "שאלות", icon: HelpCircle, href: "/questions" },
-    { label: "סיפורי", icon: BookOpen, href: "/stories" },
+    { label: "סיפורים", icon: BookOpen, href: "/stories" },
   ];
 
   const fetchFeed = useCallback(async () => {
@@ -460,7 +460,7 @@ export default function StatusPage() {
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
 
       <NavHeader
-        title="סטטוסי"
+        title="סטטוסים"
         wide
         onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
         rightContent={
@@ -480,6 +480,17 @@ export default function StatusPage() {
                 ? `נעול (${cooldownRemaining(nextPostAt)} דק')`
                 : "סטטוס חדש"}
             </button>
+            {user && (myActive || myHistory.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setHistoryModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-gray-800 dark:text-gray-100"
+              >
+                <History size={18} />
+                היסטוריית סטטוסים (
+                {[myActive, ...myHistory].filter(Boolean).length})
+              </button>
+            )}
             {!user && (
               <>
                 <button
@@ -630,20 +641,6 @@ export default function StatusPage() {
             </div>
           )}
         </div>
-
-        {user && (myActive || myHistory.length > 0) && (
-          <div className="mt-8">
-            <button
-              type="button"
-              onClick={() => setHistoryModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 bg-white/80 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md hover:shadow-lg transition-all font-medium text-gray-800 dark:text-gray-100"
-            >
-              <History size={20} />
-              היסטוריית סטטוסים (
-              {[myActive, ...myHistory].filter(Boolean).length})
-            </button>
-          </div>
-        )}
       </main>
 
       {/* New status modal */}

@@ -31,7 +31,7 @@ export default function NavHeader({
       <div
         className={`mx-auto px-4 sm:px-5 ${wide ? "max-w-6xl" : "max-w-4xl"}`}
       >
-        <div className="flex items-center gap-2 py-3 sm:py-4">
+        <div className="flex items-center gap-2 h-20">
           <div className="flex items-center gap-2 sm:gap-4">
             <button
               type="button"
@@ -43,14 +43,10 @@ export default function NavHeader({
             </button>
           </div>
           <div className="flex-1 flex justify-center min-w-0">
-            {titleContent != null ? (
+            {titleContent != null && (
               <div className="flex items-center gap-3 min-w-0">
                 {titleContent}
               </div>
-            ) : (
-              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
-                {title}
-              </h1>
             )}
           </div>
           {rightContent && (

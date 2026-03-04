@@ -337,7 +337,7 @@ export default function ChatThreadPage() {
         className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-700/50 px-4"
         dir="rtl"
       >
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3 py-2">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3 h-20">
           <div className="flex-1 min-w-0 flex justify-start">
             <Link
               href="/chat"

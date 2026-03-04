@@ -21,6 +21,7 @@ import { isOnline } from "@/lib/utils";
 import { usePresenceTick } from "@/app/hooks/usePresenceTick";
 import { useAuth } from "@/app/components/AuthProvider";
 import { RoleBadge } from "@/app/components/RoleBadge";
+import { useNotificationsRealtime } from "@/app/hooks/useNotificationsRealtime";
 
 interface MenuItem {
   label: string;
@@ -73,23 +74,7 @@ const Drawer: React.FC<DrawerProps> = ({
   usePresenceTick(); // re-evaluate isOnline(profile?.last_seen_at) every 30s
   const { userPermissions } = useAuth();
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notificationsList, setNotificationsList] = useState<
-    Array<{
-      id: string;
-      type: string;
-      title: string;
-      message: string;
-      question_id?: string | null;
-      answer_id?: string | null;
-      status_id?: string | null;
-      is_read: boolean;
-      created_at: string;
-      metadata?: { activity_log_id?: string } | null;
-    }>
-  >([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [isNotificationsPage, setIsNotificationsPage] = useState(false);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user?.id) return;
@@ -103,53 +88,32 @@ const Drawer: React.FC<DrawerProps> = ({
     }
   }, [user?.id]);
 
-  const fetchNotificationUnreadCount = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const res = await fetch("/api/notifications/unread-count");
-      const data = await res.json();
-      if (res.ok && typeof data.count === "number")
-        setNotificationUnreadCount(data.count);
-    } catch {
-      // ignore
-    }
-  }, [user?.id]);
+  const { unreadCount: notificationUnreadCount } = useNotificationsRealtime(
+    user?.id,
+  );
 
-  const fetchNotificationsList = useCallback(async () => {
-    if (!user?.id) return;
-    setNotificationsLoading(true);
-    try {
-      const res = await fetch("/api/notifications?limit=10");
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.notifications))
-        setNotificationsList(data.notifications);
-    } catch {
-      setNotificationsList([]);
-    } finally {
-      setNotificationsLoading(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname || "";
+      setIsNotificationsPage(
+        path === "/notifications" || path.startsWith("/notifications?"),
+      );
     }
-  }, [user?.id]);
+  }, []);
 
   useEffect(() => {
     if (!user?.id) {
       setChatUnreadCount(0);
-      setNotificationUnreadCount(0);
       return;
     }
     fetchUnreadCount();
-    fetchNotificationUnreadCount();
-  }, [user?.id, fetchUnreadCount, fetchNotificationUnreadCount]);
+  }, [user?.id, fetchUnreadCount]);
 
   useEffect(() => {
     if (user?.id && isDrawerOpen) {
       fetchUnreadCount();
-      fetchNotificationUnreadCount();
     }
-  }, [user?.id, isDrawerOpen, fetchUnreadCount, fetchNotificationUnreadCount]);
-
-  useEffect(() => {
-    if (notificationsOpen && user?.id) fetchNotificationsList();
-  }, [notificationsOpen, user?.id, fetchNotificationsList]);
+  }, [user?.id, isDrawerOpen, fetchUnreadCount]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -338,13 +302,6 @@ const Drawer: React.FC<DrawerProps> = ({
                       </span>
                     )}
                   </button>
-                  <button
-                    onClick={() => handleMenuClick("/settings")}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <Settings size={20} />
-                    <span className="font-medium">הגדרות</span>
-                  </button>
                 </>
               )}
             </div>
@@ -357,97 +314,32 @@ const Drawer: React.FC<DrawerProps> = ({
                 <div>
                   <button
                     type="button"
-                    onClick={() => setNotificationsOpen((prev) => !prev)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                    onClick={() => handleMenuClick("/notifications")}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      isNotificationsPage
+                        ? "text-white shadow-md"
+                        : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                    style={
+                      isNotificationsPage
+                        ? {
+                            background:
+                              "linear-gradient(to left, rgb(180, 100, 255), rgb(102, 51, 204))",
+                          }
+                        : undefined
+                    }
                   >
                     <Bell
                       size={20}
-                      className="text-gray-700 dark:text-gray-300"
+                      className={
+                        isNotificationsPage
+                          ? "text-white"
+                          : "text-gray-700 dark:text-gray-300"
+                      }
                     />
                     <span>התראות</span>
-                    {notificationUnreadCount > 0 && (
-                      <span className="mr-auto bg-[#6633cc] text-white text-xs min-w-[1.25rem] h-5 px-2 flex items-center justify-center rounded-full font-medium">
-                        {notificationUnreadCount > 99
-                          ? "99+"
-                          : notificationUnreadCount}
-                      </span>
-                    )}
+                    {/* Unread notifications badge is rendered by parent using shared state/hook */}
                   </button>
-                  {notificationsOpen && (
-                    <div className="mt-2 mr-2 ml-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 max-h-64 overflow-y-auto">
-                      {notificationsLoading ? (
-                        <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                          טוען...
-                        </div>
-                      ) : notificationsList.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                          אין התראות חדשות
-                        </div>
-                      ) : (
-                        <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                          {notificationsList.map((n) => {
-                            const href = n.question_id
-                              ? `/questions/${n.question_id}`
-                              : n.status_id
-                                ? "/status"
-                                : "#";
-                            const activityLogId = n.metadata?.activity_log_id;
-                            const showAppeal =
-                              n.type === "question_removed" && activityLogId;
-                            return (
-                              <li key={n.id}>
-                                <div className="px-3 py-2.5">
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      if (!n.is_read) {
-                                        try {
-                                          await fetch(
-                                            `/api/notifications/${n.id}/read`,
-                                            { method: "PATCH" },
-                                          );
-                                          setNotificationUnreadCount((c) =>
-                                            Math.max(0, c - 1),
-                                          );
-                                        } catch {
-                                          // ignore
-                                        }
-                                      }
-                                      setNotificationsOpen(false);
-                                      if (href !== "#") {
-                                        setIsDrawerOpen(false);
-                                        window.location.href = href;
-                                      }
-                                    }}
-                                    className={`w-full text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors ${!n.is_read ? "font-medium text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400"}`}
-                                  >
-                                    <span className="block truncate">
-                                      {n.title}
-                                    </span>
-                                    <span className="block truncate text-xs mt-0.5 opacity-80">
-                                      {n.message}
-                                    </span>
-                                  </button>
-                                  {showAppeal && (
-                                    <Link
-                                      href={`/appeal/question-deletion?activity_log_id=${encodeURIComponent(activityLogId)}`}
-                                      onClick={() => {
-                                        setNotificationsOpen(false);
-                                        setIsDrawerOpen(false);
-                                      }}
-                                      className="mt-1.5 inline-block text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                                    >
-                                      ערעור
-                                    </Link>
-                                  )}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  )}
                 </div>
                 <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
                   <Bookmark
@@ -455,6 +347,16 @@ const Drawer: React.FC<DrawerProps> = ({
                     className="text-gray-700 dark:text-gray-300"
                   />
                   <span>שמורים</span>
+                </button>
+                <button
+                  onClick={() => handleMenuClick("/settings")}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                >
+                  <Settings
+                    size={20}
+                    className="text-gray-700 dark:text-gray-300"
+                  />
+                  <span>הגדרות</span>
                 </button>
               </div>
             </div>

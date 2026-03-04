@@ -142,10 +142,10 @@ const QuestionsPage = () => {
 
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/" },
-    { label: "סטטוסי", icon: Users, href: "/status" },
-    { label: "דיוני", icon: MessageSquare, href: "/discussions" },
+    { label: "סטטוסים", icon: Users, href: "/status" },
+    { label: "דיונים", icon: MessageSquare, href: "/discussions" },
     { label: "שאלות", icon: HelpCircle, href: "/questions", active: true },
-    { label: "סיפורי", icon: BookOpen, href: "/stories" },
+    { label: "סיפורים", icon: BookOpen, href: "/stories" },
   ];
 
   const allTags = [

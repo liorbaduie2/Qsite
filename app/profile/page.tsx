@@ -19,6 +19,7 @@ import {
   Heart,
   Trash2,
 } from "lucide-react";
+import { SimpleThemeToggle } from "../components/SimpleThemeToggle";
 import { useAuth } from "../components/AuthProvider";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -684,8 +685,8 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
       {/* Header */}
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex items-center justify-between h-20">
             <button
               onClick={() => router.push("/")}
               className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
@@ -693,9 +694,7 @@ export default function ProfilePage() {
               <ArrowRight size={20} />
               <span>חזור לעמוד הבית</span>
             </button>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              פרופיל אישי
-            </h1>
+            <SimpleThemeToggle size="sm" />
           </div>
         </div>
       </div>

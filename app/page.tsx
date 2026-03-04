@@ -123,10 +123,10 @@ function ForumHomepage() {
 
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/", active: true },
-    { label: "סטטוסי", icon: Users, href: "/status" },
-    { label: "דיוני", icon: MessageSquare, href: "/discussions" },
+    { label: "סטטוסים", icon: Users, href: "/status" },
+    { label: "דיונים", icon: MessageSquare, href: "/discussions" },
     { label: "שאלות", icon: HelpCircle, href: "/questions" },
-    { label: "סיפורי", icon: BookOpen, href: "/stories" },
+    { label: "סיפורים", icon: BookOpen, href: "/stories" },
   ];
 
   useEffect(() => {
@@ -215,11 +215,7 @@ function ForumHomepage() {
       <NavHeader
         title=""
         titleContent={
-          <img
-            src="/פטפטו.svg"
-            alt="פטפטו"
-            className="h-8 sm:h-10 w-auto scale-110"
-          />
+          <img src="/פטפטו.svg" alt="פטפטו" className="h-8 sm:h-9 w-auto" />
         }
         wide
         onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}

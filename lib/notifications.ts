@@ -24,6 +24,7 @@ export interface CreateNotificationParams {
   answer_id?: string | null;
   status_id?: string | null;
   from_user_id?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 /**
@@ -41,6 +42,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
     answer_id: params.answer_id ?? null,
     status_id: params.status_id ?? null,
     from_user_id: params.from_user_id ?? null,
+    metadata: params.metadata ?? null,
   });
   if (error) {
     console.error("createNotification error:", error);

@@ -94,6 +94,7 @@ export async function POST(
           message: 'השאלה שלך קיבלה את ההצבעה הראשונה.',
           question_id: questionId,
           from_user_id: user.id,
+          metadata: { upvoteCountSnapshot: votesCount },
         });
         newLastNotified = 1;
       } else if (shouldNotifyMilestone) {
@@ -104,6 +105,7 @@ export async function POST(
           message: `השאלה שלך הגיעה ל־${votesCount} הצבעות.`,
           question_id: questionId,
           from_user_id: user.id,
+          metadata: { upvoteCountSnapshot: votesCount },
         });
         newLastNotified = votesCount;
       }
