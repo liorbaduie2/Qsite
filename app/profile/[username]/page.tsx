@@ -715,47 +715,8 @@ export default function PublicProfilePage() {
                       </div>
                     </div>
 
-                    {/* Likers Card */}
-                    <div className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-                      <div className="text-2xl font-extrabold tabular-nums mb-1 text-center text-gray-900 dark:text-white">
-                        {likesCount}
-                      </div>
-                      <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-                        <Heart
-                          size={18}
-                          className="text-gray-400 dark:text-gray-500"
-                        />
-                        <span>לייקים</span>
-                      </div>
-                    </div>
                   </div>
-
-                  {/* Latest Questions */}
-                  {questions.length > 0 && (
-                    <div className="mt-6 rounded-2xl border p-4 bg-blue-50/50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-900/30">
-                      <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
-                        <HelpCircle size={16} /> שאלות אחרונות
-                      </h4>
-                      <ul className="space-y-3">
-                        {questions.map((q) => (
-                          <li
-                            key={q.id}
-                            className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-blue-100 dark:border-blue-800/30 hover:shadow-md transition-shadow"
-                          >
-                            <Link
-                              href={`/questions/${q.id}`}
-                              className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium line-clamp-2"
-                            >
-                              {q.title}
-                            </Link>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 mt-2 block">
-                              {formatRelativeTime(q.created_at)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {/* Latest Questions removed from public profile view */}
                 </>
               )}
             </div>
