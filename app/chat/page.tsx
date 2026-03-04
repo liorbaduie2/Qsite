@@ -407,7 +407,13 @@ export default function ChatPage() {
                           className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                         >
                           <Link
-                            href={`/profile/${encodeURIComponent(r.sender.username)}`}
+                            href={
+                              profile?.username &&
+                              r.sender.username &&
+                              profile.username === r.sender.username
+                                ? "/profile"
+                                : `/profile/${encodeURIComponent(r.sender.username)}`
+                            }
                             className="flex-shrink-0"
                           >
                             <UserAvatar
@@ -421,7 +427,13 @@ export default function ChatPage() {
                           </Link>
                           <div className="flex-1 min-w-0">
                             <Link
-                              href={`/profile/${encodeURIComponent(r.sender.username)}`}
+                              href={
+                                profile?.username &&
+                                r.sender.username &&
+                                profile.username === r.sender.username
+                                  ? "/profile"
+                                  : `/profile/${encodeURIComponent(r.sender.username)}`
+                              }
                               className="font-medium text-gray-800 dark:text-gray-100 hover:underline"
                             >
                               {r.sender.full_name || r.sender.username}
@@ -480,7 +492,13 @@ export default function ChatPage() {
                       {sent.map((r) => (
                         <li key={r.id}>
                           <Link
-                            href={`/profile/${encodeURIComponent(r.receiver.username)}`}
+                            href={
+                              profile?.username &&
+                              r.receiver.username &&
+                              profile.username === r.receiver.username
+                                ? "/profile"
+                                : `/profile/${encodeURIComponent(r.receiver.username)}`
+                            }
                             className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                           >
                             <UserAvatar

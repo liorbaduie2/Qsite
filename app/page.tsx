@@ -422,7 +422,13 @@ function ForumHomepage() {
                         <div className="mt-[10px] flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-[0.825rem] text-gray-500 dark:border-gray-700/70 dark:text-gray-400 sm:text-[0.9625rem]">
                           {question.author.username ? (
                             <Link
-                              href={`/profile/${encodeURIComponent(question.author.username)}`}
+                              href={
+                                profile?.username &&
+                                question.author.username &&
+                                profile.username === question.author.username
+                                  ? "/profile"
+                                  : `/profile/${encodeURIComponent(question.author.username)}`
+                              }
                               onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-2 hover:opacity-90 transition-opacity flex-shrink-0"
                             >
@@ -446,7 +452,13 @@ function ForumHomepage() {
                           <span className="font-medium text-gray-600 dark:text-gray-300">
                             {question.author.username ? (
                               <Link
-                                href={`/profile/${encodeURIComponent(question.author.username)}`}
+                                href={
+                                  profile?.username &&
+                                  question.author.username &&
+                                  profile.username === question.author.username
+                                    ? "/profile"
+                                    : `/profile/${encodeURIComponent(question.author.username)}`
+                                }
                                 onClick={(e) => e.stopPropagation()}
                                 className="hover:underline"
                               >

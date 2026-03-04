@@ -714,7 +714,6 @@ export default function PublicProfilePage() {
                         <span>תשובות</span>
                       </div>
                     </div>
-
                   </div>
                   {/* Latest Questions removed from public profile view */}
                 </>
@@ -839,7 +838,13 @@ export default function PublicProfilePage() {
                           <div className="flex-shrink-0">
                             {c.author_username ? (
                               <Link
-                                href={`/profile/${encodeURIComponent(c.author_username)}`}
+                                href={
+                                  authProfile?.username &&
+                                  c.author_username &&
+                                  authProfile.username === c.author_username
+                                    ? "/profile"
+                                    : `/profile/${encodeURIComponent(c.author_username)}`
+                                }
                                 className="block"
                               >
                                 {c.author_avatar_url ? (
@@ -874,7 +879,13 @@ export default function PublicProfilePage() {
                               <div className="flex items-center gap-2 mb-1.5">
                                 {c.author_username ? (
                                   <Link
-                                    href={`/profile/${encodeURIComponent(c.author_username)}`}
+                                    href={
+                                      authProfile?.username &&
+                                      c.author_username &&
+                                      authProfile.username === c.author_username
+                                        ? "/profile"
+                                        : `/profile/${encodeURIComponent(c.author_username)}`
+                                    }
                                     className="font-bold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-[15px]"
                                   >
                                     {c.author_username}

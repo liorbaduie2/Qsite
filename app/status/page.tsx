@@ -561,7 +561,13 @@ export default function StatusPage() {
                     <div className="flex items-center gap-3">
                       {item.author.username ? (
                         <Link
-                          href={`/profile/${encodeURIComponent(item.author.username)}`}
+                          href={
+                            profile?.username &&
+                            item.author.username &&
+                            profile.username === item.author.username
+                              ? "/profile"
+                              : `/profile/${encodeURIComponent(item.author.username)}`
+                          }
                           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
                         >
                           {item.author.avatar_url ? (
@@ -869,7 +875,13 @@ export default function StatusPage() {
                   >
                     {u.username ? (
                       <Link
-                        href={`/profile/${encodeURIComponent(u.username)}`}
+                        href={
+                          profile?.username &&
+                          u.username &&
+                          profile.username === u.username
+                            ? "/profile"
+                            : `/profile/${encodeURIComponent(u.username)}`
+                        }
                         className="flex items-center gap-3 hover:opacity-90 transition-opacity flex-1 min-w-0"
                       >
                         {u.avatar_url ? (

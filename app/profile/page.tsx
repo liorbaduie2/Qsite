@@ -1306,7 +1306,13 @@ export default function ProfilePage() {
                               {likers.map((u) => (
                                 <Link
                                   key={u.id}
-                                  href={`/profile/${encodeURIComponent(u.username)}`}
+                                  href={
+                                    profile?.username &&
+                                    u.username &&
+                                    profile.username === u.username
+                                      ? "/profile"
+                                      : `/profile/${encodeURIComponent(u.username)}`
+                                  }
                                   className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-600 transition-colors group"
                                 >
                                   {u.avatar_url ? (
@@ -1381,7 +1387,7 @@ export default function ProfilePage() {
                   ref={commentsScrollRef}
                   className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-5 custom-scrollbar"
                 >
-                  {profileComments.length === 0 ? (
+                      {profileComments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                       <MessageSquare size={32} className="mb-3 opacity-50" />
                       <p className="text-sm font-medium">
@@ -1391,14 +1397,20 @@ export default function ProfilePage() {
                         כאשר משתמשים יגיבו, התגובות יופיעו כאן.
                       </p>
                     </div>
-                  ) : (
+                      ) : (
                     <>
                       {profileComments.map((c) => (
                         <div key={c.id} className="group flex gap-3 lg:gap-4">
                           <div className="flex-shrink-0">
                             {c.author_username ? (
                               <Link
-                                href={`/profile/${encodeURIComponent(c.author_username)}`}
+                                href={
+                                  profile?.username &&
+                                  c.author_username &&
+                                  profile.username === c.author_username
+                                    ? "/profile"
+                                    : `/profile/${encodeURIComponent(c.author_username)}`
+                                }
                                 className="block"
                               >
                                 {c.author_avatar_url ? (
@@ -1434,7 +1446,13 @@ export default function ProfilePage() {
                                 <div className="flex items-center gap-2">
                                   {c.author_username ? (
                                     <Link
-                                      href={`/profile/${encodeURIComponent(c.author_username)}`}
+                                      href={
+                                        profile?.username &&
+                                        c.author_username &&
+                                        profile.username === c.author_username
+                                          ? "/profile"
+                                          : `/profile/${encodeURIComponent(c.author_username)}`
+                                      }
                                       className="font-bold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-[15px]"
                                     >
                                       {c.author_username}

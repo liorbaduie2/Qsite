@@ -15,6 +15,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { UserAvatar } from "@/app/components/UserAvatar";
 import { isOnline } from "@/lib/utils";
@@ -72,6 +73,7 @@ const Drawer: React.FC<DrawerProps> = ({
   headerExtra,
 }) => {
   usePresenceTick(); // re-evaluate isOnline(profile?.last_seen_at) every 30s
+  const router = useRouter();
   const { userPermissions } = useAuth();
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [isNotificationsPage, setIsNotificationsPage] = useState(false);
@@ -137,10 +139,7 @@ const Drawer: React.FC<DrawerProps> = ({
 
   const handleMenuClick = (href: string) => {
     setIsDrawerOpen(false);
-    // Use Next.js navigation instead of window.location
-    if (typeof window !== "undefined") {
-      window.location.href = href;
-    }
+    router.push(href);
   };
 
   const handleProfileClick = () => {
@@ -400,9 +399,7 @@ const Drawer: React.FC<DrawerProps> = ({
                   if (onOpenLoginModal) {
                     onOpenLoginModal();
                   } else {
-                    if (typeof window !== "undefined") {
-                      window.location.href = "/?modal=login";
-                    }
+                    router.push("/?modal=login");
                   }
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-white rounded-xl transition-colors font-medium shadow-lg hover:opacity-95"
