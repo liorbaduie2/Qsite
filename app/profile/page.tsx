@@ -19,7 +19,7 @@ import {
   Heart,
   Trash2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { SimpleThemeToggle } from "../components/SimpleThemeToggle";
 import { useAuth } from "../components/AuthProvider";
@@ -212,7 +212,7 @@ export default function ProfilePage() {
     ensureMyProfilePreload,
   } = useAuth();
   const router = useRouter();
-  const[isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     username: "",
     bio: "",
@@ -224,7 +224,7 @@ export default function ProfilePage() {
   const [usernameStatus, setUsernameStatus] = useState<
     "idle" | "checking" | "available" | "taken"
   >("idle");
-  const[usernameError, setUsernameError] = useState<string | null>(null);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
   const [sharedStatus, setSharedStatus] = useState<{
     id: string;
@@ -233,20 +233,20 @@ export default function ProfilePage() {
   } | null>(null);
   const [removingShared, setRemovingShared] = useState(false);
   const [userQuestions, setUserQuestions] = useState<ProfileQuestion[]>([]);
-  const[userReplies, setUserReplies] = useState<ProfileReply[]>([]);
+  const [userReplies, setUserReplies] = useState<ProfileReply[]>([]);
   const [profileComments, setProfileComments] = useState<ProfileComment[]>([]);
   const [expandedSection, setExpandedSection] = useState<
     "questions" | "answers" | "likers" | null
   >(null);
-  const[likers, setLikers] = useState<
+  const [likers, setLikers] = useState<
     { id: string; username: string; avatar_url: string | null }[]
   >([]);
   const [questionsTotal, setQuestionsTotal] = useState(0);
   const [repliesTotal, setRepliesTotal] = useState(0);
-  const[likersTotal, setLikersTotal] = useState(0);
+  const [likersTotal, setLikersTotal] = useState(0);
   const [loadingMoreQuestions, setLoadingMoreQuestions] = useState(false);
   const [loadingMoreReplies, setLoadingMoreReplies] = useState(false);
-  const[loadingMoreLikers, setLoadingMoreLikers] = useState(false);
+  const [loadingMoreLikers, setLoadingMoreLikers] = useState(false);
   const [commentsOffset, setCommentsOffset] = useState(0);
   const [commentsTotal, setCommentsTotal] = useState(0);
   const [loadingMoreComments, setLoadingMoreComments] = useState(false);
@@ -274,7 +274,7 @@ export default function ProfilePage() {
         avatar_url: profile.avatar_url || "",
       });
     }
-  },[user, profile, loading, router]);
+  }, [user, profile, loading, router]);
 
   useEffect(() => {
     if (!user) {
@@ -285,7 +285,7 @@ export default function ProfilePage() {
       .then((res) => res.json())
       .then((data) => {
         const active = data.active?.sharedToProfile ? data.active : null;
-        const fromHistory = (data.history ||[]).find(
+        const fromHistory = (data.history || []).find(
           (s: { sharedToProfile: boolean }) => s.sharedToProfile,
         );
         const s = active || fromHistory;
@@ -314,13 +314,13 @@ export default function ProfilePage() {
     setUserQuestions(
       Array.isArray(myProfilePreload.questions)
         ? myProfilePreload.questions
-        :[],
+        : [],
     );
     setUserReplies(
-      Array.isArray(myProfilePreload.replies) ? myProfilePreload.replies :[],
+      Array.isArray(myProfilePreload.replies) ? myProfilePreload.replies : [],
     );
     setLikers(
-      Array.isArray(myProfilePreload.likers) ? myProfilePreload.likers :[],
+      Array.isArray(myProfilePreload.likers) ? myProfilePreload.likers : [],
     );
     setQuestionsTotal(
       typeof myProfilePreload.questions_total === "number"
@@ -346,7 +346,7 @@ export default function ProfilePage() {
 
     const initialComments = Array.isArray(myProfilePreload.comments)
       ? myProfilePreload.comments
-      :[];
+      : [];
     setProfileComments(initialComments);
     setCommentsOffset(initialComments.length);
     setCommentsTotal(
@@ -372,7 +372,7 @@ export default function ProfilePage() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setEditForm((prev) => ({ ...prev,[field]: value }));
+    setEditForm((prev) => ({ ...prev, [field]: value }));
     if (field === "username") {
       setUsernameError(null);
       setUsernameStatus("idle");
@@ -578,11 +578,11 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.questions?.length) {
-          setUserQuestions((prev) =>[...prev, ...data.questions]);
+          setUserQuestions((prev) => [...prev, ...data.questions]);
         }
       })
       .finally(() => setLoadingMoreQuestions(false));
-  },[
+  }, [
     profile?.username,
     loadingMoreQuestions,
     userQuestions.length,
@@ -603,7 +603,7 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.replies?.length) {
-          setUserReplies((prev) =>[...prev, ...data.replies]);
+          setUserReplies((prev) => [...prev, ...data.replies]);
         }
       })
       .finally(() => setLoadingMoreReplies(false));
@@ -623,7 +623,7 @@ export default function ProfilePage() {
         }
       })
       .finally(() => setLoadingMoreLikers(false));
-  },[profile?.username, loadingMoreLikers, likers.length, likersTotal]);
+  }, [profile?.username, loadingMoreLikers, likers.length, likersTotal]);
 
   const loadMoreComments = useCallback(() => {
     if (
@@ -641,7 +641,7 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data?.comments) && data.comments.length > 0) {
-          setProfileComments((prev) =>[...prev, ...data.comments]);
+          setProfileComments((prev) => [...prev, ...data.comments]);
           const nextOffset = commentsOffset + data.comments.length;
           setCommentsOffset(nextOffset);
           if (typeof data.total === "number") {
@@ -683,7 +683,10 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-[#0B1120] pb-12" dir="rtl">
+    <div
+      className="min-h-screen bg-gray-50/50 dark:bg-[#0B1120] pb-12"
+      dir="rtl"
+    >
       {/* Header */}
       <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6">
@@ -702,19 +705,23 @@ export default function ProfilePage() {
 
       <div className="max-w-6xl mx-auto px-6 pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
           {/* Main Sidebar (Left in LTR, Right visually in RTL) */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden relative">
               {/* Cover Photo */}
               <div className="h-32 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-600 dark:via-purple-600 dark:to-pink-600">
-                {isSkeleton && <div className="w-full h-full bg-gray-200 dark:bg-gray-800 animate-pulse" />}
+                {isSkeleton && (
+                  <div className="w-full h-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                )}
               </div>
 
               <div className="px-6 pb-6 relative">
                 {/* Profile Header (Avatar + Arc overlap) */}
                 <div className="flex justify-center -mt-16 mb-4">
-                  <div className="relative bg-white dark:bg-gray-900 rounded-full p-1" style={{ width: 132, height: 132 }}>
+                  <div
+                    className="relative bg-white dark:bg-gray-900 rounded-full p-1"
+                    style={{ width: 132, height: 132 }}
+                  >
                     {isSkeleton ? (
                       <SkeletonCircle className="w-full h-full border-4 border-white dark:border-gray-900 shadow-md" />
                     ) : (
@@ -770,7 +777,9 @@ export default function ProfilePage() {
                       {!isEditing && (
                         <div className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center justify-center gap-1.5 mb-2">
                           <span>מוניטין</span>
-                          <span className={`${reputationTextClass} font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full`}>
+                          <span
+                            className={`${reputationTextClass} font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full`}
+                          >
                             {reputation}
                           </span>
                         </div>
@@ -796,7 +805,9 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <div className="space-y-4 mb-6">
                     <div className="relative">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">שם משתמש</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        שם משתמש
+                      </label>
                       <div className="relative">
                         <input
                           type="text"
@@ -818,11 +829,12 @@ export default function ProfilePage() {
                             <SkeletonCircle className="w-5 h-5" />
                           </span>
                         )}
-                        {canChangeUsername && usernameStatus === "available" && (
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500">
-                            <CheckCircle2 size={18} />
-                          </span>
-                        )}
+                        {canChangeUsername &&
+                          usernameStatus === "available" && (
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500">
+                              <CheckCircle2 size={18} />
+                            </span>
+                          )}
                         {canChangeUsername && usernameStatus === "taken" && (
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500">
                             <AlertCircle size={18} />
@@ -836,16 +848,21 @@ export default function ProfilePage() {
                       )}
                       {!canChangeUsername && nextUsernameChangeDate && (
                         <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                          ניתן לשנות שוב ב־{nextUsernameChangeDate.toLocaleDateString("he-IL")}
+                          ניתן לשנות שוב ב־
+                          {nextUsernameChangeDate.toLocaleDateString("he-IL")}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ביוגרפיה</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        ביוגרפיה
+                      </label>
                       <textarea
                         value={editForm.bio}
-                        onChange={(e) => handleInputChange("bio", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("bio", e.target.value)
+                        }
                         placeholder="ספר קצת על עצמך..."
                         rows={3}
                         className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-900 dark:text-white transition-all"
@@ -892,7 +909,8 @@ export default function ProfilePage() {
 
                 {/* Profile Details List */}
                 <div className="space-y-4 py-4 border-t border-gray-100 dark:border-gray-800">
-                  {isSkeleton ? ([1, 2, 3].map((i) => (
+                  {isSkeleton ? (
+                    [1, 2, 3].map((i) => (
                       <div key={i} className="flex items-center gap-3">
                         <SkeletonCircle className="w-8 h-8 rounded-lg" />
                         <SkeletonText className="w-32 h-4" />
@@ -909,12 +927,16 @@ export default function ProfilePage() {
                             <input
                               type="text"
                               value={editForm.location}
-                              onChange={(e) => handleInputChange("location", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("location", e.target.value)
+                              }
                               placeholder="מיקום (אופציונלי)"
                               className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white"
                             />
                           ) : (
-                            <span className="text-gray-700 dark:text-gray-300 font-medium">{profile?.location}</span>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium">
+                              {profile?.location}
+                            </span>
                           )}
                         </div>
                       )}
@@ -928,7 +950,9 @@ export default function ProfilePage() {
                             <input
                               type="url"
                               value={editForm.website}
-                              onChange={(e) => handleInputChange("website", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("website", e.target.value)
+                              }
                               placeholder="קישור לפלייליסט או אתר"
                               className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white text-left"
                               dir="ltr"
@@ -954,7 +978,8 @@ export default function ProfilePage() {
                           <Calendar size={16} />
                         </div>
                         <span className="text-gray-700 dark:text-gray-300">
-                          הצטרף ב-{new Date(joinedDate).toLocaleDateString("he-IL")}
+                          הצטרף ב-
+                          {new Date(joinedDate).toLocaleDateString("he-IL")}
                         </span>
                       </div>
                     </>
@@ -972,7 +997,9 @@ export default function ProfilePage() {
                     <>
                       <button
                         onClick={handleEditToggle}
-                        disabled={isEditing && (!canSaveProfile || isCheckingUsername)}
+                        disabled={
+                          isEditing && (!canSaveProfile || isCheckingUsername)
+                        }
                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 ${
                           isEditing
                             ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1019,217 +1046,306 @@ export default function ProfilePage() {
 
           {/* Main Content Area (Right in LTR, Left visually in RTL) */}
           <div className="lg:col-span-8 space-y-6">
-
             {/* Activity Dashboard */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                  <HelpCircle size={20} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                  לוח פעילות
-                </h3>
-              </div>
-
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 p-4">
               {isSkeleton ? (
                 <div className="grid grid-cols-3 gap-4">
                   {[0, 1, 2].map((idx) => (
-                    <SkeletonBlock key={idx} className="h-[120px] rounded-2xl" />
+                    <SkeletonBlock
+                      key={idx}
+                      className="h-[90px] rounded-xl"
+                    />
                   ))}
                 </div>
               ) : (
                 <>
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Questions Card */}
-                  <button
-                    onClick={() => setExpandedSection((s) => s === "questions" ? null : "questions")}
-                    className={`group flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden ${
-                      expandedSection === "questions"
-                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-500/20 dark:ring-blue-400/20"
-                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
-                    }`}
-                  >
-                    <div className={`mb-3 transition-transform group-hover:scale-110 ${expandedSection === "questions" ? "text-blue-600 dark:text-blue-400 scale-110" : "text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400"}`}>
-                      <HelpCircle size={28} />
-                    </div>
-                    <div className={`text-3xl font-black mb-1 tabular-nums ${expandedSection === "questions" ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-white"}`}>
-                      {Number(questionsAsked)}
-                    </div>
-                    <div className={`text-sm font-medium ${expandedSection === "questions" ? "text-blue-600/80 dark:text-blue-400/80" : "text-gray-500 dark:text-gray-400"}`}>
-                      שאלות
-                    </div>
-                  </button>
-
-                  {/* Answers Card */}
-                  <button
-                    onClick={() => setExpandedSection((s) => s === "answers" ? null : "answers")}
-                    className={`group flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden ${
-                      expandedSection === "answers"
-                        ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 ring-1 ring-emerald-500/20 dark:ring-emerald-400/20"
-                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-800 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10"
-                    }`}
-                  >
-                    <div className={`mb-3 transition-transform group-hover:scale-110 ${expandedSection === "answers" ? "text-emerald-600 dark:text-emerald-400 scale-110" : "text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400"}`}>
-                      <MessageSquare size={28} />
-                    </div>
-                    <div className={`text-3xl font-black mb-1 tabular-nums ${expandedSection === "answers" ? "text-emerald-700 dark:text-emerald-300" : "text-gray-900 dark:text-white"}`}>
-                      {answersGiven}
-                    </div>
-                    <div className={`text-sm font-medium ${expandedSection === "answers" ? "text-emerald-600/80 dark:text-emerald-400/80" : "text-gray-500 dark:text-gray-400"}`}>
-                      תשובות
-                    </div>
-                  </button>
-
-                  {/* Likers Card */}
-                  <button
-                    onClick={() => setExpandedSection((s) => s === "likers" ? null : "likers")}
-                    className={`group flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden ${
-                      expandedSection === "likers"
-                        ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 ring-1 ring-purple-500/20 dark:ring-purple-400/20"
-                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800 hover:bg-purple-50/50 dark:hover:bg-purple-900/10"
-                    }`}
-                  >
-                    <div className={`mb-3 transition-transform group-hover:scale-110 ${expandedSection === "likers" ? "text-purple-600 dark:text-purple-400 scale-110" : "text-gray-400 dark:text-gray-500 group-hover:text-purple-500 dark:group-hover:text-purple-400"}`}>
-                      <Heart size={28} />
-                    </div>
-                    <div className={`text-3xl font-black mb-1 tabular-nums ${expandedSection === "likers" ? "text-purple-700 dark:text-purple-300" : "text-gray-900 dark:text-white"}`}>
-                      {profileLikesCount}
-                    </div>
-                    <div className={`text-sm font-medium ${expandedSection === "likers" ? "text-purple-600/80 dark:text-purple-400/80" : "text-gray-500 dark:text-gray-400"}`}>
-                      לייקים
-                    </div>
-                  </button>
-                </div>
-
-                {/* Expanded Activity Area */}
-                <div
-                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                    expandedSection ? "max-h-[500px] opacity-100 mt-6" : "max-h-0 opacity-0 mt-0"
-                  }`}
-                >
-                  <div className={`rounded-2xl border p-1 ${
-                    expandedSection === 'questions' ? 'bg-blue-50/50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-900/30' :
-                    expandedSection === 'answers' ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30' :
-                    'bg-purple-50/50 border-purple-100 dark:bg-purple-900/10 dark:border-purple-900/30'
-                  }`}>
-                    {expandedSection === "questions" && (
-                      <div ref={questionsScrollRef} className="h-[300px] overflow-y-auto p-4 custom-scrollbar">
-                        <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
-                          <HelpCircle size={16} /> השאלות שלי
-                        </h4>
-                        {userQuestions.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-40 text-blue-800/60 dark:text-blue-200/50">
-                            <p className="text-sm">אין שאלות עדיין.</p>
-                          </div>
-                        ) : (
-                          <ul className="space-y-3">
-                            {userQuestions.map((q) => (
-                              <li key={q.id} className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-blue-100 dark:border-blue-800/30 hover:shadow-md transition-shadow">
-                                <Link
-                                  href={`/questions/${q.id}`}
-                                  className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium line-clamp-2"
-                                >
-                                  {q.title}
-                                </Link>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-2 block">
-                                  {formatRelativeTime(q.created_at)}
-                                </span>
-                              </li>
-                            ))}
-                            <div ref={questionsSentinelRef} className="h-4" />
-                            {loadingMoreQuestions && (
-                              <p className="text-sm text-center text-blue-600/60 dark:text-blue-400/60 py-2">טוען...</p>
-                            )}
-                          </ul>
-                        )}
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Questions Card */}
+                    <button
+                      onClick={() =>
+                        setExpandedSection((s) =>
+                          s === "questions" ? null : "questions",
+                        )
+                      }
+                      className={`group flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 relative overflow-hidden ${
+                        expandedSection === "questions"
+                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-500/20 dark:ring-blue-400/20"
+                          : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
+                      }`}
+                    >
+                      <div
+                        className={`text-2xl font-extrabold tabular-nums mb-1 text-center ${
+                          expandedSection === "questions"
+                            ? "text-blue-700 dark:text-blue-300"
+                            : "text-gray-900 dark:text-white"
+                        }`}
+                      >
+                        {Number(questionsAsked)}
                       </div>
-                    )}
-
-                    {expandedSection === "answers" && (
-                      <div ref={repliesScrollRef} className="h-[300px] overflow-y-auto p-4 custom-scrollbar">
-                        <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-300 mb-4 flex items-center gap-2">
-                          <MessageSquare size={16} /> התשובות שלי
-                        </h4>
-                        {userReplies.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-40 text-emerald-800/60 dark:text-emerald-200/50">
-                            <p className="text-sm">אין תשובות עדיין.</p>
-                          </div>
-                        ) : (
-                          <ul className="space-y-3">
-                            {userReplies.map((r) => (
-                              <li key={r.id} className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-emerald-100 dark:border-emerald-800/30">
-                                <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2 mb-2">
-                                  {r.content}
-                                </p>
-                                <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-gray-100 dark:border-gray-700/50">
-                                  <Link
-                                    href={`/questions/${r.question_id}`}
-                                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium line-clamp-1"
-                                  >
-                                    בשאלה: {r.question_title ?? "שאלה ללא כותרת"}
-                                  </Link>
-                                </div>
-                                <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 block">
-                                  {formatRelativeTime(r.created_at)}
-                                </span>
-                              </li>
-                            ))}
-                            <div ref={repliesSentinelRef} className="h-4" />
-                            {loadingMoreReplies && (
-                              <p className="text-sm text-center text-emerald-600/60 dark:text-emerald-400/60 py-2">טוען...</p>
-                            )}
-                          </ul>
-                        )}
+                      <div
+                        className={`flex items-center justify-center gap-1.5 text-xs font-medium ${
+                          expandedSection === "questions"
+                            ? "text-blue-600/80 dark:text-blue-400/80"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      >
+                        <HelpCircle
+                          size={18}
+                          className={
+                            expandedSection === "questions"
+                              ? "text-blue-500 dark:text-blue-400"
+                              : "text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors"
+                          }
+                        />
+                        <span>שאלות</span>
                       </div>
-                    )}
+                    </button>
 
-                    {expandedSection === "likers" && (
-                      <div ref={likersScrollRef} className="h-[300px] overflow-y-auto p-4 custom-scrollbar">
-                        <h4 className="text-sm font-bold text-purple-900 dark:text-purple-300 mb-4 flex items-center gap-2">
-                          <Heart size={16} /> אנשים שאהבו
-                        </h4>
-                        {likers.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-40 text-purple-800/60 dark:text-purple-200/50">
-                            <p className="text-sm">אין לייקים עדיין.</p>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {likers.map((u) => (
-                              <Link
-                                key={u.id}
-                                href={`/profile/${encodeURIComponent(u.username)}`}
-                                className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-600 transition-colors group"
-                              >
-                                {u.avatar_url ? (
-                                  <Image
-                                    src={u.avatar_url}
-                                    alt={u.username}
-                                    width={40}
-                                    height={40}
-                                    className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 group-hover:ring-2 ring-purple-500/30 transition-all"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:ring-2 ring-purple-500/30 transition-all">
-                                    <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
-                                      {(u.username ?? "מ").charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                )}
-                                <span className="font-medium text-gray-800 dark:text-gray-200 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                                  {u.username}
-                                </span>
-                              </Link>
-                            ))}
-                            <div ref={likersSentinelRef} className="h-4 sm:col-span-2" />
-                            {loadingMoreLikers && (
-                              <p className="text-sm text-center text-purple-600/60 dark:text-purple-400/60 py-2 sm:col-span-2">טוען...</p>
-                            )}
-                          </div>
-                        )}
+                    {/* Answers Card */}
+                    <button
+                      onClick={() =>
+                        setExpandedSection((s) =>
+                          s === "answers" ? null : "answers",
+                        )
+                      }
+                      className={`group flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 relative overflow-hidden ${
+                        expandedSection === "answers"
+                          ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 ring-1 ring-emerald-500/20 dark:ring-emerald-400/20"
+                          : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-800 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10"
+                      }`}
+                    >
+                      <div
+                        className={`text-2xl font-extrabold tabular-nums mb-1 text-center ${
+                          expandedSection === "answers"
+                            ? "text-emerald-700 dark:text-emerald-300"
+                            : "text-gray-900 dark:text-white"
+                        }`}
+                      >
+                        {answersGiven}
                       </div>
-                    )}
+                      <div
+                        className={`flex items-center justify-center gap-1.5 text-xs font-medium ${
+                          expandedSection === "answers"
+                            ? "text-emerald-600/80 dark:text-emerald-400/80"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      >
+                        <MessageSquare
+                          size={18}
+                          className={
+                            expandedSection === "answers"
+                              ? "text-emerald-500 dark:text-emerald-400"
+                              : "text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors"
+                          }
+                        />
+                        <span>תשובות</span>
+                      </div>
+                    </button>
+
+                    {/* Likers Card */}
+                    <button
+                      onClick={() =>
+                        setExpandedSection((s) =>
+                          s === "likers" ? null : "likers",
+                        )
+                      }
+                      className={`group flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 relative overflow-hidden ${
+                        expandedSection === "likers"
+                          ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 ring-1 ring-purple-500/20 dark:ring-purple-400/20"
+                          : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800 hover:bg-purple-50/50 dark:hover:bg-purple-900/10"
+                      }`}
+                    >
+                      <div
+                        className={`text-2xl font-extrabold tabular-nums mb-1 text-center ${
+                          expandedSection === "likers"
+                            ? "text-purple-700 dark:text-purple-300"
+                            : "text-gray-900 dark:text-white"
+                        }`}
+                      >
+                        {profileLikesCount}
+                      </div>
+                      <div
+                        className={`flex items-center justify-center gap-1.5 text-xs font-medium ${
+                          expandedSection === "likers"
+                            ? "text-purple-600/80 dark:text-purple-400/80"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      >
+                        <Heart
+                          size={18}
+                          className={
+                            expandedSection === "likers"
+                              ? "text-purple-500 dark:text-purple-400"
+                              : "text-gray-400 dark:text-gray-500 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors"
+                          }
+                        />
+                        <span>לייקים</span>
+                      </div>
+                    </button>
                   </div>
-                </div>
+
+                  {/* Expanded Activity Area */}
+                  <div
+                    className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                      expandedSection
+                        ? "max-h-[500px] opacity-100 mt-6"
+                        : "max-h-0 opacity-0 mt-0"
+                    }`}
+                  >
+                    <div
+                      className={`rounded-2xl border p-1 ${
+                        expandedSection === "questions"
+                          ? "bg-blue-50/50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-900/30"
+                          : expandedSection === "answers"
+                            ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30"
+                            : "bg-purple-50/50 border-purple-100 dark:bg-purple-900/10 dark:border-purple-900/30"
+                      }`}
+                    >
+                      {expandedSection === "questions" && (
+                        <div
+                          ref={questionsScrollRef}
+                          className="h-[300px] overflow-y-auto p-4 custom-scrollbar"
+                        >
+                          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
+                            <HelpCircle size={16} /> השאלות שלי
+                          </h4>
+                          {userQuestions.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-40 text-blue-800/60 dark:text-blue-200/50">
+                              <p className="text-sm">אין שאלות עדיין.</p>
+                            </div>
+                          ) : (
+                            <ul className="space-y-3">
+                              {userQuestions.map((q) => (
+                                <li
+                                  key={q.id}
+                                  className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-blue-100 dark:border-blue-800/30 hover:shadow-md transition-shadow"
+                                >
+                                  <Link
+                                    href={`/questions/${q.id}`}
+                                    className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium line-clamp-2"
+                                  >
+                                    {q.title}
+                                  </Link>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-2 block">
+                                    {formatRelativeTime(q.created_at)}
+                                  </span>
+                                </li>
+                              ))}
+                              <div ref={questionsSentinelRef} className="h-4" />
+                              {loadingMoreQuestions && (
+                                <p className="text-sm text-center text-blue-600/60 dark:text-blue-400/60 py-2">
+                                  טוען...
+                                </p>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+
+                      {expandedSection === "answers" && (
+                        <div
+                          ref={repliesScrollRef}
+                          className="h-[300px] overflow-y-auto p-4 custom-scrollbar"
+                        >
+                          <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-300 mb-4 flex items-center gap-2">
+                            <MessageSquare size={16} /> התשובות שלי
+                          </h4>
+                          {userReplies.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-40 text-emerald-800/60 dark:text-emerald-200/50">
+                              <p className="text-sm">אין תשובות עדיין.</p>
+                            </div>
+                          ) : (
+                            <ul className="space-y-3">
+                              {userReplies.map((r) => (
+                                <li
+                                  key={r.id}
+                                  className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-sm border border-emerald-100 dark:border-emerald-800/30"
+                                >
+                                  <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2 mb-2">
+                                    {r.content}
+                                  </p>
+                                  <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-gray-100 dark:border-gray-700/50">
+                                    <Link
+                                      href={`/questions/${r.question_id}`}
+                                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium line-clamp-1"
+                                    >
+                                      בשאלה:{" "}
+                                      {r.question_title ?? "שאלה ללא כותרת"}
+                                    </Link>
+                                  </div>
+                                  <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 block">
+                                    {formatRelativeTime(r.created_at)}
+                                  </span>
+                                </li>
+                              ))}
+                              <div ref={repliesSentinelRef} className="h-4" />
+                              {loadingMoreReplies && (
+                                <p className="text-sm text-center text-emerald-600/60 dark:text-emerald-400/60 py-2">
+                                  טוען...
+                                </p>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+
+                      {expandedSection === "likers" && (
+                        <div
+                          ref={likersScrollRef}
+                          className="h-[300px] overflow-y-auto p-4 custom-scrollbar"
+                        >
+                          <h4 className="text-sm font-bold text-purple-900 dark:text-purple-300 mb-4 flex items-center gap-2">
+                            <Heart size={16} /> אנשים שאהבו
+                          </h4>
+                          {likers.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-40 text-purple-800/60 dark:text-purple-200/50">
+                              <p className="text-sm">אין לייקים עדיין.</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {likers.map((u) => (
+                                <Link
+                                  key={u.id}
+                                  href={`/profile/${encodeURIComponent(u.username)}`}
+                                  className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-600 transition-colors group"
+                                >
+                                  {u.avatar_url ? (
+                                    <Image
+                                      src={u.avatar_url}
+                                      alt={u.username}
+                                      width={40}
+                                      height={40}
+                                      className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 group-hover:ring-2 ring-purple-500/30 transition-all"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:ring-2 ring-purple-500/30 transition-all">
+                                      <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
+                                        {(u.username ?? "מ")
+                                          .charAt(0)
+                                          .toUpperCase()}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <span className="font-medium text-gray-800 dark:text-gray-200 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                    {u.username}
+                                  </span>
+                                </Link>
+                              ))}
+                              <div
+                                ref={likersSentinelRef}
+                                className="h-4 sm:col-span-2"
+                              />
+                              {loadingMoreLikers && (
+                                <p className="text-sm text-center text-purple-600/60 dark:text-purple-400/60 py-2 sm:col-span-2">
+                                  טוען...
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -1268,8 +1384,12 @@ export default function ProfilePage() {
                   {profileComments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                       <MessageSquare size={32} className="mb-3 opacity-50" />
-                      <p className="text-sm font-medium">אין תגובות על הפרופיל שלך.</p>
-                      <p className="text-xs mt-1">כאשר משתמשים יגיבו, התגובות יופיעו כאן.</p>
+                      <p className="text-sm font-medium">
+                        אין תגובות על הפרופיל שלך.
+                      </p>
+                      <p className="text-xs mt-1">
+                        כאשר משתמשים יגיבו, התגובות יופיעו כאן.
+                      </p>
                     </div>
                   ) : (
                     <>
@@ -1292,14 +1412,18 @@ export default function ProfilePage() {
                                 ) : (
                                   <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center hover:opacity-90 transition-opacity">
                                     <span className="text-sm lg:text-base font-bold text-indigo-700 dark:text-indigo-300">
-                                      {c.author_username.charAt(0).toUpperCase()}
+                                      {c.author_username
+                                        .charAt(0)
+                                        .toUpperCase()}
                                     </span>
                                   </div>
                                 )}
                               </Link>
                             ) : (
                               <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
-                                <span className="text-sm lg:text-base font-bold text-gray-500">מ</span>
+                                <span className="text-sm lg:text-base font-bold text-gray-500">
+                                  מ
+                                </span>
                               </div>
                             )}
                           </div>
@@ -1331,13 +1455,15 @@ export default function ProfilePage() {
                                     if (!profile?.username) return;
                                     const res = await fetch(
                                       `/api/profile/${encodeURIComponent(profile.username)}/comments/${c.id}`,
-                                      { method: "DELETE" }
+                                      { method: "DELETE" },
                                     );
                                     if (res.ok) {
                                       setProfileComments((prev) =>
-                                        prev.filter((x) => x.id !== c.id)
+                                        prev.filter((x) => x.id !== c.id),
                                       );
-                                      setCommentsTotal(prev => Math.max(0, prev - 1));
+                                      setCommentsTotal((prev) =>
+                                        Math.max(0, prev - 1),
+                                      );
                                     }
                                   }}
                                   className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all focus:opacity-100"
@@ -1358,7 +1484,9 @@ export default function ProfilePage() {
                         <div className="py-4 flex justify-center">
                           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm">
                             <SkeletonCircle className="w-4 h-4 animate-spin border-t-indigo-600" />
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">טוען תגובות...</span>
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                              טוען תגובות...
+                            </span>
                           </div>
                         </div>
                       )}
@@ -1367,7 +1495,6 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-
           </div>
         </div>
       </div>
