@@ -1,7 +1,7 @@
 //app/page.tsx
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import {
   MessageSquare,
   Users,
@@ -15,6 +15,7 @@ import {
   ArrowUp,
   ArrowDown,
   Star,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "./components/AuthProvider";
 import LoginModal from "./components/LoginModal";
@@ -101,7 +102,10 @@ function ForumHomepage() {
   const searchParams = useSearchParams();
   usePresenceTick(); // re-evaluate isOnline every 30s
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
-  const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
+  const [updatingVoteIds, setUpdatingVoteIds] = useState<
+    Record<string, boolean>
+  >({});
+  const voteRequestsRef = useRef(new Set<string>());
   const isGuest = !user;
 
   useEffect(() => {
@@ -134,7 +138,15 @@ function ForumHomepage() {
       setLoadingTopQuestions(true);
       setTopQuestionsError(null);
       try {
-        const res = await fetch("/api/questions?sort=votes&limit=5");
+        const params = new URLSearchParams({
+          sort: "votes",
+          limit: "5",
+        });
+        if (user?.id) {
+          params.set("includeUserVotes", "1");
+        }
+
+        const res = await fetch(`/api/questions?${params.toString()}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -143,6 +155,7 @@ function ForumHomepage() {
         }
 
         setTopQuestions(data.questions || []);
+        setUserVotes(user?.id ? data.userVotes || {} : {});
       } catch {
         setTopQuestionsError("שגיאה בטעינת השאלות המובילות");
       } finally {
@@ -151,7 +164,7 @@ function ForumHomepage() {
     }
 
     loadTopQuestions();
-  }, []);
+  }, [user?.id]);
 
   const handleLogin = () => setIsLoginModalOpen(true);
   const handleRegister = () => setIsRegisterModalOpen(true);
@@ -166,7 +179,27 @@ function ForumHomepage() {
       handleLogin();
       return;
     }
-    setUpdatingVoteId(questionId);
+    if (voteRequestsRef.current.has(questionId)) return;
+
+    const currentQuestion = topQuestions.find((question) => question.id === questionId);
+    if (!currentQuestion) return;
+
+    const previousVote = userVotes[questionId] ?? 0;
+    const optimisticVote = previousVote === voteType ? 0 : voteType;
+    const previousVotesCount = currentQuestion.votes;
+    const optimisticVotesCount =
+      previousVotesCount + (optimisticVote - previousVote);
+
+    voteRequestsRef.current.add(questionId);
+    setUpdatingVoteIds((prev) => ({ ...prev, [questionId]: true }));
+    setTopQuestions((prev) =>
+      prev.map((question) =>
+        question.id === questionId
+          ? { ...question, votes: optimisticVotesCount }
+          : question,
+      ),
+    );
+    setUserVotes((prev) => ({ ...prev, [questionId]: optimisticVote }));
     try {
       const res = await fetch(`/api/questions/${questionId}/vote`, {
         method: "POST",
@@ -174,17 +207,43 @@ function ForumHomepage() {
         body: JSON.stringify({ voteType }),
       });
       const data = await res.json();
-      if (!res.ok) return;
+      if (!res.ok) {
+        setTopQuestions((prev) =>
+          prev.map((question) =>
+            question.id === questionId
+              ? { ...question, votes: previousVotesCount }
+              : question,
+          ),
+        );
+        setUserVotes((prev) => ({ ...prev, [questionId]: previousVote }));
+        return;
+      }
+      const resolvedVote =
+        data.userVote === 1 || data.userVote === -1 ? data.userVote : 0;
       setTopQuestions((prev) =>
-        prev.map((q) =>
-          q.id === questionId ? { ...q, votes: data.votes ?? q.votes } : q,
+        prev.map((question) =>
+          question.id === questionId
+            ? { ...question, votes: data.votes ?? question.votes }
+            : question,
         ),
       );
-      setUserVotes((prev) => ({ ...prev, [questionId]: voteType }));
+      setUserVotes((prev) => ({ ...prev, [questionId]: resolvedVote }));
     } catch {
-      // leave as-is
+      setTopQuestions((prev) =>
+        prev.map((question) =>
+          question.id === questionId
+            ? { ...question, votes: previousVotesCount }
+            : question,
+        ),
+      );
+      setUserVotes((prev) => ({ ...prev, [questionId]: previousVote }));
     } finally {
-      setUpdatingVoteId(null);
+      voteRequestsRef.current.delete(questionId);
+      setUpdatingVoteIds((prev) => {
+        const next = { ...prev };
+        delete next[questionId];
+        return next;
+      });
     }
   };
   const closeLoginModal = () => setIsLoginModalOpen(false);
@@ -336,7 +395,7 @@ function ForumHomepage() {
                               ? (e) => handleVote(e, question.id, 1)
                               : undefined
                           }
-                          disabled={isGuest || updatingVoteId === question.id}
+                          disabled={isGuest || !!updatingVoteIds[question.id]}
                           className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] ${
                             isGuest
                               ? "cursor-not-allowed opacity-60"
@@ -363,7 +422,7 @@ function ForumHomepage() {
                               ? (e) => handleVote(e, question.id, -1)
                               : undefined
                           }
-                          disabled={isGuest || updatingVoteId === question.id}
+                          disabled={isGuest || !!updatingVoteIds[question.id]}
                           className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] ${
                             isGuest
                               ? "cursor-not-allowed opacity-60"
@@ -419,7 +478,15 @@ function ForumHomepage() {
                           </h3>
                         </div>
 
-                        <div className="mt-[10px] flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-[0.825rem] text-gray-500 dark:border-gray-700/70 dark:text-gray-400 sm:text-[0.9625rem]">
+                        <div className="relative mt-[10px] flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]">
+                          <div
+                            className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
+                            aria-hidden
+                          />
+                          <div className="absolute left-2 -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                            <Clock size={12} />
+                            <span>{timeAgo(question.createdAt)}</span>
+                          </div>
                           {question.author.username ? (
                             <Link
                               href={
@@ -467,9 +534,6 @@ function ForumHomepage() {
                             ) : (
                               "אנונימי"
                             )}
-                          </span>
-                          <span className="text-[0.825rem] text-gray-500 dark:text-gray-400 flex-shrink-0 sm:text-[0.9625rem]">
-                            {timeAgo(question.createdAt)}
                           </span>
                           <div
                             className="flex items-center gap-1"

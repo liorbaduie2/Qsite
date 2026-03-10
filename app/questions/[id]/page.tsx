@@ -16,8 +16,8 @@ import {
   LogIn,
   Eye,
   MessageCircle,
-  ChevronRight,
   Clock,
+  ChevronRight,
   Shield,
   Send,
   CheckCircle,
@@ -28,6 +28,7 @@ import {
   MoreVertical,
   Trash2,
   FileQuestion,
+  Flag,
 } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import LoginModal from "../../components/LoginModal";
@@ -52,6 +53,7 @@ interface QuestionDetail {
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
+  userVote: 1 | -1 | 0;
   author: {
     id: string;
     username: string;
@@ -70,6 +72,7 @@ interface Answer {
   isEdited: boolean;
   createdAt: string;
   parentAnswerId?: string | null;
+  userVote: 1 | -1 | 0;
   replies?: Answer[];
   author: {
     id: string;
@@ -95,6 +98,7 @@ const MOCK_QUESTION: QuestionDetail = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   lastActivityAt: new Date().toISOString(),
+  userVote: 0,
   author: {
     id: "mock-author",
     username: "example_user",
@@ -114,6 +118,7 @@ const MOCK_ANSWERS: Answer[] = [
     isEdited: false,
     createdAt: new Date().toISOString(),
     parentAnswerId: null,
+    userVote: 0,
     author: {
       id: "mock-user-1",
       username: "helper_user",
@@ -129,6 +134,7 @@ const MOCK_ANSWERS: Answer[] = [
     isEdited: false,
     createdAt: new Date().toISOString(),
     parentAnswerId: null,
+    userVote: 0,
     author: {
       id: "mock-user-2",
       username: "another_helper",
@@ -137,6 +143,11 @@ const MOCK_ANSWERS: Answer[] = [
     },
   },
 ];
+
+interface VoteUserEntry {
+  userId: string;
+  username: string;
+}
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -215,6 +226,7 @@ export default function QuestionDetailPage() {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
   const [questionMenuOpen, setQuestionMenuOpen] = useState(false);
+  const [openAnswerMenuId, setOpenAnswerMenuId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -226,7 +238,43 @@ export default function QuestionDetailPage() {
   const [requestRemovalReason, setRequestRemovalReason] = useState("");
   const [submittingRemovalRequest, setSubmittingRemovalRequest] =
     useState(false);
+  const [reportingAnswer, setReportingAnswer] = useState<Answer | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [showVoteDetailsModal, setShowVoteDetailsModal] = useState(false);
+  const [voteDetailsLoading, setVoteDetailsLoading] = useState(false);
+  const [voteDetailsError, setVoteDetailsError] = useState<string | null>(null);
+  const [voteDetails, setVoteDetails] = useState<{
+    upvotes: VoteUserEntry[];
+    downvotes: VoteUserEntry[];
+  }>({
+    upvotes: [],
+    downvotes: [],
+  });
+  const [showAnswerVoteDetailsModal, setShowAnswerVoteDetailsModal] =
+    useState(false);
+  const [answerVoteDetailsAnswerId, setAnswerVoteDetailsAnswerId] = useState<
+    string | null
+  >(null);
+  const [answerVoteDetailsLoading, setAnswerVoteDetailsLoading] =
+    useState(false);
+  const [answerVoteDetailsError, setAnswerVoteDetailsError] = useState<
+    string | null
+  >(null);
+  const [answerVoteDetails, setAnswerVoteDetails] = useState<{
+    upvotes: VoteUserEntry[];
+    downvotes: VoteUserEntry[];
+  }>({
+    upvotes: [],
+    downvotes: [],
+  });
+  const [updatingVoteIds, setUpdatingVoteIds] = useState<
+    Record<string, boolean>
+  >({});
   const questionMenuRef = useRef<HTMLDivElement>(null);
+  const answerMenuRef = useRef<HTMLDivElement>(null);
+  const voteRequestsRef = useRef(new Set<string>());
   const searchParams = useSearchParams();
   const [hasScrolledToAnswer, setHasScrolledToAnswer] = useState(false);
 
@@ -238,6 +286,7 @@ export default function QuestionDetailPage() {
     loading: authLoading,
     signOut,
   } = useAuth();
+  const userId = user?.id ?? null;
   const isGuest = !user;
   usePresenceTick(); // re-evaluate isOnline() every 30s so indicators update when users go offline
 
@@ -268,6 +317,12 @@ export default function QuestionDetailPage() {
     (userPermissions?.role === "owner" || userPermissions?.role === "guardian");
   const canRequestRemoval =
     question && user && userPermissions?.role === "admin";
+  const canViewVotes =
+    question &&
+    user &&
+    (userPermissions?.role === "owner" ||
+      userPermissions?.role === "guardian" ||
+      userPermissions?.role === "admin");
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -285,11 +340,25 @@ export default function QuestionDetailPage() {
   }, [questionMenuOpen]);
 
   useEffect(() => {
+    if (!openAnswerMenuId) return;
+    const onClick = (e: MouseEvent) => {
+      if (
+        answerMenuRef.current &&
+        !answerMenuRef.current.contains(e.target as Node)
+      ) {
+        setOpenAnswerMenuId(null);
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [openAnswerMenuId]);
+
+  useEffect(() => {
     async function fetchQuestion() {
       if (!id) return;
 
       // For guests, do not load the real question – show mock content only
-      if (!user && !authLoading) {
+      if (!userId && !authLoading) {
         setError(null);
         setQuestion(MOCK_QUESTION);
         setLoading(false);
@@ -297,7 +366,7 @@ export default function QuestionDetailPage() {
       }
 
       // While auth state is still resolving, wait
-      if (!user) {
+      if (!userId) {
         return;
       }
 
@@ -319,19 +388,19 @@ export default function QuestionDetailPage() {
     }
 
     fetchQuestion();
-  }, [id, user, authLoading]);
+  }, [id, userId, authLoading]);
 
   const fetchAnswers = useCallback(async () => {
     if (!id) return;
 
     // For guests, show only mock answers
-    if (!user && !authLoading) {
+    if (!userId && !authLoading) {
       setAnswers(MOCK_ANSWERS);
       setAnswersLoading(false);
       return;
     }
 
-    if (!user) {
+    if (!userId) {
       return;
     }
 
@@ -347,39 +416,292 @@ export default function QuestionDetailPage() {
     } finally {
       setAnswersLoading(false);
     }
-  }, [id, user, authLoading]);
+  }, [id, userId, authLoading]);
 
   useEffect(() => {
     fetchAnswers();
   }, [fetchAnswers]);
 
-  // Re-fetch question and answers periodically when tab visible so online status stays accurate
-  useEffect(() => {
-    if (!id || !user) return;
-    const refetch = () => {
-      fetch(`/api/questions/${id}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => data?.question && setQuestion(data.question))
-        .catch(() => {});
-      fetchAnswers();
-    };
-    const onVisible = () => {
-      if (document.visibilityState === "visible") refetch();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    const interval = setInterval(() => {
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState !== "visible"
-      )
+  const setVoteLoading = useCallback((voteKey: string, isLoading: boolean) => {
+    setUpdatingVoteIds((prev) => {
+      if (isLoading) {
+        return { ...prev, [voteKey]: true };
+      }
+
+      const next = { ...prev };
+      delete next[voteKey];
+      return next;
+    });
+  }, []);
+
+  const handleQuestionVote = async (voteType: 1 | -1) => {
+    if (!id) return;
+
+    if (!user) {
+      handleAuthAction("login");
+      return;
+    }
+
+    const currentQuestion = question;
+    if (!currentQuestion) return;
+
+    const previousVote = currentQuestion.userVote ?? 0;
+    const optimisticVote = previousVote === voteType ? 0 : voteType;
+    const previousVotesCount = currentQuestion.votes;
+    const optimisticVotesCount =
+      previousVotesCount + (optimisticVote - previousVote);
+    const voteKey = `question:${id}`;
+    if (voteRequestsRef.current.has(voteKey)) return;
+
+    voteRequestsRef.current.add(voteKey);
+    setVoteLoading(voteKey, true);
+    setQuestion((current) =>
+      current
+        ? {
+            ...current,
+            votes: optimisticVotesCount,
+            userVote: optimisticVote,
+          }
+        : current,
+    );
+    try {
+      const res = await fetch(`/api/questions/${id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voteType }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setQuestion((current) =>
+          current
+            ? {
+                ...current,
+                votes: previousVotesCount,
+                userVote: previousVote,
+              }
+            : current,
+        );
         return;
-      refetch();
-    }, 10 * 1000); // 10s so other users' online status updates within ~5–10s
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      clearInterval(interval);
-    };
-  }, [id, user, fetchAnswers]);
+      }
+
+      const resolvedVote =
+        data.userVote === 1 || data.userVote === -1 ? data.userVote : 0;
+      setQuestion((currentQuestion) =>
+        currentQuestion
+          ? {
+              ...currentQuestion,
+              votes: data.votes ?? currentQuestion.votes,
+              userVote: resolvedVote,
+            }
+          : currentQuestion,
+      );
+    } catch {
+      setQuestion((current) =>
+        current
+          ? {
+              ...current,
+              votes: previousVotesCount,
+              userVote: previousVote,
+            }
+          : current,
+      );
+    } finally {
+      voteRequestsRef.current.delete(voteKey);
+      setVoteLoading(voteKey, false);
+    }
+  };
+
+  const handleAnswerVote = async (answerId: string, voteType: 1 | -1) => {
+    if (!id) return;
+
+    if (!user) {
+      handleAuthAction("login");
+      return;
+    }
+
+    const currentAnswer = answers.find((answer) => answer.id === answerId);
+    if (!currentAnswer) return;
+
+    const previousVote = currentAnswer.userVote ?? 0;
+    const optimisticVote = previousVote === voteType ? 0 : voteType;
+    const previousVotesCount = currentAnswer.votes;
+    const optimisticVotesCount =
+      previousVotesCount + (optimisticVote - previousVote);
+    const voteKey = `answer:${answerId}`;
+    if (voteRequestsRef.current.has(voteKey)) return;
+
+    voteRequestsRef.current.add(voteKey);
+    setVoteLoading(voteKey, true);
+    setAnswers((prev) =>
+      prev.map((answer) =>
+        answer.id === answerId
+          ? {
+              ...answer,
+              votes: optimisticVotesCount,
+              userVote: optimisticVote,
+            }
+          : answer,
+      ),
+    );
+    try {
+      const res = await fetch(`/api/questions/${id}/answers/${answerId}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voteType }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAnswers((prev) =>
+          prev.map((answer) =>
+            answer.id === answerId
+              ? {
+                  ...answer,
+                  votes: previousVotesCount,
+                  userVote: previousVote,
+                }
+              : answer,
+          ),
+        );
+        return;
+      }
+
+      const resolvedVote =
+        data.userVote === 1 || data.userVote === -1 ? data.userVote : 0;
+      setAnswers((prev) =>
+        prev.map((answer) =>
+          answer.id === answerId
+            ? {
+                ...answer,
+                votes: data.votes ?? answer.votes,
+                userVote: resolvedVote,
+              }
+            : answer,
+        ),
+      );
+    } catch {
+      setAnswers((prev) =>
+        prev.map((answer) =>
+          answer.id === answerId
+            ? {
+                ...answer,
+                votes: previousVotesCount,
+                userVote: previousVote,
+              }
+            : answer,
+        ),
+      );
+    } finally {
+      voteRequestsRef.current.delete(voteKey);
+      setVoteLoading(voteKey, false);
+    }
+  };
+
+  const handleOpenAnswerReport = (answer: Answer) => {
+    setOpenAnswerMenuId(null);
+
+    if (!user) {
+      handleAuthAction("login");
+      return;
+    }
+
+    setReportingAnswer(answer);
+    setReportReason("");
+    setReportError("");
+  };
+
+  const handleSubmitAnswerReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportingAnswer || reportSubmitting) return;
+
+    setReportSubmitting(true);
+    setReportError("");
+    try {
+      const res = await fetch("/api/report/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contentType: "answer",
+          contentId: reportingAnswer.id,
+          description: reportReason.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setReportError(data.error || "שגיאה בשליחת הדיווח");
+        return;
+      }
+
+      setReportingAnswer(null);
+      setReportReason("");
+      setReportError("");
+    } catch {
+      setReportError("שגיאה בחיבור לשרת");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  const handleOpenVoteDetails = async () => {
+    if (!id) return;
+
+    setQuestionMenuOpen(false);
+    setShowVoteDetailsModal(true);
+    setVoteDetailsLoading(true);
+    setVoteDetailsError(null);
+    setVoteDetails({ upvotes: [], downvotes: [] });
+    try {
+      const res = await fetch(`/api/questions/${id}/votes`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setVoteDetailsError(data.error || "שגיאה בטעינת פרטי ההצבעות");
+        return;
+      }
+
+      setVoteDetails({
+        upvotes: Array.isArray(data.upvotes) ? data.upvotes : [],
+        downvotes: Array.isArray(data.downvotes) ? data.downvotes : [],
+      });
+    } catch {
+      setVoteDetailsError("שגיאה בחיבור לשרת");
+    } finally {
+      setVoteDetailsLoading(false);
+    }
+  };
+
+  const handleOpenAnswerVoteDetails = async (answer: Answer) => {
+    if (!id) return;
+
+    setOpenAnswerMenuId(null);
+    setAnswerVoteDetailsAnswerId(answer.id);
+    setShowAnswerVoteDetailsModal(true);
+    setAnswerVoteDetailsLoading(true);
+    setAnswerVoteDetailsError(null);
+    setAnswerVoteDetails({ upvotes: [], downvotes: [] });
+    try {
+      const res = await fetch(
+        `/api/questions/${id}/answers/${answer.id}/votes`,
+      );
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAnswerVoteDetailsError(data.error || "שגיאה בטעינת פרטי ההצבעות");
+        return;
+      }
+
+      setAnswerVoteDetails({
+        upvotes: Array.isArray(data.upvotes) ? data.upvotes : [],
+        downvotes: Array.isArray(data.downvotes) ? data.downvotes : [],
+      });
+    } catch {
+      setAnswerVoteDetailsError("שגיאה בחיבור לשרת");
+    } finally {
+      setAnswerVoteDetailsLoading(false);
+    }
+  };
 
   const handleSubmitAnswer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,6 +738,10 @@ export default function QuestionDetailPage() {
   };
 
   const answerTree = React.useMemo(() => buildAnswerTree(answers), [answers]);
+  const selectedAnswerForVoteDetails = answerVoteDetailsAnswerId
+    ? (answers.find((answer) => answer.id === answerVoteDetailsAnswerId) ??
+      null)
+    : null;
 
   useEffect(() => {
     if (!id || !answerTree.length || hasScrolledToAnswer) return;
@@ -639,6 +965,14 @@ export default function QuestionDetailPage() {
                 הרשמה
               </button>
             </div>
+          ) : question && !isAnswerPanelOpen ? (
+            <button
+              onClick={() => setIsAnswerPanelOpen(true)}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg font-medium"
+            >
+              <Plus size={18} />
+              כתוב תשובה
+            </button>
           ) : undefined
         }
       />
@@ -657,20 +991,15 @@ export default function QuestionDetailPage() {
       />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-5 py-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
-          <Link
-            href="/questions"
-            className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            שאלות ותשובות
-          </Link>
-          <ChevronRight size={14} className="rotate-180" />
-          <span className="text-gray-400 dark:text-gray-500 truncate max-w-xs">
-            {question?.title || "שאלה"}
-          </span>
-        </nav>
+      <main className="max-w-4xl mx-auto px-5 py-8 relative">
+        {/* Back Button */}
+        <Link
+          href="/questions"
+          className="absolute -right-12 xl:-right-16 top-8 p-3 bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-full shadow-md border border-gray-200/50 dark:border-gray-700/50 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-all hover:scale-105 hidden md:flex items-center justify-center z-10"
+          title="חזרה לשאלות"
+        >
+          <ChevronRight size={24} />
+        </Link>
 
         {error ? (
           <div className="text-center py-16">
@@ -695,19 +1024,37 @@ export default function QuestionDetailPage() {
               <div className="flex">
                 {/* Vote sidebar */}
                 <div className="flex flex-col items-center gap-1 px-4 py-4 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
-                  <button className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => void handleQuestionVote(1)}
+                    disabled={!!updatingVoteIds[`question:${question.id}`]}
+                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
+                  >
                     <ArrowUp
                       size={22}
-                      className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      className={
+                        question.userVote === 1
+                          ? "text-indigo-600 dark:text-indigo-400"
+                          : "text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      }
                     />
                   </button>
                   <span className="font-bold text-xl text-gray-800 dark:text-gray-100">
                     {question.votes}
                   </span>
-                  <button className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => void handleQuestionVote(-1)}
+                    disabled={!!updatingVoteIds[`question:${question.id}`]}
+                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
+                  >
                     <ArrowDown
                       size={22}
-                      className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      className={
+                        question.userVote === -1
+                          ? "text-indigo-600 dark:text-indigo-400"
+                          : "text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      }
                     />
                   </button>
                   {question.isAnswered && (
@@ -757,7 +1104,10 @@ export default function QuestionDetailPage() {
                           minLength={5}
                           required
                         />
-                        {(canEdit || canRemove || canRequestRemoval) && (
+                        {(canEdit ||
+                          canRemove ||
+                          canRequestRemoval ||
+                          canViewVotes) && (
                           <div
                             className="relative flex-shrink-0"
                             ref={questionMenuRef}
@@ -806,6 +1156,16 @@ export default function QuestionDetailPage() {
                                     בקשת הסרה
                                   </button>
                                 )}
+                                {canViewVotes && (
+                                  <button
+                                    type="button"
+                                    onClick={handleOpenVoteDetails}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  >
+                                    <Eye size={16} />
+                                    צפה בהצבעות
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -844,7 +1204,10 @@ export default function QuestionDetailPage() {
                       <h1 className="flex-1 min-w-0 text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug">
                         {question.title}
                       </h1>
-                      {(canEdit || canRemove || canRequestRemoval) && (
+                      {(canEdit ||
+                        canRemove ||
+                        canRequestRemoval ||
+                        canViewVotes) && (
                         <div
                           className="relative flex-shrink-0"
                           ref={questionMenuRef}
@@ -893,6 +1256,16 @@ export default function QuestionDetailPage() {
                                   בקשת הסרה
                                 </button>
                               )}
+                              {canViewVotes && (
+                                <button
+                                  type="button"
+                                  onClick={handleOpenVoteDetails}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                  <Eye size={16} />
+                                  צפה בהצבעות
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -923,7 +1296,15 @@ export default function QuestionDetailPage() {
                   )}
 
                   {/* Meta bar */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+                  <div className="relative flex items-center justify-between pt-3 mt-1">
+                    <div
+                      className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
+                      aria-hidden
+                    />
+                    <div className="absolute left-2 -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                      <Clock size={12} />
+                      <span>{timeAgo(question.createdAt)}</span>
+                    </div>
                     {/* Author */}
                     <div className="flex items-center gap-3">
                       {question.author.username ||
@@ -981,10 +1362,6 @@ export default function QuestionDetailPage() {
                         <Eye size={15} />
                         <span>{question.views}</span>
                       </div>
-                      <div className="flex items-center gap-1" title="פורסם">
-                        <Clock size={15} />
-                        <span>{timeAgo(question.createdAt)}</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1011,29 +1388,53 @@ export default function QuestionDetailPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
                 </div>
               ) : answerTree.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2.5 sm:space-y-3">
                   {(() => {
                     const q = question!;
                     function renderAnswerNode(
                       node: Answer,
-                      isTopLevel: boolean,
+                      depth = 0,
                     ): React.ReactNode {
+                      const isTopLevel = depth === 0;
                       const isOP = node.author.id === q.author.id;
+                      const condensedDepth = Math.min(depth, 3);
+                      const nestedThreadClass =
+                        condensedDepth >= 3
+                          ? "relative mr-2 sm:mr-3 pr-2 sm:pr-2.5"
+                          : condensedDepth === 2
+                            ? "relative mr-2.5 sm:mr-3 pr-2.5 sm:pr-3"
+                            : "relative mr-3 sm:mr-4 md:mr-5 pr-2.5 sm:pr-3";
+                      const nestedRailClass =
+                        condensedDepth >= 3
+                          ? "pointer-events-none absolute right-0 -top-1 bottom-1 w-px rounded-full bg-indigo-200/80 dark:bg-indigo-800/75"
+                          : "pointer-events-none absolute right-0 -top-1.5 bottom-1.5 w-px rounded-full bg-indigo-200/80 dark:bg-indigo-800/75";
+                      const nestedHookClass =
+                        condensedDepth >= 3
+                          ? "pointer-events-none absolute right-0 top-4 h-px w-2 sm:w-2.5 bg-indigo-200/80 dark:bg-indigo-800/75"
+                          : "pointer-events-none absolute right-0 top-4 h-px w-2.5 sm:w-3 bg-indigo-200/80 dark:bg-indigo-800/75";
                       return (
                         <div
                           key={node.id}
-                          className={
-                            isTopLevel
-                              ? ""
-                              : "mr-6 border-r-2 border-indigo-100 dark:border-indigo-900/50 pr-4 mt-3"
-                          }
+                          className={isTopLevel ? "" : nestedThreadClass}
                         >
+                          {!isTopLevel && (
+                            <>
+                              <div
+                                aria-hidden="true"
+                                className={nestedRailClass}
+                              />
+                              <div
+                                aria-hidden="true"
+                                className={nestedHookClass}
+                              />
+                            </>
+                          )}
                           <div
                             id={isTopLevel ? `answer-${node.id}` : undefined}
-                            className={`rounded-xl border transition-all ${
+                            className={`relative rounded-xl border transition-all ${
                               isTopLevel
-                                ? "p-4"
-                                : "p-3 rounded-r-lg bg-gray-50/60 dark:bg-gray-700/50 border-gray-200/50 dark:border-gray-600/50"
+                                ? "p-3"
+                                : "p-2.5 sm:p-3 bg-gray-50/80 dark:bg-gray-700/55 border-gray-200/60 dark:border-gray-600/60"
                             } ${
                               node.isAccepted && isTopLevel
                                 ? "bg-green-50/60 dark:bg-green-900/20 border-green-200 dark:border-green-700/50"
@@ -1042,42 +1443,129 @@ export default function QuestionDetailPage() {
                                   : ""
                             }`}
                           >
-                            <div className="flex gap-4">
-                              {isTopLevel && (
-                                <div className="flex flex-col items-center gap-0.5 min-w-[40px]">
-                                  <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors">
-                                    <ArrowUp
-                                      size={18}
-                                      className="text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                    />
+                            <div
+                              className={`flex items-start ${isTopLevel ? "gap-2" : "gap-1.5 sm:gap-2"}`}
+                            >
+                              <div
+                                className={`flex flex-col items-center gap-0.5 flex-shrink-0 ${isTopLevel ? "min-w-[28px]" : "min-w-[22px] sm:min-w-[24px]"}`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleAnswerVote(node.id, 1)
+                                  }
+                                  disabled={
+                                    !!updatingVoteIds[`answer:${node.id}`]
+                                  }
+                                  className="p-0.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
+                                >
+                                  <ArrowUp
+                                    size={isTopLevel ? 15 : 14}
+                                    className={
+                                      node.userVote === 1
+                                        ? "text-indigo-600 dark:text-indigo-400"
+                                        : "text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                    }
+                                  />
+                                </button>
+                                <span
+                                  className={`font-bold text-gray-700 dark:text-gray-200 text-sm`}
+                                >
+                                  {node.votes}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleAnswerVote(node.id, -1)
+                                  }
+                                  disabled={
+                                    !!updatingVoteIds[`answer:${node.id}`]
+                                  }
+                                  className="p-0.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
+                                >
+                                  <ArrowDown
+                                    size={isTopLevel ? 15 : 14}
+                                    className={
+                                      node.userVote === -1
+                                        ? "text-indigo-600 dark:text-indigo-400"
+                                        : "text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                    }
+                                  />
+                                </button>
+                                {node.isAccepted && isTopLevel && (
+                                  <CheckCircle
+                                    size={16}
+                                    className="text-green-600 dark:text-green-400 mt-0.5"
+                                    fill="currentColor"
+                                  />
+                                )}
+                              </div>
+                              <div
+                                className={`flex-1 min-w-0 ${isTopLevel ? "pl-8" : "pl-7 sm:pl-8"}`}
+                              >
+                                <div
+                                  className="absolute left-2 top-2"
+                                  ref={
+                                    openAnswerMenuId === node.id
+                                      ? answerMenuRef
+                                      : undefined
+                                  }
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setOpenAnswerMenuId((currentId) =>
+                                        currentId === node.id ? null : node.id,
+                                      )
+                                    }
+                                    className="p-1 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    aria-label="תפריט תשובה"
+                                  >
+                                    <MoreVertical size={isTopLevel ? 16 : 14} />
                                   </button>
-                                  <span className="font-bold text-gray-700 dark:text-gray-200">
-                                    {node.votes}
-                                  </span>
-                                  <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors">
-                                    <ArrowDown
-                                      size={18}
-                                      className="text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                    />
-                                  </button>
-                                  {node.isAccepted && (
-                                    <CheckCircle
-                                      size={20}
-                                      className="text-green-600 dark:text-green-400 mt-1"
-                                      fill="currentColor"
-                                    />
+                                  {openAnswerMenuId === node.id && (
+                                    <div className="absolute right-0 top-full mt-1 min-w-[140px] py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-20">
+                                      {canViewVotes && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleOpenAnswerVoteDetails(node)
+                                          }
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          <Eye size={14} />
+                                          צפה בהצבעות
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleOpenAnswerReport(node)
+                                        }
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                      >
+                                        <Flag size={14} />
+                                        דווח
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
-                              )}
-                              <div className="flex-1 min-w-0">
                                 <div
-                                  className={`text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap mb-3 ${!isTopLevel ? "text-sm" : ""}`}
+                                  className={`text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap ${isTopLevel ? "mb-2" : "mb-1.5 sm:mb-2 text-sm"}`}
                                 >
                                   {node.content}
                                 </div>
 
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 flex-wrap gap-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
+                                <div className="relative flex items-center justify-between flex-wrap gap-1.5 mt-1 pt-2">
+                                  <div
+                                    className="absolute top-0 right-0 left-[70px] h-px bg-gray-100 dark:bg-gray-700"
+                                    aria-hidden
+                                  />
+                                  <div className="absolute left-[-30px] -top-[10px] px-2 bg-white/90 dark:bg-gray-800/90 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                    <Clock size={12} />
+                                    <span>{timeAgo(node.createdAt)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     {node.author.username ||
                                     user?.id === node.author.id ? (
                                       <Link
@@ -1096,7 +1584,7 @@ export default function QuestionDetailPage() {
                                             node.author.lastSeenAt,
                                           )}
                                         />
-                                        <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
                                           <span
                                             className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? "text-sm" : "text-sm"}`}
                                           >
@@ -1105,7 +1593,7 @@ export default function QuestionDetailPage() {
                                                 ? profile?.username
                                                 : null)}
                                           </span>
-                                          <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.9">
+                                          <span className="text-xs text-gray-400 dark:text-gray-500">
                                             {node.author.reputation} מוניטין
                                           </span>
                                         </div>
@@ -1120,7 +1608,7 @@ export default function QuestionDetailPage() {
                                             node.author.lastSeenAt,
                                           )}
                                         />
-                                        <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
                                           <span
                                             className={`font-semibold text-gray-800 dark:text-gray-100 ${isTopLevel ? "text-sm" : "text-sm"}`}
                                           >
@@ -1128,14 +1616,14 @@ export default function QuestionDetailPage() {
                                           </span>
                                           <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
                                             <Shield size={10} />
-                                            {node.author.reputation}
+                                            {node.author.reputation} מוניטין
                                           </span>
                                         </div>
                                       </div>
                                     )}
                                     {isOP && (
                                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700">
-                                        שואל השאלה
+                                        השואל
                                       </span>
                                     )}
                                     {node.isEdited && (
@@ -1144,25 +1632,24 @@ export default function QuestionDetailPage() {
                                         נערך
                                       </span>
                                     )}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (!user) {
-                                          handleAuthAction("login");
-                                          return;
-                                        }
-                                        setReplyingToId(node.id);
-                                        setReplyError(null);
-                                      }}
-                                      className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
-                                    >
-                                      <Reply size={isTopLevel ? 14 : 12} />
-                                      הגב
-                                    </button>
                                   </div>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    {timeAgo(node.createdAt)}
-                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!user) {
+                                        handleAuthAction("login");
+                                        return;
+                                      }
+                                      setReplyingToId(node.id);
+                                      setReplyError(null);
+                                    }}
+                                    className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3"
+                                  >
+                                    <MessageSquare
+                                      size={isTopLevel ? 14 : 12}
+                                    />
+                                    הגב
+                                  </button>
                                 </div>
 
                                 {replyingToId === node.id && (
@@ -1170,14 +1657,14 @@ export default function QuestionDetailPage() {
                                     onSubmit={(e) =>
                                       handleSubmitReply(e, node.id)
                                     }
-                                    className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700"
+                                    className={`hidden md:block border-t border-gray-100 dark:border-gray-700 ${isTopLevel ? "mt-4 pt-4" : "mt-3 pt-3"}`}
                                   >
                                     <textarea
                                       value={replyContent}
                                       onChange={(e) =>
                                         setReplyContent(e.target.value)
                                       }
-                                      placeholder="כתוב תגובה... (לפחות 10 תווים)"
+                                      placeholder={`מגיב ל-${node.author.username || "משתמש"}`}
                                       className="w-full min-h-[80px] p-3 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                                       autoFocus
                                       required
@@ -1228,18 +1715,16 @@ export default function QuestionDetailPage() {
                           </div>
 
                           {node.replies && node.replies.length > 0 && (
-                            <div className="space-y-1">
+                            <div className="mt-1.5 space-y-2 sm:space-y-2.5">
                               {node.replies.map((reply) =>
-                                renderAnswerNode(reply, false),
+                                renderAnswerNode(reply, depth + 1),
                               )}
                             </div>
                           )}
                         </div>
                       );
                     }
-                    return answerTree.map((answer) =>
-                      renderAnswerNode(answer, true),
-                    );
+                    return answerTree.map((answer) => renderAnswerNode(answer));
                   })()}
                 </div>
               ) : (
@@ -1257,6 +1742,63 @@ export default function QuestionDetailPage() {
           </div>
         ) : null}
       </main>
+
+      {/* Mobile reply textfield island */}
+      {replyingToId && (
+        <div className="md:hidden fixed inset-x-0 bottom-0 z-50 p-4 pb-[env(safe-area-inset-bottom)] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+          <form
+            onSubmit={(e) => handleSubmitReply(e, replyingToId)}
+            className="flex flex-col gap-3"
+          >
+            <textarea
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+              placeholder={`מגיב ל-${answers.find((a) => a.id === replyingToId)?.author?.username || "משתמש"}`}
+              className="w-full min-h-[80px] p-3 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
+              autoFocus
+              required
+              minLength={10}
+            />
+            {replyError && (
+              <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                {replyError}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={
+                  replyContent.trim().length < 10 || submittingReply
+                }
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingReply ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    שולח...
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    שלח תגובה
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setReplyingToId(null);
+                  setReplyContent("");
+                  setReplyError(null);
+                }}
+                className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-xl text-sm font-medium"
+              >
+                ביטול
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Remove question confirmation */}
       {showRemoveConfirm && (
@@ -1362,6 +1904,246 @@ export default function QuestionDetailPage() {
         </div>
       )}
 
+      {showVoteDetailsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            onClick={() => setShowVoteDetailsModal(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-lg w-full border border-gray-200 dark:border-gray-700 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                פרטי הצבעות
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowVoteDetailsModal(false)}
+                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {voteDetailsLoading ? (
+              <div className="flex justify-center py-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
+              </div>
+            ) : voteDetailsError ? (
+              <div className="text-sm text-red-600 dark:text-red-400">
+                {voteDetailsError}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <section>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    הצבעות בעד ({voteDetails.upvotes.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {voteDetails.upvotes.length > 0 ? (
+                      voteDetails.upvotes.map((entry) => (
+                        <div
+                          key={`upvote-${entry.userId}`}
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                        >
+                          {entry.username}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        אין הצבעות בעד עדיין.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    הצבעות נגד ({voteDetails.downvotes.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {voteDetails.downvotes.length > 0 ? (
+                      voteDetails.downvotes.map((entry) => (
+                        <div
+                          key={`downvote-${entry.userId}`}
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                        >
+                          {entry.username}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        אין הצבעות נגד עדיין.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showAnswerVoteDetailsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            onClick={() => {
+              setShowAnswerVoteDetailsModal(false);
+              setAnswerVoteDetailsAnswerId(null);
+            }}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-lg w-full border border-gray-200 dark:border-gray-700 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  פרטי הצבעות לתשובה
+                </h3>
+                {selectedAnswerForVoteDetails && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {selectedAnswerForVoteDetails.content}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAnswerVoteDetailsModal(false);
+                  setAnswerVoteDetailsAnswerId(null);
+                }}
+                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {answerVoteDetailsLoading ? (
+              <div className="flex justify-center py-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
+              </div>
+            ) : answerVoteDetailsError ? (
+              <div className="text-sm text-red-600 dark:text-red-400">
+                {answerVoteDetailsError}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <section>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    הצבעות בעד ({answerVoteDetails.upvotes.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {answerVoteDetails.upvotes.length > 0 ? (
+                      answerVoteDetails.upvotes.map((entry) => (
+                        <div
+                          key={`answer-upvote-${entry.userId}`}
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                        >
+                          {entry.username}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        אין הצבעות בעד עדיין.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    הצבעות נגד ({answerVoteDetails.downvotes.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {answerVoteDetails.downvotes.length > 0 ? (
+                      answerVoteDetails.downvotes.map((entry) => (
+                        <div
+                          key={`answer-downvote-${entry.userId}`}
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                        >
+                          {entry.username}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        אין הצבעות נגד עדיין.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {reportingAnswer && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            onClick={() => {
+              if (!reportSubmitting) {
+                setReportingAnswer(null);
+                setReportReason("");
+                setReportError("");
+              }
+            }}
+          />
+          <form
+            onSubmit={handleSubmitAnswerReport}
+            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700"
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+              דווח על תשובה
+            </h3>
+            {reportError && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                {reportError}
+              </p>
+            )}
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">
+              סיבה (לא חובה)
+            </label>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+              rows={4}
+              maxLength={2000}
+              placeholder="תאר בקצרה את הבעיה..."
+            />
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setReportingAnswer(null);
+                  setReportReason("");
+                  setReportError("");
+                }}
+                disabled={reportSubmitting}
+                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                ביטול
+              </button>
+              <button
+                type="submit"
+                disabled={reportSubmitting}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {reportSubmitting ? "..." : "שלח דיווח"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
@@ -1380,99 +2162,85 @@ export default function QuestionDetailPage() {
         }}
       />
 
-      {/* Fixed "Write Answer" button on the right side */}
-      {!isAnswerPanelOpen && question && (
+      {/* Fixed "Write Answer" button - mobile only */}
+      {!isAnswerPanelOpen && question && user && (
         <button
-          onClick={() => {
-            if (!user) {
-              handleAuthAction("login");
-              return;
-            }
-            setIsAnswerPanelOpen(true);
-          }}
-          className="fixed left-6 bottom-8 z-40 flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 font-medium"
+          onClick={() => setIsAnswerPanelOpen(true)}
+          className="md:hidden fixed left-6 bottom-8 z-40 flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 font-medium"
         >
           <Plus size={18} />
           כתוב תשובה
         </button>
       )}
 
-      {/* Answer Modal (centered) */}
+      {/* Answer Modal (matches create status popout) */}
       {isAnswerPanelOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           dir="rtl"
         >
-          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
             onClick={() => setIsAnswerPanelOpen(false)}
           />
-
-          {/* Modal */}
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col animate-modal-in overflow-hidden border border-gray-200 dark:border-gray-700">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-l from-indigo-50 to-white dark:from-indigo-900/30 dark:to-gray-800 flex-shrink-0">
+          <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl bg-slate-900 text-gray-100">
+            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-l from-indigo-700 via-indigo-800 to-slate-900">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+                <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/60">
                   <Send
-                    size={20}
                     className="text-indigo-600 dark:text-indigo-400"
+                    size={20}
                   />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                    כתוב תשובה
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[400px]">
-                    {question?.title}
-                  </p>
+                <div className="text-right">
+                  <h2 className="text-lg font-bold text-white">כתוב תשובה</h2>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsAnswerPanelOpen(false)}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 rounded-lg text-slate-200 hover:bg-slate-800/70"
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Body */}
             <form
               onSubmit={handleSubmitAnswer}
-              className="flex-1 flex flex-col p-6 gap-4 overflow-y-auto"
+              className="flex-1 flex flex-col min-h-0"
             >
-              <label className="font-semibold text-gray-700 dark:text-gray-200">
-                התשובה שלך
-              </label>
-              <textarea
-                value={answerContent}
-                onChange={(e) => setAnswerContent(e.target.value)}
-                placeholder="שתף את התשובה שלך כאן... (לפחות 10 תווים)"
-                className="flex-1 min-h-[200px] p-4 text-base bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-colors resize-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-                autoFocus
-                required
-                minLength={10}
-              />
+              <div className="relative flex-1 flex flex-col min-h-0 bg-slate-800">
+                <textarea
+                  value={answerContent}
+                  onChange={(e) => setAnswerContent(e.target.value)}
+                  placeholder="שתף את התשובה שלך כאן..."
+                  className="w-full flex-1 px-6 pt-6 pb-8 bg-transparent text-gray-100 placeholder-gray-400 border-none outline-none resize-none min-h-[320px]"
+                  autoFocus
+                  required
+                />
+                <span className="absolute bottom-2 left-6 text-xs text-slate-400 pointer-events-none">
+                  {answerContent.length} תווים
+                </span>
+              </div>
 
               {answerError && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                <div className="mx-6 mb-2 rounded-lg bg-red-900/40 border border-red-700 px-3 py-2 text-red-100 text-sm">
                   {answerError}
                 </div>
               )}
 
-              <div className="text-xs text-gray-400 dark:text-gray-500">
-                {answerContent.length} תווים
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between px-6 py-3 border-t border-slate-700/80 bg-slate-900/90">
+                <button
+                  type="button"
+                  onClick={() => setIsAnswerPanelOpen(false)}
+                  className="px-4 py-2 text-sm text-slate-300 hover:text-white"
+                >
+                  ביטול
+                </button>
                 <button
                   type="submit"
-                  disabled={
-                    answerContent.trim().length < 10 || submittingAnswer
-                  }
-                  className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  disabled={!answerContent.trim() || submittingAnswer}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submittingAnswer ? (
                     <>
@@ -1480,18 +2248,8 @@ export default function QuestionDetailPage() {
                       שולח...
                     </>
                   ) : (
-                    <>
-                      <Send size={16} />
-                      פרסם תשובה
-                    </>
+                    "פרסום תשובה"
                   )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAnswerPanelOpen(false)}
-                  className="px-5 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors font-medium"
-                >
-                  ביטול
                 </button>
               </div>
             </form>
@@ -1499,21 +2257,6 @@ export default function QuestionDetailPage() {
         </div>
       )}
 
-      <style jsx>{`
-        @keyframes modalIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95) translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-        .animate-modal-in {
-          animation: modalIn 0.25s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

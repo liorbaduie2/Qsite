@@ -33,11 +33,19 @@ export async function POST(
       );
     }
 
-    const { data: question } = await supabase
+    const { data: question, error: questionError } = await supabase
       .from('questions')
       .select('id')
       .eq('id', questionId)
       .maybeSingle();
+
+    if (questionError) {
+      console.error('Question vote lookup error:', questionError);
+      return NextResponse.json(
+        { error: 'שגיאה באיתור השאלה' },
+        { status: 500 }
+      );
+    }
 
     if (!question) {
       return NextResponse.json(
@@ -46,41 +54,119 @@ export async function POST(
       );
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('votes')
       .select('id, vote_type')
       .eq('question_id', questionId)
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (existing) {
-      if (existing.vote_type !== voteType) {
-        await supabase
-          .from('votes')
-          .update({ vote_type: voteType })
-          .eq('id', existing.id);
-      }
-      // If vote type is the same, do nothing – user keeps their existing vote
-    } else {
-      await supabase.from('votes').insert({
-        user_id: user.id,
-        question_id: questionId,
-        vote_type: voteType,
-      });
+    if (existingError) {
+      console.error('Question vote existing lookup error:', existingError);
+      return NextResponse.json(
+        { error: 'שגיאה בבדיקת ההצבעה הקיימת' },
+        { status: 500 }
+      );
     }
 
-    const { data: updatedQuestion } = await supabase
+    let didMutateVote = false;
+    if (existing?.vote_type === voteType) {
+      const { error: deleteError } = await supabase
+        .from('votes')
+        .delete()
+        .eq('question_id', questionId)
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        console.error('Question vote delete error:', deleteError);
+        return NextResponse.json(
+          { error: 'שגיאה בהסרת ההצבעה' },
+          { status: 500 }
+        );
+      }
+
+      didMutateVote = true;
+    } else if (existing) {
+      const { data: updatedVote, error: updateError } = await supabase
+        .from('votes')
+        .update({ vote_type: voteType })
+        .eq('id', existing.id)
+        .eq('vote_type', existing.vote_type)
+        .select('id')
+        .maybeSingle();
+
+      if (updateError) {
+        console.error('Question vote update error:', updateError);
+        return NextResponse.json(
+          { error: 'שגיאה בעדכון ההצבעה' },
+          { status: 500 }
+        );
+      }
+
+      didMutateVote = !!updatedVote;
+    } else {
+      const { data: insertedVote, error: insertError } = await supabase
+        .from('votes')
+        .insert({
+          user_id: user.id,
+          question_id: questionId,
+          vote_type: voteType,
+        })
+        .select('id')
+        .maybeSingle();
+
+      if (insertError && insertError.code !== '23505') {
+        console.error('Question vote insert error:', insertError);
+        return NextResponse.json(
+          { error: 'שגיאה בשמירת ההצבעה' },
+          { status: 500 }
+        );
+      }
+
+      didMutateVote = !!insertedVote;
+    }
+
+    const { data: finalVote, error: finalVoteError } = await supabase
+      .from('votes')
+      .select('vote_type')
+      .eq('question_id', questionId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (finalVoteError) {
+      console.error('Question vote final lookup error:', finalVoteError);
+      return NextResponse.json(
+        { error: 'שגיאה בקריאת מצב ההצבעה' },
+        { status: 500 }
+      );
+    }
+
+    const resolvedVote =
+      finalVote?.vote_type === 1 || finalVote?.vote_type === -1
+        ? finalVote.vote_type
+        : null;
+
+    const { data: updatedQuestion, error: updatedQuestionError } = await supabase
       .from('questions')
       .select('votes_count, author_id, last_upvote_notification_count, most_rated_notified_at')
       .eq('id', questionId)
       .single();
 
+    if (updatedQuestionError) {
+      console.error('Question vote updated question lookup error:', updatedQuestionError);
+      return NextResponse.json(
+        { error: 'שגיאה בקריאת מצב השאלה' },
+        { status: 500 }
+      );
+    }
+
     const votesCount = updatedQuestion?.votes_count ?? 0;
     const authorId = updatedQuestion?.author_id;
     const lastNotified = updatedQuestion?.last_upvote_notification_count ?? 0;
+    const becameUpvote = didMutateVote && resolvedVote === 1 && existing?.vote_type !== 1;
 
     // Notify on upvotes only: first upvote, then every 5 (5, 10, 15, ...)
-    if (voteType === 1 && authorId && authorId !== user.id) {
+    if (becameUpvote && authorId && authorId !== user.id) {
       let newLastNotified = lastNotified;
       const shouldNotifyFirst = votesCount >= 1 && lastNotified < 1;
       const shouldNotifyMilestone =
@@ -120,7 +206,7 @@ export async function POST(
     }
 
     // "Most rated" (enters top 5): notify once when question first enters top 5 by votes
-    if (authorId && !updatedQuestion?.most_rated_notified_at) {
+    if (becameUpvote && authorId && !updatedQuestion?.most_rated_notified_at) {
       const { data: topIds } = await supabase
         .from('questions')
         .select('id')
@@ -146,6 +232,7 @@ export async function POST(
     return NextResponse.json({
       voteType,
       votes: votesCount,
+      userVote: resolvedVote,
     });
   } catch (error) {
     console.error('Question vote POST error:', error);

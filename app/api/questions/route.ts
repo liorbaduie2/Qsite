@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { normalizeTagName } from '@/lib/tag-matching';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,8 +10,17 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const tag = searchParams.get('tag') || '';
     const sortBy = searchParams.get('sort') || 'newest';
+    const includeUserVotes = searchParams.get('includeUserVotes') === '1';
     const limitParam = searchParams.get('limit');
     const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+    let currentUserId: string | null = null;
+
+    if (includeUserVotes) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      currentUserId = user?.id ?? null;
+    }
 
     let weekStartIso: string | null = null;
 
@@ -124,13 +134,41 @@ export async function GET(request: NextRequest) {
         q.created_at >= weekStartIso,
     }));
 
-    if (tag && tag !== 'הכל') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const filtered = formatted.filter((q: any) => q.tags.includes(tag));
-      return NextResponse.json({ questions: filtered });
+    const visibleQuestions =
+      tag && tag !== 'הכל'
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          formatted.filter((q: any) => q.tags.includes(tag))
+        : formatted;
+
+    let userVotes: Record<string, 1 | -1> = {};
+    if (includeUserVotes && currentUserId && visibleQuestions.length > 0) {
+      const questionIds = visibleQuestions.map((question) => question.id);
+      const { data: voteRows, error: votesError } = await supabase
+        .from('votes')
+        .select('question_id, vote_type')
+        .eq('user_id', currentUserId)
+        .in('question_id', questionIds);
+
+      if (votesError) {
+        console.error('Error fetching current user question votes:', votesError);
+        return NextResponse.json({ error: 'שגיאה בטעינת ההצבעות' }, { status: 500 });
+      }
+
+      userVotes = Object.fromEntries(
+        (voteRows ?? [])
+          .filter(
+            (vote) =>
+              vote.question_id &&
+              (vote.vote_type === 1 || vote.vote_type === -1),
+          )
+          .map((vote) => [vote.question_id as string, vote.vote_type as 1 | -1]),
+      );
     }
 
-    return NextResponse.json({ questions: formatted });
+    return NextResponse.json({
+      questions: visibleQuestions,
+      ...(includeUserVotes ? { userVotes } : {}),
+    });
   } catch (error) {
     console.error('Questions GET error:', error);
     return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
@@ -155,6 +193,47 @@ export async function POST(request: NextRequest) {
     if (!content?.trim()) {
       return NextResponse.json({ error: 'תוכן השאלה הוא שדה חובה' }, { status: 400 });
     }
+    if (!Array.isArray(tags) || tags.length === 0) {
+      return NextResponse.json({ error: 'יש להוסיף לפחות תגית אחת' }, { status: 400 });
+    }
+
+    const submittedTags: string[] = tags.filter(
+      (tag): tag is string => typeof tag === 'string',
+    );
+
+    const normalizedTags: string[] = Array.from(
+      new Set(
+        submittedTags
+          .map((tag) => normalizeTagName(tag))
+          .filter(Boolean),
+      ),
+    ).slice(0, 5);
+
+    if (normalizedTags.length === 0) {
+      return NextResponse.json({ error: 'יש לבחור לפחות תגית קיימת אחת' }, { status: 400 });
+    }
+
+    const { data: existingTags, error: tagsValidationError } = await supabase
+      .from('tags')
+      .select('id, name, use_count')
+      .limit(500);
+
+    if (tagsValidationError) {
+      console.error('Error validating tags:', tagsValidationError);
+      return NextResponse.json({ error: 'שגיאה באימות התגיות' }, { status: 500 });
+    }
+
+    const existingTagsByName = new Map(
+      (existingTags || []).map((tag) => [normalizeTagName(tag.name), tag]),
+    );
+    const invalidTags = normalizedTags.filter((tag) => !existingTagsByName.has(tag));
+
+    if (invalidTags.length > 0) {
+      return NextResponse.json(
+        { error: 'ניתן לבחור רק תגיות קיימות מהקטלוג' },
+        { status: 400 },
+      );
+    }
 
     const { data: question, error: questionError } = await supabase
       .from('questions')
@@ -171,34 +250,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'שגיאה ביצירת השאלה' }, { status: 500 });
     }
 
-    if (tags && tags.length > 0) {
-      for (const tagName of tags.slice(0, 5)) {
-        let { data: existingTag } = await supabase
+    for (const tagName of normalizedTags) {
+      const existingTag = existingTagsByName.get(tagName);
+
+      if (existingTag) {
+        await supabase
+          .from('question_tags')
+          .insert({ question_id: question.id, tag_id: existingTag.id });
+
+        await supabase
           .from('tags')
-          .select('id')
-          .eq('name', tagName)
-          .single();
-
-        if (!existingTag) {
-          const { data: newTag } = await supabase
-            .from('tags')
-            .insert({ name: tagName })
-            .select('id')
-            .single();
-          existingTag = newTag;
-        }
-
-        if (existingTag) {
-          await supabase
-            .from('question_tags')
-            .insert({ question_id: question.id, tag_id: existingTag.id });
-
-          await supabase
-            .from('tags')
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .update({ use_count: (existingTag as any).use_count ? (existingTag as any).use_count + 1 : 1 })
-            .eq('id', existingTag.id);
-        }
+          .update({ use_count: (existingTag.use_count || 0) + 1 })
+          .eq('id', existingTag.id);
       }
     }
 

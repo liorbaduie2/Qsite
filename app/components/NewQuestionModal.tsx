@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
-import { X, Send, HelpCircle, Sparkles, Hash, CheckCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { X, Send, HelpCircle, Hash } from "lucide-react";
+import { normalizeTagName, shouldFetchSuggestedTags } from "@/lib/tag-matching";
 
 interface NewQuestionModalProps {
   isOpen: boolean;
@@ -9,29 +10,34 @@ interface NewQuestionModalProps {
   onQuestionCreated?: () => void;
 }
 
-export default function NewQuestionModal({ isOpen, onClose, onQuestionCreated }: NewQuestionModalProps) {
-  const [title, setTitle] = useState<string>('');
-  const [content, setContent] = useState<string>('');
+export default function NewQuestionModal({
+  isOpen,
+  onClose,
+  onQuestionCreated,
+}: NewQuestionModalProps) {
+  const [title, setTitle] = useState<string>("");
+  const [content, setContent] = useState<string>("");
   const [tags, setTags] = useState<string[]>([]);
-  const [currentTag, setCurrentTag] = useState<string>('');
+  const [currentTag, setCurrentTag] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(false);
+  const [tagMatches, setTagMatches] = useState<string[]>([]);
 
   // Refs for focus management
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
-
-  // Popular tags - matching your existing Hebrew tags
-  const popularTags: string[] = [
-    'תכנות', 'React', 'JavaScript', 'CSS', 'HTML', 'Vue', 
-    'עיצוב', 'UI/UX', 'קריירה', 'לימודים', 'מתחיל', 'עזרה'
-  ];
+  const suggestionAbortRef = useRef<AbortController | null>(null);
+  const suggestionRequestIdRef = useRef(0);
 
   const handleTagAdd = (tagText: string): void => {
-    const trimmedTag = tagText.trim().replace(/\s+/g, '-');
+    const trimmedTag = normalizeTagName(tagText);
     if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 5) {
       setTags([...tags, trimmedTag]);
-      setCurrentTag('');
+      setCurrentTag("");
+      setTagMatches([]);
+      setError(null);
     }
   };
 
@@ -42,13 +48,21 @@ export default function NewQuestionModal({ isOpen, onClose, onQuestionCreated }:
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
-    
+    if (currentTag.trim()) {
+      setError("יש לבחור תגית קיימת מהרשימה");
+      return;
+    }
+    if (tags.length === 0) {
+      setError("יש להוסיף לפחות תגית אחת");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
           content: content.trim(),
@@ -59,114 +73,201 @@ export default function NewQuestionModal({ isOpen, onClose, onQuestionCreated }:
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'שגיאה ביצירת השאלה');
+        setError(data.error || "שגיאה ביצירת השאלה");
         return;
       }
 
-      setTitle('');
-      setContent('');
+      setTitle("");
+      setContent("");
       setTags([]);
-      setCurrentTag('');
+      setCurrentTag("");
       onQuestionCreated?.();
       onClose();
     } catch (err) {
-      console.error('Error creating question:', err);
-      setError('שגיאה בחיבור לשרת');
+      console.error("Error creating question:", err);
+      setError("שגיאה בחיבור לשרת");
     } finally {
       setLoading(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
-      handleTagAdd(currentTag);
+      const normalizedCurrentTag = normalizeTagName(currentTag);
+      const exactMatch = tagMatches.find(
+        (tag) => normalizeTagName(tag) === normalizedCurrentTag,
+      );
+
+      if (exactMatch) {
+        handleTagAdd(exactMatch);
+      } else if (normalizedCurrentTag) {
+        setError("יש לבחור תגית קיימת מהרשימה");
+      }
     }
   };
-  
+
   const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrentTag(e.target.value.replace(/\s+/g, '-'));
+    setCurrentTag(e.target.value);
+    setError(null);
   };
+
+  const showContent = title.trim() !== "";
+  const showTags = content.trim() !== "";
+
+  const fetchSuggestions = useCallback(async () => {
+    const trimmedTitle = title.trim();
+    const trimmedContent = content.trim();
+
+    if (
+      !showTags ||
+      !shouldFetchSuggestedTags(trimmedTitle, trimmedContent) ||
+      tags.length >= 5
+    ) {
+      suggestionAbortRef.current?.abort();
+      setSuggestedTags([]);
+      setLoadingSuggestions(false);
+      return;
+    }
+
+    const requestId = suggestionRequestIdRef.current + 1;
+    suggestionRequestIdRef.current = requestId;
+    suggestionAbortRef.current?.abort();
+
+    const controller = new AbortController();
+    suggestionAbortRef.current = controller;
+
+    setLoadingSuggestions(true);
+
+    try {
+      const res = await fetch("/api/questions/suggest-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          title: trimmedTitle,
+          content: trimmedContent,
+          excludeTags: tags,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (requestId !== suggestionRequestIdRef.current) {
+        return;
+      }
+
+      if (res.ok && Array.isArray(data.suggestions)) {
+        setSuggestedTags(data.suggestions);
+      } else {
+        setSuggestedTags([]);
+      }
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setSuggestedTags([]);
+    } finally {
+      if (requestId === suggestionRequestIdRef.current) {
+        setLoadingSuggestions(false);
+      }
+
+      if (suggestionAbortRef.current === controller) {
+        suggestionAbortRef.current = null;
+      }
+    }
+  }, [showTags, title, content, tags]);
+
+  const fetchTagMatches = useCallback(async () => {
+    const query = normalizeTagName(currentTag);
+    if (!showTags || !query || tags.length >= 5) {
+      setTagMatches([]);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        query,
+        exclude: tags.join(","),
+      });
+      const res = await fetch(`/api/tags?${params.toString()}`);
+      const data = await res.json();
+
+      if (res.ok && Array.isArray(data.tags)) {
+        setTagMatches(data.tags);
+      } else {
+        setTagMatches([]);
+      }
+    } catch {
+      setTagMatches([]);
+    }
+  }, [currentTag, showTags, tags]);
+
+  useEffect(() => {
+    if (!showTags) {
+      suggestionAbortRef.current?.abort();
+      setSuggestedTags([]);
+      setLoadingSuggestions(false);
+      return;
+    }
+
+    const t = setTimeout(fetchSuggestions, 600);
+
+    return () => {
+      clearTimeout(t);
+      suggestionAbortRef.current?.abort();
+    };
+  }, [showTags, fetchSuggestions]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      suggestionAbortRef.current?.abort();
+      setSuggestedTags([]);
+      setLoadingSuggestions(false);
+      suggestionRequestIdRef.current = 0;
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const query = normalizeTagName(currentTag);
+    if (!query || !showTags) {
+      setTagMatches([]);
+      return;
+    }
+
+    const t = setTimeout(fetchTagMatches, 200);
+    return () => clearTimeout(t);
+  }, [currentTag, showTags, fetchTagMatches]);
 
   if (!isOpen) return null;
 
-  // Progressive disclosure states
-  const showContent = title.trim() !== '';
-  const showTags = content.trim() !== '';
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" dir="rtl">
-      <div className="fixed inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative min-h-full flex items-center justify-center p-4">
-        <div className="relative bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden grid grid-cols-1 md:grid-cols-3 border border-gray-200 dark:border-gray-700">
-          
-          {/* Left Column - Tips and Popular Tags */}
-          <div className="col-span-1 bg-white dark:bg-gray-800/80 p-8 space-y-6 border-l border-gray-200 dark:border-gray-700">
-            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              <Sparkles className="text-indigo-500 dark:text-indigo-400" size={24} />
-              טיפים לשאלה טובה
-            </h3>
-            
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <CheckCircle className="text-green-500 dark:text-green-400 mt-1 flex-shrink-0" size={18} />
-                <span className="text-gray-600 dark:text-gray-300">כותרת ברורה ותמציתית</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle 
-                  className={`mt-1 flex-shrink-0 ${showContent ? 'text-green-500 dark:text-green-400' : 'text-gray-300 dark:text-gray-600'}`} 
-                  size={18} 
-                />
-                <span className={`${showContent ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
-                  הסבר מה ניסית ואיפה נתקעת
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle 
-                  className={`mt-1 flex-shrink-0 ${showTags ? 'text-green-500 dark:text-green-400' : 'text-gray-300 dark:text-gray-600'}`} 
-                  size={18} 
-                />
-                <span className={`${showTags ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
-                  בחר תגיות מתאימות
-                </span>
-              </li>
-            </ul>
-            
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2 mb-4">
-                <Hash className="text-indigo-500 dark:text-indigo-400" size={20} />
-                תגיות פופולריות
-              </h3>
-              <div className={`flex flex-wrap gap-2 transition-opacity duration-500 ${showTags ? 'opacity-100' : 'opacity-30'}`}>
-                {popularTags.map((tag) => (
-                  <button 
-                    key={tag} 
-                    type="button" 
-                    onClick={() => handleTagAdd(tag)} 
-                    disabled={!showTags || tags.includes(tag) || tags.length >= 5}
-                    className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          {/* Right Column - Form */}
-          <div className="col-span-2 p-8 space-y-6 max-h-[95vh] overflow-y-auto">
+        <div className="relative bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[95vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+          {/* Form */}
+          <div className="p-8 space-y-6 max-h-[95vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl">
-                  <HelpCircle className="text-indigo-600 dark:text-indigo-400" size={24} />
+                  <HelpCircle
+                    className="text-indigo-600 dark:text-indigo-400"
+                    size={24}
+                  />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">שאל שאלה חדשה</h2>
-                  <p className="text-gray-500 dark:text-gray-400">שתף את הידע שלך עם הקהילה</p>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    שאל שאלה חדשה
+                  </h2>
                 </div>
               </div>
-              <button 
-                onClick={onClose} 
+              <button
+                onClick={onClose}
                 className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
               >
                 <X size={20} />
@@ -176,52 +277,65 @@ export default function NewQuestionModal({ isOpen, onClose, onQuestionCreated }:
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Title */}
               <div className="space-y-2">
-                <label className="font-semibold text-gray-700 dark:text-gray-200">כותרת</label>
-                <input 
-                  type="text" 
-                  value={title} 
-                  onChange={(e) => setTitle(e.target.value)} 
-                  placeholder="מהי שאלתך?" 
-                  className="w-full p-4 text-base bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-colors text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400" 
-                  maxLength={300} 
-                  autoFocus 
-                  required
-                />
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {title.length}/300 תווים
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="מהי שאלתך?"
+                    className="w-full p-4 pl-20 text-base bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-colors text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                    maxLength={70}
+                    autoFocus
+                    required
+                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400 pointer-events-none">
+                    {title.length}/70 תווים
+                  </span>
                 </div>
               </div>
 
               {/* Content - shows when title is filled */}
-              <div className={`space-y-2 transition-all duration-500 ${showContent ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 overflow-hidden'}`}>
-                <label className="font-semibold text-gray-700 dark:text-gray-200">תוכן</label>
-                <textarea 
-                  ref={contentRef}
-                  value={content} 
-                  onChange={(e) => setContent(e.target.value)} 
-                  placeholder="הסבר בפירוט את שאלתך, מה ניסית לעשות, איפה נתקעת..."
-                  className="w-full h-36 p-4 text-base bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-colors resize-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400" 
-                  disabled={!showContent}
-                  required
-                />
+              <div
+                className={`space-y-2 transition-all duration-500 ${showContent ? "opacity-100 max-h-96" : "opacity-0 max-h-0 overflow-hidden"}`}
+              >
+                <div className="relative">
+                  <textarea
+                    ref={contentRef}
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="הסבר בפירוט את שאלתך..."
+                    className="w-full h-36 p-4 pl-20 text-base bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-colors resize-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                    maxLength={300}
+                    disabled={!showContent}
+                    required
+                  />
+                  <span className="absolute left-4 bottom-4 text-xs text-gray-500 dark:text-gray-400 pointer-events-none">
+                    {content.length}/300 תווים
+                  </span>
+                </div>
               </div>
-              
+
               {/* Tags - shows when content is filled */}
-              <div className={`space-y-3 transition-all duration-500 ${showTags ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+              <div
+                className={`space-y-3 transition-all duration-500 ${showTags ? "opacity-100 max-h-96" : "opacity-0 max-h-0 overflow-hidden"}`}
+              >
                 <label className="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                  <Hash className="text-indigo-500 dark:text-indigo-400" size={20} />
-                  תגיות (עד 5)
+                  <Hash
+                    className="text-indigo-500 dark:text-indigo-400"
+                    size={20}
+                  />
+                  תגיות (1-5)
                 </label>
                 <div className="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-transparent transition-all">
                   {tags.map((tag) => (
-                    <span 
-                      key={tag} 
+                    <span
+                      key={tag}
                       className="group flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 rounded-md font-semibold text-sm transition-all duration-300"
                     >
                       {tag}
-                      <button 
-                        type="button" 
-                        onClick={() => handleTagRemove(tag)} 
+                      <button
+                        type="button"
+                        onClick={() => handleTagRemove(tag)}
                         className="p-0.5 opacity-50 group-hover:opacity-100 hover:bg-indigo-200 dark:hover:bg-indigo-800 rounded-full transition-opacity"
                       >
                         <X size={14} />
@@ -235,12 +349,47 @@ export default function NewQuestionModal({ isOpen, onClose, onQuestionCreated }:
                       value={currentTag}
                       onChange={handleTagInputChange}
                       onKeyPress={handleKeyPress}
-                      placeholder="הוסף תגית ולחץ Enter..."
+                      placeholder="חפש תגית קיימת..."
                       className="flex-1 bg-transparent p-1.5 min-w-[150px] focus:outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       disabled={!showTags}
                     />
                   )}
                 </div>
+                {currentTag.trim() && (
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+                    {tagMatches.length > 0 ? (
+                      tagMatches.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleTagAdd(tag)}
+                          className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          {tag}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                        לא נמצאו תגיות תואמות בקטלוג
+                      </div>
+                    )}
+                  </div>
+                )}
+                {suggestedTags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {suggestedTags
+                      .map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleTagAdd(tag)}
+                          className="px-3 py-1 text-sm bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-full hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors border border-amber-200 dark:border-amber-700"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -258,9 +407,15 @@ export default function NewQuestionModal({ isOpen, onClose, onQuestionCreated }:
                 >
                   ביטול
                 </button>
-                <button 
+                <button
                   type="submit"
-                  disabled={!title.trim() || !content.trim() || loading} 
+                  disabled={
+                    !title.trim() ||
+                    !content.trim() ||
+                    !!currentTag.trim() ||
+                    tags.length === 0 ||
+                    loading
+                  }
                   className="group flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base"
                 >
                   {loading ? (

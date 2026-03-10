@@ -9,6 +9,9 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { data: answers, error } = await supabase
       .from('answers')
@@ -40,6 +43,31 @@ export async function GET(
       return NextResponse.json({ error: 'שגיאה בטעינת התשובות' }, { status: 500 });
     }
 
+    let answerUserVotes: Record<string, 1 | -1> = {};
+    if (user?.id && (answers?.length ?? 0) > 0) {
+      const answerIds = (answers ?? []).map((answer) => answer.id);
+      const { data: voteRows, error: voteError } = await supabase
+        .from('votes')
+        .select('answer_id, vote_type')
+        .eq('user_id', user.id)
+        .in('answer_id', answerIds);
+
+      if (voteError) {
+        console.error('Error fetching answer vote state:', voteError);
+        return NextResponse.json({ error: 'שגיאה בטעינת ההצבעות' }, { status: 500 });
+      }
+
+      answerUserVotes = Object.fromEntries(
+        (voteRows ?? [])
+          .filter(
+            (vote) =>
+              vote.answer_id &&
+              (vote.vote_type === 1 || vote.vote_type === -1),
+          )
+          .map((vote) => [vote.answer_id as string, vote.vote_type as 1 | -1]),
+      );
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formatted = (answers || []).map((a: Record<string, any>) => ({
       id: a.id,
@@ -49,6 +77,7 @@ export async function GET(
       isEdited: a.is_edited || false,
       createdAt: a.created_at,
       parentAnswerId: a.parent_answer_id ?? null,
+      userVote: answerUserVotes[a.id] ?? 0,
       author: {
         id: a.profiles?.id || a.author_id,
         username: a.profiles?.username || 'אנונימי',
@@ -81,8 +110,8 @@ export async function POST(
     const body = await request.json();
     const { content, parentAnswerId } = body;
 
-    if (!content?.trim() || content.trim().length < 10) {
-      return NextResponse.json({ error: 'התשובה חייבת להכיל לפחות 10 תווים' }, { status: 400 });
+    if (!content?.trim()) {
+      return NextResponse.json({ error: 'התשובה לא יכולה להיות ריקה' }, { status: 400 });
     }
 
     const { data: question, error: qError } = await supabase

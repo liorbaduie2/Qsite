@@ -8,6 +8,9 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { data: question, error } = await supabase
       .from('questions')
@@ -48,6 +51,26 @@ export async function GET(
       return NextResponse.json({ error: 'השאלה לא נמצאה' }, { status: 404 });
     }
 
+    let userVote: 1 | -1 | 0 = 0;
+    if (user?.id) {
+      const { data: voteRow, error: voteError } = await supabase
+        .from('votes')
+        .select('vote_type')
+        .eq('question_id', id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (voteError) {
+        console.error('Question GET vote lookup error:', voteError);
+        return NextResponse.json({ error: 'שגיאה בטעינת ההצבעה' }, { status: 500 });
+      }
+
+      userVote =
+        voteRow?.vote_type === 1 || voteRow?.vote_type === -1
+          ? voteRow.vote_type
+          : 0;
+    }
+
     const formatted = {
       id: question.id,
       title: question.title,
@@ -78,6 +101,7 @@ export async function GET(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((qt: any) => qt.tags?.name)
         .filter(Boolean),
+      userVote,
     };
 
     return NextResponse.json({ question: formatted });

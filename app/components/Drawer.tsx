@@ -58,7 +58,7 @@ interface DrawerProps {
   onSignOut?: () => void;
   /** When provided, "התחברות" opens this (e.g. index login popup). Otherwise navigates to /?modal=login */
   onOpenLoginModal?: () => void;
-  /** Optional content rendered beside the "תפריט ניווט" title (e.g. theme toggle for phone) */
+  /** Optional content rendered in the top bar (e.g. theme toggle for phone) */
   headerExtra?: React.ReactNode;
 }
 
@@ -169,75 +169,73 @@ const Drawer: React.FC<DrawerProps> = ({
 
       {/* Drawer Panel - white in light, dark gray in dark */}
       <div
-        className={`absolute right-0 top-0 h-full w-80 bg-white dark:bg-gray-900 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ${isDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`absolute right-0 top-0 h-full max-h-dvh w-80 bg-white dark:bg-gray-900 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 flex flex-col ${isDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
       >
-        <div className="p-6 h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3 min-w-0">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                תפריט ניווט
-              </h2>
-              {headerExtra && <div className="sm:hidden">{headerExtra}</div>}
-            </div>
-            <button
-              onClick={() => setIsDrawerOpen(false)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-800 dark:text-gray-100"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* Profile Section - pale lavender in light, dark surface in dark */}
-          {user && (
+        <div className="p-6 flex-1 min-h-0 overflow-y-auto flex flex-col">
+          {/* Top bar: user info + close button (or just close when guest) */}
+          {user ? (
             <div className="mb-6 p-4 rounded-xl border border-purple-100/80 dark:border-gray-700 bg-[#f5f0ff] dark:bg-gray-800/90">
-              <div className="flex items-center gap-4 mb-4">
-                {/* Profile Circle - muted lavender when no avatar */}
-                <div className="relative">
-                  <UserAvatar
-                    avatarUrl={profile?.avatar_url ?? null}
-                    username={profile?.username}
-                    size="xl"
-                    isOnline={isOnline(profile?.last_seen_at)}
-                    className="border-2 border-white dark:border-gray-600 shadow-md"
-                  />
-                </div>
-
-                {/* Profile Info - email-style and reputation */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100 truncate min-h-[1.5rem] text-lg">
-                      {profile ? (
-                        profile.full_name || profile.username
-                      ) : (
-                        <span
-                          className="inline-block w-24 h-5 rounded bg-gray-200 dark:bg-gray-600 animate-pulse"
-                          aria-hidden
-                        />
-                      )}
-                    </span>
-                    {userPermissions &&
-                      userPermissions.role &&
-                      userPermissions.role !== "user" &&
-                      !userPermissions.is_hidden && (
-                        <div>
-                          <RoleBadge
-                            role={userPermissions.role}
-                            roleHebrew={userPermissions.role_hebrew}
-                            size="sm"
-                          />
-                        </div>
-                      )}
-                  </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Award
-                      size={12}
-                      className="text-amber-500 dark:text-amber-400"
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  {/* Profile Circle - muted lavender when no avatar */}
+                  <div className="relative">
+                    <UserAvatar
+                      avatarUrl={profile?.avatar_url ?? null}
+                      username={profile?.username}
+                      size="xl"
+                      isOnline={isOnline(profile?.last_seen_at)}
+                      className="border-2 border-white dark:border-gray-600 shadow-md"
                     />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {profile?.reputation ?? 0} נקודות מוניטין
-                    </span>
                   </div>
+
+                  {/* Profile Info - email-style and reputation */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100 truncate min-h-[1.5rem] text-lg">
+                        {profile ? (
+                          profile.full_name || profile.username
+                        ) : (
+                          <span
+                            className="inline-block w-24 h-5 rounded bg-gray-200 dark:bg-gray-600 animate-pulse"
+                            aria-hidden
+                          />
+                        )}
+                      </span>
+                      {userPermissions &&
+                        userPermissions.role &&
+                        userPermissions.role !== "user" &&
+                        !userPermissions.is_hidden && (
+                          <div>
+                            <RoleBadge
+                              role={userPermissions.role}
+                              roleHebrew={userPermissions.role_hebrew}
+                              size="sm"
+                            />
+                          </div>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1 min-w-0">
+                      <Award
+                        size={12}
+                        className="text-amber-500 dark:text-amber-400 flex-shrink-0"
+                      />
+                      <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        {profile?.reputation ?? 0} נקודות מוניטין
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0 -translate-y-[25px]">
+                  {headerExtra && (
+                    <div className="sm:hidden">{headerExtra}</div>
+                  )}
+                  <button
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-800 dark:text-gray-100"
+                    aria-label="סגור"
+                  >
+                    <X size={22} />
+                  </button>
                 </div>
               </div>
 
@@ -259,36 +257,105 @@ const Drawer: React.FC<DrawerProps> = ({
                 )}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Navigation Menu - active: purple gradient; inactive: dark grey */}
           <nav className="flex-1">
             <div className="space-y-2">
-              {menuItems.map((item) => {
-                const IconComponent = item.icon;
-                return (
-                  <button
-                    key={item.href}
-                    onClick={() => handleMenuClick(item.href)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      item.active
-                        ? "text-white shadow-md"
-                        : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                    style={
-                      item.active
-                        ? {
-                            background:
-                              "linear-gradient(to left, rgb(180, 100, 255), rgb(102, 51, 204))",
+              {!user && menuItems.length > 0 ? (
+                <>
+                  {/* Guest: First row = [ Index ] [ X ] [ Theme toggle on mobile only ] */}
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const item = menuItems[0];
+                      const IconComponent = item.icon;
+                      return (
+                        <button
+                          key={item.href}
+                          onClick={() => handleMenuClick(item.href)}
+                          className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                            item.active
+                              ? "text-white shadow-md"
+                              : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          }`}
+                          style={
+                            item.active
+                              ? {
+                                  background:
+                                    "linear-gradient(to left, rgb(180, 100, 255), rgb(102, 51, 204))",
+                                }
+                              : undefined
                           }
-                        : undefined
-                    }
-                  >
-                    <IconComponent size={20} />
-                    <span className="font-medium">{item.label}</span>
-                  </button>
-                );
-              })}
+                        >
+                          <IconComponent size={20} />
+                          <span className="font-medium">{item.label}</span>
+                        </button>
+                      );
+                    })()}
+                    {headerExtra && (
+                      <div className="sm:hidden flex-shrink-0">{headerExtra}</div>
+                    )}
+                    <button
+                      onClick={() => setIsDrawerOpen(false)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-800 dark:text-gray-100 flex-shrink-0"
+                      aria-label="סגור"
+                    >
+                      <X size={22} />
+                    </button>
+                  </div>
+                  {menuItems.slice(1).map((item) => {
+                    const IconComponent = item.icon;
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={() => handleMenuClick(item.href)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                          item.active
+                            ? "text-white shadow-md"
+                            : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                        style={
+                          item.active
+                            ? {
+                                background:
+                                  "linear-gradient(to left, rgb(180, 100, 255), rgb(102, 51, 204))",
+                              }
+                            : undefined
+                        }
+                      >
+                        <IconComponent size={20} />
+                        <span className="font-medium">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              ) : (
+                menuItems.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <button
+                      key={item.href}
+                      onClick={() => handleMenuClick(item.href)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        item.active
+                          ? "text-white shadow-md"
+                          : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
+                      style={
+                        item.active
+                          ? {
+                              background:
+                                "linear-gradient(to left, rgb(180, 100, 255), rgb(102, 51, 204))",
+                            }
+                          : undefined
+                      }
+                    >
+                      <IconComponent size={20} />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  );
+                })
+              )}
               {user && (
                 <>
                   <button

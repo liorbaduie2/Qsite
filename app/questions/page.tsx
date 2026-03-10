@@ -18,6 +18,7 @@ import {
   User,
   LogIn,
   ChevronDown,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "../components/AuthProvider";
 import LoginModal from "../components/LoginModal";
@@ -113,11 +114,15 @@ const QuestionsPage = () => {
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
-  const [updatingVoteId, setUpdatingVoteId] = useState<string | null>(null);
+  const [updatingVoteIds, setUpdatingVoteIds] = useState<
+    Record<string, boolean>
+  >({});
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const voteRequestsRef = useRef(new Set<string>());
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
+  const userId = user?.id ?? null;
   const router = useRouter();
   usePresenceTick(); // re-evaluate isOnline every 30s
 
@@ -165,15 +170,16 @@ const QuestionsPage = () => {
 
   const fetchQuestions = useCallback(async () => {
     // For guests, show only mock questions and do not hit the real API
-    if (!user && !authLoading) {
+    if (!userId && !authLoading) {
       setFetchError(null);
       setQuestions(MOCK_QUESTIONS);
+      setUserVotes({});
       setLoadingQuestions(false);
       return;
     }
 
     // While auth state is still resolving, wait before deciding what to fetch
-    if (!user) {
+    if (!userId) {
       return;
     }
 
@@ -184,6 +190,7 @@ const QuestionsPage = () => {
       if (searchTerm) params.set("search", searchTerm);
       if (filterTag && filterTag !== "הכל") params.set("tag", filterTag);
       params.set("sort", sortBy);
+      params.set("includeUserVotes", "1");
 
       const res = await fetch(`/api/questions?${params.toString()}`);
       const data = await res.json();
@@ -194,12 +201,13 @@ const QuestionsPage = () => {
       }
 
       setQuestions(data.questions || []);
+      setUserVotes(data.userVotes || {});
     } catch {
       setFetchError("שגיאה בחיבור לשרת");
     } finally {
       setLoadingQuestions(false);
     }
-  }, [searchTerm, filterTag, sortBy, user, authLoading]);
+  }, [searchTerm, filterTag, sortBy, userId, authLoading]);
 
   useEffect(() => {
     fetchQuestions();
@@ -256,7 +264,30 @@ const QuestionsPage = () => {
       return;
     }
 
-    setUpdatingVoteId(questionId);
+    if (voteRequestsRef.current.has(questionId)) return;
+
+    const currentQuestion = questions.find((question) => question.id === questionId);
+    if (!currentQuestion) return;
+
+    const previousVote = userVotes[questionId] ?? 0;
+    const optimisticVote = previousVote === voteType ? 0 : voteType;
+    const previousVotesCount = currentQuestion.votes;
+    const optimisticVotesCount =
+      previousVotesCount + (optimisticVote - previousVote);
+
+    voteRequestsRef.current.add(questionId);
+    setUpdatingVoteIds((prev) => ({ ...prev, [questionId]: true }));
+    setQuestions((prev) =>
+      prev.map((question) =>
+        question.id === questionId
+          ? { ...question, votes: optimisticVotesCount }
+          : question,
+      ),
+    );
+    setUserVotes((prev) => ({
+      ...prev,
+      [questionId]: optimisticVote,
+    }));
     try {
       const res = await fetch(`/api/questions/${questionId}/vote`, {
         method: "POST",
@@ -266,9 +297,22 @@ const QuestionsPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        // Silently fail for now; optionally surface error to user
+        setQuestions((prev) =>
+          prev.map((question) =>
+            question.id === questionId
+              ? { ...question, votes: previousVotesCount }
+              : question,
+          ),
+        );
+        setUserVotes((prev) => ({
+          ...prev,
+          [questionId]: previousVote,
+        }));
         return;
       }
+
+      const resolvedVote =
+        data.userVote === 1 || data.userVote === -1 ? data.userVote : 0;
 
       setQuestions((prev) =>
         prev.map((q) =>
@@ -278,12 +322,27 @@ const QuestionsPage = () => {
 
       setUserVotes((prev) => ({
         ...prev,
-        [questionId]: voteType,
+        [questionId]: resolvedVote,
       }));
     } catch {
-      // Network/server error – leave UI as-is
+      setQuestions((prev) =>
+        prev.map((question) =>
+          question.id === questionId
+            ? { ...question, votes: previousVotesCount }
+            : question,
+        ),
+      );
+      setUserVotes((prev) => ({
+        ...prev,
+        [questionId]: previousVote,
+      }));
     } finally {
-      setUpdatingVoteId(null);
+      voteRequestsRef.current.delete(questionId);
+      setUpdatingVoteIds((prev) => {
+        const next = { ...prev };
+        delete next[questionId];
+        return next;
+      });
     }
   };
 
@@ -482,16 +541,15 @@ const QuestionsPage = () => {
                     <button
                       type="button"
                       onClick={(e) => handleVote(e, question.id, 1)}
-                      disabled={updatingVoteId === question.id}
-                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
+                      disabled={!!updatingVoteIds[question.id]}
+                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation]"
                     >
                       <ArrowUp
                         size={25}
                         className={
-                          (userVotes[question.id] === 1
+                          userVotes[question.id] === 1
                             ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-gray-400 dark:text-gray-500") +
-                          " group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors"
+                            : "text-gray-400 dark:text-gray-500"
                         }
                       />
                     </button>
@@ -501,16 +559,15 @@ const QuestionsPage = () => {
                     <button
                       type="button"
                       onClick={(e) => handleVote(e, question.id, -1)}
-                      disabled={updatingVoteId === question.id}
-                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
+                      disabled={!!updatingVoteIds[question.id]}
+                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation]"
                     >
                       <ArrowDown
                         size={25}
                         className={
-                          (userVotes[question.id] === -1
+                          userVotes[question.id] === -1
                             ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-gray-400 dark:text-gray-500") +
-                          " group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors"
+                            : "text-gray-400 dark:text-gray-500"
                         }
                       />
                     </button>
@@ -553,7 +610,15 @@ const QuestionsPage = () => {
                       </h3>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 text-[0.825rem] text-gray-500 dark:border-gray-700/70 dark:text-gray-400 sm:text-[0.9625rem]">
+                    <div className="relative flex flex-wrap items-center gap-2 pt-2 mt-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]">
+                      <div
+                        className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
+                        aria-hidden
+                      />
+                      <div className="absolute left-2 -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                        <Clock size={12} />
+                        <span>{timeAgo(question.createdAt)}</span>
+                      </div>
                       {question.author.username ? (
                         <Link
                           href={
@@ -601,9 +666,6 @@ const QuestionsPage = () => {
                         ) : (
                           "אנונימי"
                         )}
-                      </span>
-                      <span className="text-[0.825rem] text-gray-500 dark:text-gray-400 shrink-0 sm:text-[0.9625rem]">
-                        {timeAgo(question.createdAt)}
                       </span>
                       <div className="flex items-center gap-2" title="תגובות">
                         <MessageCircle size={15} />

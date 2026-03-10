@@ -324,7 +324,41 @@ export default function StatusPage() {
       handleAuthAction("login");
       return;
     }
+    const statusFromFeed = feed.find((s) => s.id === statusId);
+    const prevStarred = statusFromFeed?.starredByMe ?? false;
+    const prevCount = statusFromFeed?.starsCount ?? 0;
+    const optimisticStarred = !prevStarred;
+    const optimisticCount = Math.max(
+      0,
+      prevCount + (optimisticStarred ? 1 : -1),
+    );
+
     setStarringId(statusId);
+    setFeed((prev) =>
+      prev.map((s) =>
+        s.id === statusId
+          ? {
+              ...s,
+              starredByMe: optimisticStarred,
+              starsCount: optimisticCount,
+            }
+          : s,
+      ),
+    );
+    setMyActive((prev) =>
+      prev?.id === statusId ? { ...prev, starsCount: optimisticCount } : prev,
+    );
+    setMyHistory((prev) =>
+      prev.map((s) =>
+        s.id === statusId ? { ...s, starsCount: optimisticCount } : s,
+      ),
+    );
+    setAdminStarsModal((prev) =>
+      prev?.statusId === statusId
+        ? { ...prev, starsCount: optimisticCount }
+        : prev,
+    );
+
     try {
       const res = await fetch(`/api/status/${statusId}/star`, {
         method: "POST",
@@ -334,52 +368,71 @@ export default function StatusPage() {
         const starred = data.starred === true;
         const authoritativeCount =
           typeof data.starsCount === "number" ? data.starsCount : undefined;
+        const reconciledCount =
+          authoritativeCount ?? Math.max(0, prevCount + (starred ? 1 : -1));
         setFeed((prev) =>
           prev.map((s) =>
             s.id === statusId
-              ? {
-                  ...s,
-                  starredByMe: starred,
-                  starsCount:
-                    authoritativeCount ??
-                    Math.max(0, s.starsCount + (starred ? 1 : -1)),
-                }
+              ? { ...s, starredByMe: starred, starsCount: reconciledCount }
               : s,
           ),
         );
         setMyActive((prev) =>
           prev?.id === statusId
-            ? {
-                ...prev,
-                starsCount:
-                  authoritativeCount ??
-                  Math.max(0, prev.starsCount + (starred ? 1 : -1)),
-              }
+            ? { ...prev, starsCount: reconciledCount }
             : prev,
         );
         setMyHistory((prev) =>
           prev.map((s) =>
-            s.id === statusId
-              ? {
-                  ...s,
-                  starsCount:
-                    authoritativeCount ??
-                    Math.max(0, s.starsCount + (starred ? 1 : -1)),
-                }
-              : s,
+            s.id === statusId ? { ...s, starsCount: reconciledCount } : s,
           ),
         );
         setAdminStarsModal((prev) =>
           prev?.statusId === statusId
-            ? {
-                ...prev,
-                starsCount:
-                  authoritativeCount ??
-                  Math.max(0, prev.starsCount + (starred ? 1 : -1)),
-              }
+            ? { ...prev, starsCount: reconciledCount }
+            : prev,
+        );
+      } else {
+        setFeed((prev) =>
+          prev.map((s) =>
+            s.id === statusId
+              ? { ...s, starredByMe: prevStarred, starsCount: prevCount }
+              : s,
+          ),
+        );
+        setMyActive((prev) =>
+          prev?.id === statusId ? { ...prev, starsCount: prevCount } : prev,
+        );
+        setMyHistory((prev) =>
+          prev.map((s) =>
+            s.id === statusId ? { ...s, starsCount: prevCount } : s,
+          ),
+        );
+        setAdminStarsModal((prev) =>
+          prev?.statusId === statusId
+            ? { ...prev, starsCount: prevCount }
             : prev,
         );
       }
+    } catch {
+      setFeed((prev) =>
+        prev.map((s) =>
+          s.id === statusId
+            ? { ...s, starredByMe: prevStarred, starsCount: prevCount }
+            : s,
+        ),
+      );
+      setMyActive((prev) =>
+        prev?.id === statusId ? { ...prev, starsCount: prevCount } : prev,
+      );
+      setMyHistory((prev) =>
+        prev.map((s) =>
+          s.id === statusId ? { ...s, starsCount: prevCount } : s,
+        ),
+      );
+      setAdminStarsModal((prev) =>
+        prev?.statusId === statusId ? { ...prev, starsCount: prevCount } : prev,
+      );
     } finally {
       setStarringId(null);
     }
@@ -487,8 +540,7 @@ export default function StatusPage() {
                 className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-gray-800 dark:text-gray-100"
               >
                 <History size={18} />
-                היסטוריית סטטוסים (
-                {[myActive, ...myHistory].filter(Boolean).length})
+                היסטוריה שלי
               </button>
             )}
             {!user && (

@@ -2,7 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Send, ArrowRight, MoreVertical, Flag, Shield, UserCircle } from "lucide-react";
+import {
+  Send,
+  ArrowRight,
+  MoreVertical,
+  Flag,
+  Shield,
+  UserCircle,
+} from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import { UserAvatar } from "../../components/UserAvatar";
 import { isOnline } from "@/lib/utils";
@@ -39,7 +46,9 @@ export default function ChatThreadPage() {
   } | null>(null);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   /** Presence-only update for the other user so the online indicator updates without refetching the whole conversation. */
-  const [otherUserLastSeenAt, setOtherUserLastSeenAt] = useState<string | null | undefined>(undefined);
+  const [otherUserLastSeenAt, setOtherUserLastSeenAt] = useState<
+    string | null | undefined
+  >(undefined);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +126,11 @@ export default function ChatThreadPage() {
     };
     document.addEventListener("visibilitychange", onVisible);
     const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState !== "visible"
+      )
+        return;
       fetchPresence();
     }, 10 * 1000);
     return () => {
@@ -162,7 +175,9 @@ export default function ChatThreadPage() {
     if (!otherUser || blockSubmitting) return;
     setBlockSubmitting(true);
     try {
-      const res = await fetch(`/api/chat/blocked/${otherUser.id}`, { method: "POST" });
+      const res = await fetch(`/api/chat/blocked/${otherUser.id}`, {
+        method: "POST",
+      });
       const data = await res.json();
       if (res.ok) {
         setBlockModalOpen(false);
@@ -411,10 +426,7 @@ export default function ChatThreadPage() {
       </header>
 
       <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full min-h-0">
-        <div
-          className="flex-1 overflow-y-auto p-4 modal-scroll"
-          dir="ltr"
-        >
+        <div className="flex-1 overflow-y-auto p-4 modal-scroll" dir="ltr">
           <div className="space-y-3" dir="rtl">
             {messages.length === 0 && (
               <p className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -481,14 +493,22 @@ export default function ChatThreadPage() {
       </div>
 
       {blockModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" dir="rtl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          dir="rtl"
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">חסימת משתמש</h3>
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">
+              חסימת משתמש
+            </h3>
             {blockError && (
-              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{blockError}</p>
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                {blockError}
+              </p>
             )}
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-              לאחר חסימה לא תוכלו להחליף הודעות. השיחה תישאר במערכת לצורכי רישום ומנהלה. המשתמש יידע שנחסם.
+              לאחר חסימה לא תוכלו להחליף הודעות. השיחה תישאר במערכת לצורכי רישום
+              ומנהלה. המשתמש יידע שנחסם.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -512,13 +532,25 @@ export default function ChatThreadPage() {
       )}
 
       {reportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" dir="rtl">
-          <form onSubmit={handleReportSubmit} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">דווח על משתמש</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          dir="rtl"
+        >
+          <form
+            onSubmit={handleReportSubmit}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-6"
+          >
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">
+              דווח על משתמש
+            </h3>
             {reportError && (
-              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{reportError}</p>
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                {reportError}
+              </p>
             )}
-            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">סיבה (לא חובה)</label>
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">
+              סיבה (לא חובה)
+            </label>
             <textarea
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
@@ -530,7 +562,10 @@ export default function ChatThreadPage() {
             <div className="flex gap-3 justify-end mt-4">
               <button
                 type="button"
-                onClick={() => { setReportModalOpen(false); setReportReason(""); }}
+                onClick={() => {
+                  setReportModalOpen(false);
+                  setReportReason("");
+                }}
                 className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 ביטול
