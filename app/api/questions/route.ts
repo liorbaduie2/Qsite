@@ -1,6 +1,116 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeTagName } from '@/lib/tag-matching';
+import { getAdminClient } from '@/lib/supabase/admin';
+import {
+  syncTagEmbeddings,
+  upsertQuestionEmbedding,
+} from '@/lib/tag-suggestions/embedding-sync';
+
+type TagSuggestionContext = {
+  shownSuggestedTags: string[];
+  acceptedSuggestedTags: string[];
+};
+
+type ExistingTagRow = {
+  id: string;
+  name: string;
+  use_count: number | null;
+};
+
+function normalizeTagSuggestionContext(value: unknown): TagSuggestionContext {
+  const fallback: TagSuggestionContext = {
+    shownSuggestedTags: [],
+    acceptedSuggestedTags: [],
+  };
+
+  if (!value || typeof value !== 'object') {
+    return fallback;
+  }
+
+  const context = value as {
+    shownSuggestedTags?: unknown;
+    acceptedSuggestedTags?: unknown;
+  };
+
+  return {
+    shownSuggestedTags: Array.isArray(context.shownSuggestedTags)
+      ? context.shownSuggestedTags
+          .filter((tag): tag is string => typeof tag === 'string')
+          .map((tag) => normalizeTagName(tag))
+          .filter(Boolean)
+      : [],
+    acceptedSuggestedTags: Array.isArray(context.acceptedSuggestedTags)
+      ? context.acceptedSuggestedTags
+          .filter((tag): tag is string => typeof tag === 'string')
+          .map((tag) => normalizeTagName(tag))
+          .filter(Boolean)
+      : [],
+  };
+}
+
+function buildTagFeedbackRows(params: {
+  existingTagsByName: Map<
+    string,
+    {
+      id: string;
+    }
+  >;
+  normalizedTags: string[];
+  suggestionContext: TagSuggestionContext;
+}): Array<{
+  tag_id: string;
+  shown_delta: number;
+  selected_delta: number;
+  accepted_delta: number;
+  manual_delta: number;
+  shown_at: string | null;
+  selected_at: string | null;
+}> {
+  const { existingTagsByName, normalizedTags, suggestionContext } = params;
+  const shownTagSet = new Set(suggestionContext.shownSuggestedTags);
+  const acceptedTagSet = new Set(suggestionContext.acceptedSuggestedTags);
+  const selectedTagSet = new Set(normalizedTags);
+  const timestamp = new Date().toISOString();
+
+  return Array.from(new Set([...shownTagSet, ...selectedTagSet]))
+    .map((tagName) => {
+      const existingTag = existingTagsByName.get(tagName);
+      if (!existingTag) return null;
+
+      const wasShown = shownTagSet.has(tagName);
+      const wasSelected = selectedTagSet.has(tagName);
+      const wasAccepted = wasSelected && acceptedTagSet.has(tagName);
+      const wasManualSelection = wasSelected && !wasAccepted;
+
+      if (!wasShown && !wasSelected) {
+        return null;
+      }
+
+      return {
+        tag_id: existingTag.id,
+        shown_delta: wasShown ? 1 : 0,
+        selected_delta: wasSelected ? 1 : 0,
+        accepted_delta: wasAccepted ? 1 : 0,
+        manual_delta: wasManualSelection ? 1 : 0,
+        shown_at: wasShown ? timestamp : null,
+        selected_at: wasSelected ? timestamp : null,
+      };
+    })
+    .filter(
+      (
+        row,
+      ): row is {
+        tag_id: string;
+        shown_delta: number;
+        selected_delta: number;
+        accepted_delta: number;
+        manual_delta: number;
+        shown_at: string | null;
+        selected_at: string | null;
+      } => Boolean(row),
+    );
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -185,7 +295,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, tags } = body;
+    const { title, content, tags, tagSuggestionContext } = body;
+    const normalizedSuggestionContext =
+      normalizeTagSuggestionContext(tagSuggestionContext);
 
     if (!title?.trim() || title.trim().length < 5) {
       return NextResponse.json({ error: 'הכותרת חייבת להכיל לפחות 5 תווים' }, { status: 400 });
@@ -213,7 +325,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'יש לבחור לפחות תגית קיימת אחת' }, { status: 400 });
     }
 
-    const { data: existingTags, error: tagsValidationError } = await supabase
+    const { data: existingTagsResult, error: tagsValidationError } = await supabase
       .from('tags')
       .select('id, name, use_count')
       .limit(500);
@@ -223,8 +335,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'שגיאה באימות התגיות' }, { status: 500 });
     }
 
+    const existingTags = (existingTagsResult || []) as ExistingTagRow[];
     const existingTagsByName = new Map(
-      (existingTags || []).map((tag) => [normalizeTagName(tag.name), tag]),
+      existingTags.map((tag) => [normalizeTagName(tag.name), tag]),
     );
     const invalidTags = normalizedTags.filter((tag) => !existingTagsByName.has(tag));
 
@@ -250,19 +363,88 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'שגיאה ביצירת השאלה' }, { status: 500 });
     }
 
-    for (const tagName of normalizedTags) {
+    const selectedTagRows = normalizedTags.flatMap((tagName) => {
       const existingTag = existingTagsByName.get(tagName);
+      return existingTag ? [existingTag] : [];
+    });
 
-      if (existingTag) {
-        await supabase
-          .from('question_tags')
-          .insert({ question_id: question.id, tag_id: existingTag.id });
+    if (selectedTagRows.length > 0) {
+      const questionTagRows = selectedTagRows.map((tag) => ({
+        question_id: question.id,
+        tag_id: tag.id,
+      }));
 
-        await supabase
-          .from('tags')
-          .update({ use_count: (existingTag.use_count || 0) + 1 })
-          .eq('id', existingTag.id);
+      const { error: questionTagsError } = await supabase
+        .from('question_tags')
+        .insert(questionTagRows);
+
+      if (questionTagsError) {
+        console.error('Error linking question tags:', questionTagsError);
+        return NextResponse.json({ error: 'שגיאה בשמירת התגיות' }, { status: 500 });
       }
+
+      const useCountUpdates = await Promise.allSettled(
+        selectedTagRows.map((tag) =>
+          supabase
+            .from('tags')
+            .update({ use_count: (tag.use_count || 0) + 1 })
+            .eq('id', tag.id),
+        ),
+      );
+
+      useCountUpdates.forEach((result) => {
+        if (result.status === 'rejected') {
+          console.error('Error updating tag use count:', result.reason);
+        } else if (result.value.error) {
+          console.error('Error updating tag use count:', result.value.error);
+        }
+      });
+    }
+
+    const feedbackRows = buildTagFeedbackRows({
+      existingTagsByName,
+      normalizedTags,
+      suggestionContext: normalizedSuggestionContext,
+    });
+
+    try {
+      const adminClient = getAdminClient();
+      const learningTasks: Promise<unknown>[] = [
+        upsertQuestionEmbedding({
+          questionId: question.id,
+          title: title.trim(),
+          content: content.trim(),
+          adminClient,
+        }),
+        syncTagEmbeddings({
+          adminClient,
+          tagIds: selectedTagRows.map((tag) => tag.id),
+          batchSize: 5,
+        }),
+      ];
+
+      if (feedbackRows.length > 0) {
+        learningTasks.push(
+          (async () => {
+            const { error } = await adminClient.rpc('record_tag_feedback_batch', {
+              feedback_rows: feedbackRows,
+            });
+
+            if (error) {
+              throw error;
+            }
+          })(),
+        );
+      }
+
+      const learningResults = await Promise.allSettled(learningTasks);
+      learningResults.forEach((result) => {
+        if (result.status === 'rejected') {
+          console.error('Question tagging learning task failed:', result.reason);
+        }
+      });
+    } catch (learningError) {
+      console.error('Question tagging learning setup failed:', learningError);
     }
 
     return NextResponse.json({ success: true, questionId: question.id }, { status: 201 });
