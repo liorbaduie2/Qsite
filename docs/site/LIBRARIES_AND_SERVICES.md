@@ -89,7 +89,7 @@
 - Runtime: shared/server
 - Description: Hebrew-aware tag normalization, fuzzy matching, and scoring engine.
 - Exports: `TagScoreEntry`, `buildSuggestionSearchTerms`, `getTopSuggestionNames`, `normalizeTagName`, `normalizeTextForMatch`, `scoreAutocompleteTag`, `scoreSuggestedTag`, `shouldFetchSuggestedTags`, `tokenizeForMatch`
-- Named functions: `addSearchTerm`, `buildTokenPhrases`, `clamp`, `containsWholePhrase`, `escapeRegex`, `getConfidenceMultiplier`, `getDistinctTokenCount`, `getKeywordPhrases`, `getMinimumTokenLength`, `getPhraseMatches`, `getPopularityWeight`, `getPromptTokens`, `getTagKeywordTexts`, `getTagTokens`, `getTokenMatchStats`, `hasHebrewCharacters`, `hasStrongLexicalEvidence`, `isFuzzyMatch`, `isPartialTokenMatch`, `levenshteinDistance`, `normalizeToken`, `scoreTokenMatches`
+- Named functions: `addSearchTerm`, `buildTokenPhrases`, `clamp`, `containsWholePhrase`, `escapeRegex`, `getConfidenceMultiplier`, `getDistinctTokenCount`, `getKeywordPhrases`, `getMinimumTokenLength`, `getPhraseMatches`, `getPopularityWeight`, `getPrefixPhraseMatches`, `getPromptTokens`, `getTagKeywordTexts`, `getTagTokens`, `getTokenMatchStats`, `getTokenPrefixStats`, `hasHebrewCharacters`, `hasStrongAutocompleteEvidence`, `hasStrongLexicalEvidence`, `isFuzzyMatch`, `isPartialTokenMatch`, `levenshteinDistance`, `normalizeToken`, `promptHasContextTerms`, `scoreTokenMatches`, `shouldSuppressAmbiguousTagMatch`
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -97,7 +97,7 @@
 ### `lib/tag-suggestion-regression.ts`
 - Runtime: shared/server
 - Description: Supporting code file for tag suggestion regression.
-- Exports: `HYBRID_TAG_SUGGESTION_REGRESSION_CASES`, `HybridTagSuggestionRegressionCase`, `TAG_SUGGESTION_REGRESSION_CASES`, `TAG_SUGGESTION_REGRESSION_CATALOG`, `TagSuggestionRegressionCase`
+- Exports: `HYBRID_TAG_SUGGESTION_REGRESSION_CASES`, `HybridTagSuggestionRegressionCase`, `TAG_AUTOCOMPLETE_REGRESSION_CASES`, `TAG_SUGGESTION_REGRESSION_CASES`, `TAG_SUGGESTION_REGRESSION_CATALOG`, `TagAutocompleteRegressionCase`, `TagSuggestionRegressionCase`
 - Named functions: None
 - Fetch calls: None
 - Supabase tables/views: None
@@ -116,7 +116,7 @@
 - Runtime: shared/server
 - Description: Ranking helpers that merge lexical and semantic tag candidates.
 - Exports: `RankedHybridTagCandidate`, `mergeHybridTagCandidates`, `rankHybridTagCandidates`, `rankHybridTagSuggestions`
-- Named functions: `clamp`, `getAutocompleteBoost`, `getFallbackPopularityBoost`, `getFeedbackBoost`, `getSemanticBoost`, `getSimilarQuestionBoost`, `hasHybridEvidence`, `maxNullable`, `mergeStringArray`
+- Named functions: `clamp`, `getAutocompleteBoost`, `getFallbackPopularityBoost`, `getFeedbackBoost`, `getSemanticBoost`, `getSemanticOnlyConfidence`, `getSimilarQuestionBoost`, `hasHybridEvidence`, `maxNullable`, `mergeStringArray`
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None

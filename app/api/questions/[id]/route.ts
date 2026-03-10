@@ -125,18 +125,31 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { title, content } = body;
+    const { title, content, tags } = body;
     if (!title?.trim() || title.trim().length < 5) {
       return NextResponse.json({ error: 'הכותרת חייבת להכיל לפחות 5 תווים' }, { status: 400 });
     }
     if (!content?.trim()) {
       return NextResponse.json({ error: 'תוכן השאלה הוא שדה חובה' }, { status: 400 });
     }
+    if (!Array.isArray(tags) || tags.length === 0) {
+      return NextResponse.json({ error: 'יש להוסיף לפחות תגית אחת' }, { status: 400 });
+    }
+
+    const submittedTags = tags
+      .filter((t: unknown): t is string => typeof t === 'string')
+      .map((t: string) => t.replace(/^#+/, '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    const uniqueTags = Array.from(new Set(submittedTags)).slice(0, 5);
+    if (uniqueTags.length === 0) {
+      return NextResponse.json({ error: 'יש לבחור לפחות תגית קיימת אחת' }, { status: 400 });
+    }
 
     const { data: result, error } = await supabase.rpc('update_question_with_permission', {
       p_question_id: id,
       p_title: title.trim(),
       p_content: content.trim(),
+      p_tags: uniqueTags,
     });
 
     if (error) {

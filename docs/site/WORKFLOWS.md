@@ -19,7 +19,7 @@ Key files:
 
 ## Questions and answers
 
-Questions are discovered on the home and question-index routes, created through a modal workflow, and managed in detail pages that support answers, voting, reporting, and removal requests.
+Questions are discovered on the home and question-index routes, created through a modal workflow, and managed in detail pages that support answers, voting, reporting, and removal requests. Tags are shown via a "הצג תגיות" (Show Tags) toggle on both the question list cards and the detail page. Question owners and ממונה מוסמך (guardian) can edit tags when editing a question; tag selection uses the catalog only (no custom tags).
 
 Key files:
 - `app/page.tsx`
@@ -27,6 +27,7 @@ Key files:
 - `app/questions/[id]/page.tsx`
 - `app/components/NewQuestionModal.tsx`
 - `app/api/questions/route.ts`
+- `app/api/questions/[id]/route.ts` (GET, PATCH with tags, DELETE)
 - `app/api/questions/[id]/answers/route.ts`
 - `app/api/questions/[id]/vote/route.ts`
 - `app/api/questions/[id]/request-removal/route.ts`

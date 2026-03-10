@@ -108,9 +108,9 @@
 - Kind: page
 - Surface: Core product
 - Runtime: client
-- Description: Question detail page with answers, votes, reports, and moderation actions.
+- Description: Question detail page with answers, votes, reports, and moderation actions. Includes "הצג תגיות" (Show Tags) toggle to expand/collapse tags, and tag editing in edit mode (owner or ממונה מוסמך) using catalog-only selection.
 - Exports: `QuestionDetailPage`
-- Named functions: `buildAnswerThreads`, `fetchAnswers`, `fetchQuestion`, `handleAnswerVote`, `handleAuthAction`, `handleCancelEdit`, `handleClickOutside`, `handleConfirmRemove`, `handleOpenAnswerReport`, `handleOpenAnswerVoteDetails`, `handleOpenRequestRemoval`, `handleOpenVoteDetails`, `handleQuestionVote`, `handleSaveEdit`, `handleSignOut`, `handleStartEdit`, `handleSubmitAnswer`, `handleSubmitAnswerReport`, `handleSubmitReply`, `handleSubmitRequestRemoval`, `onClick`, `renderAnswerCard`, `renderReplyItem`, `renderTopLevelAnswer`, `resolveRootId`, `setVoteLoading`, `timeAgo`
+- Named functions: `buildAnswerThreads`, `fetchAnswers`, `fetchEditTagMatches`, `fetchQuestion`, `handleAnswerVote`, `handleAuthAction`, `handleCancelEdit`, `handleClickOutside`, `handleConfirmRemove`, `handleEditTagAdd`, `handleEditTagRemove`, `handleOpenAnswerReport`, `handleOpenAnswerVoteDetails`, `handleOpenRequestRemoval`, `handleOpenVoteDetails`, `handleQuestionVote`, `handleSaveEdit`, `handleSignOut`, `handleStartEdit`, `handleSubmitAnswer`, `handleSubmitAnswerReport`, `handleSubmitReply`, `handleSubmitRequestRemoval`, `onClick`, `renderAnswerCard`, `renderReplyItem`, `renderTopLevelAnswer`, `resolveRootId`, `setVoteLoading`, `timeAgo`
 - Fetch calls: `/api/report/content`
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -120,7 +120,7 @@
 - Kind: page
 - Surface: Core product
 - Runtime: client
-- Description: Question index with search, sort, filters, and question-creation entry points.
+- Description: Question index with search, sort, filters, and question-creation entry points. Each question card has a "הצג תגיות" (Show Tags) toggle to expand/collapse tags.
 - Exports: `QuestionsPage`
 - Named functions: `QuestionsPage`, `fetchQuestions`, `handleNewQuestion`, `handleSignOut`, `handleVote`, `onClick`, `onKeyDown`, `timeAgo`
 - Fetch calls: None

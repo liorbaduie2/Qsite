@@ -48,11 +48,11 @@
 - Endpoint: `/api/questions/[id]`
 - Domain: Questions and tags
 - Methods: `GET`, `PATCH`, `DELETE`
-- Description: Fetches or updates a single question.
+- Description: Fetches or updates a single question. PATCH accepts `title`, `content`, and `tags` (array of catalog tag names); updates question and question_tags.
 - Named functions: None
 - Fetch calls: None
-- Supabase tables/views: `questions`, `votes`
-- Supabase RPCs: None
+- Supabase tables/views: `questions`, `votes`, `question_tags`
+- Supabase RPCs: `update_question_with_permission`
 
 ### `app/api/questions/[id]/vote/route.ts`
 - Endpoint: `/api/questions/[id]/vote`

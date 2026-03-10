@@ -211,13 +211,27 @@ export default function StatusPage() {
     }
   }, [user]);
 
+  // Only refetch when user id actually changes (login/logout), not on tab visibility change
+  const lastFetchedUserIdRef = React.useRef<string | null | "guest" | undefined>(
+    undefined,
+  );
   useEffect(() => {
+    if (authLoading && !user) return;
+    const currentState = user?.id ?? "guest";
+    if (lastFetchedUserIdRef.current === currentState) return;
+    lastFetchedUserIdRef.current = currentState;
     fetchFeed();
-  }, [fetchFeed]);
+  }, [user?.id, authLoading, fetchFeed]);
 
+  const lastFetchedMeUserIdRef = React.useRef<
+    string | null | "guest" | undefined
+  >(undefined);
   useEffect(() => {
+    const currentState = user?.id ?? "guest";
+    if (lastFetchedMeUserIdRef.current === currentState) return;
+    lastFetchedMeUserIdRef.current = currentState;
     fetchMe();
-  }, [fetchMe]);
+  }, [user?.id, fetchMe]);
 
   // Real-time: subscribe to user_statuses updates so star count syncs for all viewers
   useEffect(() => {
@@ -522,7 +536,7 @@ export default function StatusPage() {
               type="button"
               onClick={handleNewStatus}
               disabled={Boolean(user && !canPost)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 shadow-lg ${
+              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 shadow-lg ${
                 user && !canPost
                   ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-100 disabled:cursor-not-allowed"
                   : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl"
@@ -533,7 +547,7 @@ export default function StatusPage() {
                 ? `נעול (${cooldownRemaining(nextPostAt)} דק')`
                 : "סטטוס חדש"}
             </button>
-            {user && (myActive || myHistory.length > 0) && (
+            {user && (
               <button
                 type="button"
                 onClick={() => setHistoryModalOpen(true)}
@@ -701,67 +715,74 @@ export default function StatusPage() {
         </div>
       </main>
 
-      {/* New status modal */}
+      {/* Fixed "סטטוס חדש" button - mobile only (matches כתוב תשובה in question details) */}
+      {!isComposerOpen && user && (
+        <button
+          type="button"
+          onClick={handleNewStatus}
+          disabled={!canPost}
+          className={`md:hidden fixed left-6 bottom-8 z-40 flex items-center gap-2 px-5 py-3 rounded-full transition-all duration-300 shadow-xl font-medium ${
+            canPost
+              ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-2xl hover:scale-105"
+              : "bg-red-600 text-white opacity-90 disabled:cursor-not-allowed"
+          }`}
+        >
+          {canPost ? (
+            <>
+              <Plus size={18} />
+              סטטוס חדש
+            </>
+          ) : (
+            <>
+              <Lock size={18} />
+              {nextPostAt ? `נעול (${cooldownRemaining(nextPostAt)} דק')` : "נעול"}
+            </>
+          )}
+        </button>
+      )}
+
+      {/* New status modal (matches כתוב תשובה layout in question details) */}
       {user && isComposerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
           <div
             className="absolute inset-0 bg-black/40 dark:bg-black/60"
             onClick={() => setIsComposerOpen(false)}
           />
-          <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl bg-slate-900 text-gray-100">
-            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-l from-indigo-700 via-indigo-800 to-slate-900">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/60">
-                  <MessageSquare
-                    className="text-indigo-600 dark:text-indigo-400"
-                    size={20}
-                  />
-                </div>
-                <div className="text-right">
-                  <h2 className="text-lg font-bold text-white">סטטוס חדש</h2>
-                  <p className="text-xs text-slate-200/70">
-                    שתף מה קורה איתך עכשיו
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsComposerOpen(false)}
-                className="p-2 rounded-lg text-slate-200 hover:bg-slate-800/70"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
+          <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl bg-white text-gray-900 dark:bg-slate-900 dark:text-gray-100">
             <form
               onSubmit={handlePost}
               className="flex-1 flex flex-col min-h-0"
             >
-              <div className="relative flex-1 flex flex-col min-h-0 bg-slate-800">
+              <div className="relative flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-800">
                 <textarea
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
                   placeholder="מה קורה?"
-                  className="w-full flex-1 px-6 pt-6 pb-8 bg-transparent text-gray-100 placeholder-gray-400 border-none outline-none resize-none min-h-[120px]"
+                  rows={4}
+                  className="w-full px-6 pt-6 pb-8 bg-transparent text-gray-900 placeholder-gray-500 dark:text-gray-100 dark:placeholder-gray-400 border-none outline-none resize-y min-h-[6.5rem]"
                   maxLength={500}
                   disabled={posting}
+                  autoFocus
                 />
-                <span className="absolute bottom-2 left-6 text-xs text-slate-400 pointer-events-none">
+                <span className="absolute bottom-2 left-6 text-xs text-gray-500 dark:text-slate-400 pointer-events-none">
                   {newContent.length}/500 תווים
                 </span>
               </div>
 
               {postError && (
-                <div className="mx-6 mb-2 rounded-lg bg-red-900/40 border border-red-700 px-3 py-2 text-red-100 text-sm">
+                <div className="mx-6 mb-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-red-700 text-sm dark:bg-red-900/40 dark:border-red-700 dark:text-red-100">
                   {postError}
                 </div>
               )}
 
-              <div className="flex items-center justify-between px-6 py-3 border-t border-slate-700/80 bg-slate-900/90">
+              <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50 dark:border-slate-700/80 dark:bg-slate-900/90">
                 <button
                   type="button"
                   onClick={() => setIsComposerOpen(false)}
-                  className="px-4 py-2 text-sm text-slate-300 hover:text-white"
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white"
                 >
                   ביטול
                 </button>

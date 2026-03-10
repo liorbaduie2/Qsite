@@ -8,8 +8,8 @@ The migration directory is the current source of truth for database structure an
 
 - Tables: 41
 - Views: 2
-- SQL functions: 37
-- Triggers: 9
+- SQL functions: 39
+- Triggers: 10
 
 ## Tables
 
@@ -77,6 +77,7 @@ The migration directory is the current source of truth for database structure an
 - `get_pending_applications`
 - `get_user_admin_permissions`
 - `get_user_all_permissions`
+- `get_user_reputation_permissions`
 - `handle_appeal_decision`
 - `handle_new_user`
 - `increment_question_views`
@@ -91,6 +92,7 @@ The migration directory is the current source of truth for database structure an
 - `search_tags_autocomplete`
 - `submit_question_deletion_appeal`
 - `suspend_user`
+- `sync_tag_search_document`
 - `trg_profile_likes_count`
 - `trg_profiles_reputation_enforce`
 - `update_answer_votes_count`
@@ -111,6 +113,7 @@ The migration directory is the current source of truth for database structure an
 - `trg_profile_likes_count_del`
 - `trg_profile_likes_count_ins`
 - `trg_profiles_reputation_enforce`
+- `trg_tags_search_document`
 
 ## Migration timeline
 
@@ -369,5 +372,29 @@ The migration directory is the current source of truth for database structure an
 ### `supabase/migrations/20260310100000_semantic_tagging_vectors.sql`
 - Tables added or changed in file: `tag_embeddings`, `question_embeddings`, `tag_feedback_stats`
 - Views added or changed in file: None
-- SQL functions added or changed in file: `search_tags_autocomplete`, `match_tag_candidates`, `match_similar_tagged_questions`, `record_tag_feedback_batch`
+- SQL functions added or changed in file: `sync_tag_search_document`, `search_tags_autocomplete`, `match_tag_candidates`, `match_similar_tagged_questions`, `record_tag_feedback_batch`
+- Triggers added or changed in file: `trg_tags_search_document`
+
+### `supabase/migrations/20260310120000_trim_react_tag_keywords.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: None
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260310150000_update_question_tags_in_edit.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: `update_question_with_permission`
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260310151000_grant_update_question_with_tags.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: None
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260310152000_create_get_user_reputation_permissions.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: `get_user_reputation_permissions`
 - Triggers added or changed in file: None

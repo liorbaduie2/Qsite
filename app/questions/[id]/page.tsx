@@ -25,6 +25,7 @@ import {
   MessageCircle,
   Clock,
   ChevronRight,
+  ChevronDown,
   Shield,
   Send,
   CheckCircle,
@@ -45,6 +46,7 @@ import Drawer from "../../components/Drawer";
 import NavHeader from "../../components/NavHeader";
 import { UserAvatar } from "../../components/UserAvatar";
 import { isOnline } from "@/lib/utils";
+import { normalizeTagName } from "@/lib/tag-matching";
 import { usePresenceTick } from "../../hooks/usePresenceTick";
 
 interface QuestionDetail {
@@ -279,6 +281,11 @@ export default function QuestionDetailPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [editCurrentTag, setEditCurrentTag] = useState("");
+  const [editTagMatches, setEditTagMatches] = useState<string[]>([]);
+  const [showTagsExpanded, setShowTagsExpanded] = useState(false);
+  const editTagMatchesAbortRef = useRef<AbortController | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [deletionReason, setDeletionReason] = useState("");
@@ -429,6 +436,45 @@ export default function QuestionDetailPage() {
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
   }, [openAnswerMenuId]);
+
+  useEffect(() => {
+    async function fetchEditTagMatches() {
+      const query = normalizeTagName(editCurrentTag);
+      if (!isEditMode || !query || editTags.length >= 5) {
+        setEditTagMatches([]);
+        return;
+      }
+      editTagMatchesAbortRef.current?.abort();
+      const controller = new AbortController();
+      editTagMatchesAbortRef.current = controller;
+      try {
+        const params = new URLSearchParams({
+          query,
+          exclude: editTags.join(","),
+        });
+        const res = await fetch(`/api/tags?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.tags)) {
+          setEditTagMatches(data.tags);
+        } else {
+          setEditTagMatches([]);
+        }
+      } catch {
+        setEditTagMatches([]);
+      } finally {
+        if (editTagMatchesAbortRef.current === controller) {
+          editTagMatchesAbortRef.current = null;
+        }
+      }
+    }
+    const t = setTimeout(fetchEditTagMatches, 200);
+    return () => {
+      clearTimeout(t);
+      editTagMatchesAbortRef.current?.abort();
+    };
+  }, [isEditMode, editCurrentTag, editTags]);
 
   useEffect(() => {
     async function fetchQuestion() {
@@ -889,6 +935,7 @@ export default function QuestionDetailPage() {
     if (question) {
       setEditTitle(question.title);
       setEditContent(question.content);
+      setEditTags([...question.tags]);
       setIsEditMode(true);
       setQuestionMenuOpen(false);
     }
@@ -898,6 +945,22 @@ export default function QuestionDetailPage() {
     setIsEditMode(false);
     setEditTitle("");
     setEditContent("");
+    setEditTags([]);
+    setEditCurrentTag("");
+    setEditTagMatches([]);
+  };
+
+  const handleEditTagAdd = (tag: string) => {
+    const trimmed = normalizeTagName(tag);
+    if (trimmed && !editTags.includes(trimmed) && editTags.length < 5) {
+      setEditTags([...editTags, trimmed]);
+      setEditCurrentTag("");
+      setEditTagMatches([]);
+    }
+  };
+
+  const handleEditTagRemove = (tag: string) => {
+    setEditTags(editTags.filter((t) => t !== tag));
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -906,7 +969,9 @@ export default function QuestionDetailPage() {
       !id ||
       !editTitle.trim() ||
       editTitle.trim().length < 5 ||
-      !editContent.trim()
+      !editContent.trim() ||
+      editTags.length === 0 ||
+      editCurrentTag.trim()
     )
       return;
     setSavingEdit(true);
@@ -917,6 +982,7 @@ export default function QuestionDetailPage() {
         body: JSON.stringify({
           title: editTitle.trim(),
           content: editContent.trim(),
+          tags: editTags,
         }),
       });
       const data = await res.json();
@@ -926,7 +992,12 @@ export default function QuestionDetailPage() {
       }
       setQuestion((q) =>
         q
-          ? { ...q, title: editTitle.trim(), content: editContent.trim() }
+          ? {
+              ...q,
+              title: editTitle.trim(),
+              content: editContent.trim(),
+              tags: [...editTags],
+            }
           : null,
       );
       handleCancelEdit();
@@ -1211,13 +1282,76 @@ export default function QuestionDetailPage() {
                         placeholder="תוכן השאלה"
                         required
                       />
+                      {/* Tag editing - catalog only */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          תגיות
+                        </label>
+                        <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg">
+                          {editTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="group flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 rounded-md font-semibold text-sm"
+                            >
+                              {tag}
+                              <button
+                                type="button"
+                                onClick={() => handleEditTagRemove(tag)}
+                                className="p-0.5 opacity-50 group-hover:opacity-100 hover:bg-indigo-200 dark:hover:bg-indigo-800 rounded-full transition-opacity"
+                              >
+                                <X size={14} />
+                              </button>
+                            </span>
+                          ))}
+                          {editTags.length < 5 && (
+                            <input
+                              type="text"
+                              value={editCurrentTag}
+                              onChange={(e) => setEditCurrentTag(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const exact = editTagMatches.find(
+                                    (t) => normalizeTagName(t) === normalizeTagName(editCurrentTag),
+                                  );
+                                  if (exact) handleEditTagAdd(exact);
+                                }
+                              }}
+                              placeholder="חפש תגית קיימת..."
+                              className="flex-1 bg-transparent p-1.5 min-w-[120px] focus:outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                            />
+                          )}
+                        </div>
+                        {editCurrentTag.trim() && (
+                          <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden">
+                            {editTagMatches.length > 0 ? (
+                              editTagMatches.map((tag) => (
+                                <button
+                                  key={tag}
+                                  type="button"
+                                  onClick={() => handleEditTagAdd(tag)}
+                                  className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                  {tag}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                לא נמצאו תגיות תואמות בקטלוג
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <div className="flex gap-2">
                         <button
                           type="submit"
                           disabled={
                             savingEdit ||
                             editTitle.trim().length < 5 ||
-                            !editContent.trim()
+                            !editContent.trim() ||
+                            editTags.length === 0 ||
+                            !!editCurrentTag.trim()
                           }
                           className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
                         >
@@ -1263,21 +1397,6 @@ export default function QuestionDetailPage() {
                   {!isEditMode && (
                     <div className="prose prose-gray max-w-none mb-3 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                       {question.content}
-                    </div>
-                  )}
-
-                  {/* Tags */}
-                  {question.tags.length > 0 && (
-                    <div className="flex gap-2 mb-3 flex-wrap">
-                      {question.tags.map((tag) => (
-                        <Link
-                          key={tag}
-                          href={`/questions?tag=${encodeURIComponent(tag)}`}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
-                        >
-                          {tag}
-                        </Link>
-                      ))}
                     </div>
                   )}
 
@@ -1338,7 +1457,7 @@ export default function QuestionDetailPage() {
                       )}
                     </div>
 
-                    {/* Stats */}
+                    {/* Stats + Show Tags */}
                     <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                       <div className="flex items-center gap-1" title="תגובות">
                         <MessageCircle size={15} />
@@ -1348,8 +1467,41 @@ export default function QuestionDetailPage() {
                         <Eye size={15} />
                         <span>{question.views}</span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowTagsExpanded((v) => !v)}
+                        className="inline-flex items-center gap-1.5 px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        aria-expanded={showTagsExpanded}
+                        title={showTagsExpanded ? "הסתר תגיות" : "הצג תגיות"}
+                      >
+                        <ChevronDown
+                          size={14}
+                          className={`transition-transform ${showTagsExpanded ? "rotate-180" : ""}`}
+                        />
+                        הצג תגיות
+                      </button>
                     </div>
                   </div>
+                  {/* Tags (when expanded) */}
+                  {showTagsExpanded && (
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      {question.tags.length > 0 ? (
+                        question.tags.map((tag) => (
+                          <Link
+                            key={tag}
+                            href={`/questions?tag=${encodeURIComponent(tag)}`}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
+                          >
+                            {tag}
+                          </Link>
+                        ))
+                      ) : (
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          אין תגיות
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
