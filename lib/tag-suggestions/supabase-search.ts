@@ -78,8 +78,8 @@ export async function searchAutocompleteCandidates(params: {
     throw error;
   }
 
-  return (data || [])
-    .map((row) => mapRpcCandidate((row || {}) as RpcTagRow))
+  return ((data || []) as Array<RpcTagRow | null | undefined>)
+    .map((row: RpcTagRow | null | undefined) => mapRpcCandidate((row || {}) as RpcTagRow))
     .filter((row): row is HybridTagCandidate => Boolean(row));
 }
 
@@ -101,8 +101,8 @@ export async function matchSemanticTagCandidates(params: {
     throw error;
   }
 
-  return (data || [])
-    .map((row) => mapRpcCandidate((row || {}) as RpcTagRow))
+  return ((data || []) as Array<RpcTagRow | null | undefined>)
+    .map((row: RpcTagRow | null | undefined) => mapRpcCandidate((row || {}) as RpcTagRow))
     .filter((row): row is HybridTagCandidate => Boolean(row));
 }
 
@@ -132,7 +132,7 @@ export async function matchSimilarQuestionTagCandidates(params: {
     throw error;
   }
 
-  return (data || [])
-    .map((row) => mapRpcCandidate((row || {}) as RpcTagRow))
+  return ((data || []) as Array<RpcTagRow | null | undefined>)
+    .map((row: RpcTagRow | null | undefined) => mapRpcCandidate((row || {}) as RpcTagRow))
     .filter((row): row is HybridTagCandidate => Boolean(row));
 }
