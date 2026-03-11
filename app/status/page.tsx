@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import {
   Users,
   MessageSquare,
@@ -18,7 +24,10 @@ import {
   Shield,
   Plus,
   Lock,
+  MoreVertical,
+  Flag,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../components/AuthProvider";
 import LoginModal from "../components/LoginModal";
 import RegisterModal from "../components/RegisterModal";
@@ -39,8 +48,10 @@ interface FeedItem {
     username: string;
     fullName?: string | null;
     avatar_url?: string | null;
+    reputation?: number;
   };
   starredByMe: boolean;
+  authorLikedByMe: boolean;
 }
 
 interface MyStatusItem {
@@ -51,6 +62,14 @@ interface MyStatusItem {
   isLegendary?: boolean;
   createdAt: string;
 }
+
+type StatusFilter = "all" | "topRated" | "likedProfiles";
+
+const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "all", label: "כל הסטטוסים" },
+  { id: "topRated", label: "סטטוסים מובילים" },
+  { id: "likedProfiles", label: "מפרופילים שאהבת" },
+];
 
 const MOCK_FEED: FeedItem[] = [
   {
@@ -63,8 +82,10 @@ const MOCK_FEED: FeedItem[] = [
       username: "community_member",
       fullName: "משתמש לדוגמה",
       avatar_url: undefined,
+      reputation: 0,
     },
     starredByMe: false,
+    authorLikedByMe: false,
   },
   {
     id: "mock-status-2",
@@ -76,8 +97,10 @@ const MOCK_FEED: FeedItem[] = [
       username: "another_member",
       fullName: "חבר קהילה",
       avatar_url: undefined,
+      reputation: 0,
     },
     starredByMe: false,
+    authorLikedByMe: false,
   },
 ];
 
@@ -130,6 +153,18 @@ export default function StatusPage() {
   } | null>(null);
   const [adminStarsLoading, setAdminStarsLoading] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [openStatusMenuId, setOpenStatusMenuId] = useState<string | null>(null);
+  const [statusMenuPosition, setStatusMenuPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const [reportingStatus, setReportingStatus] = useState<FeedItem | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+  const statusMenuPortalRef = useRef<HTMLDivElement>(null);
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const isGuest = !user;
@@ -150,6 +185,71 @@ export default function StatusPage() {
       document.body.classList.remove("modal-open");
     }
   }, [isLoginModalOpen, isRegisterModalOpen]);
+
+  useLayoutEffect(() => {
+    if (openStatusMenuId && statusMenuRef.current) {
+      const rect = statusMenuRef.current.getBoundingClientRect();
+      setStatusMenuPosition({ top: rect.bottom + 4, left: rect.left });
+    } else {
+      setStatusMenuPosition(null);
+    }
+  }, [openStatusMenuId]);
+
+  useEffect(() => {
+    if (!openStatusMenuId) return;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const inTrigger = statusMenuRef.current?.contains(target) ?? false;
+      const inPortal = statusMenuPortalRef.current?.contains(target) ?? false;
+      if (!inTrigger && !inPortal) setOpenStatusMenuId(null);
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [openStatusMenuId]);
+
+  const handleOpenStatusReport = (item: FeedItem) => {
+    setOpenStatusMenuId(null);
+    if (!user) {
+      handleAuthAction("login");
+      return;
+    }
+    setReportingStatus(item);
+    setReportReason("");
+    setReportError("");
+  };
+
+  const handleSubmitStatusReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportingStatus || reportSubmitting) return;
+
+    setReportSubmitting(true);
+    setReportError("");
+    try {
+      const res = await fetch("/api/report/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contentType: "status",
+          contentId: reportingStatus.id,
+          description: reportReason.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setReportError(data.error || "שגיאה בשליחת הדיווח");
+        return;
+      }
+
+      setReportingStatus(null);
+      setReportReason("");
+      setReportError("");
+    } catch {
+      setReportError("שגיאה בחיבור לשרת");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   const menuItems = [
     { label: "ראשי", icon: Home, href: "/" },
@@ -212,9 +312,9 @@ export default function StatusPage() {
   }, [user]);
 
   // Only refetch when user id actually changes (login/logout), not on tab visibility change
-  const lastFetchedUserIdRef = React.useRef<string | null | "guest" | undefined>(
-    undefined,
-  );
+  const lastFetchedUserIdRef = React.useRef<
+    string | null | "guest" | undefined
+  >(undefined);
   useEffect(() => {
     if (authLoading && !user) return;
     const currentState = user?.id ?? "guest";
@@ -508,7 +608,159 @@ export default function StatusPage() {
     }
   };
 
-  const topStatusId = feed.length > 0 ? feed[0].id : null;
+  const activeFilterIndex = STATUS_FILTERS.findIndex(
+    ({ id }) => id === activeFilter,
+  );
+  const filteredFeed =
+    activeFilter === "topRated"
+      ? feed.filter((item) => item.starsCount > 0)
+      : activeFilter === "likedProfiles"
+        ? feed.filter((item) => item.authorLikedByMe)
+        : feed;
+  const topStatusId = filteredFeed.length > 0 ? filteredFeed[0].id : null;
+  const remainingStatuses = filteredFeed.filter((s) => s.id !== topStatusId);
+  const topSectionTitle =
+    activeFilter === "likedProfiles"
+      ? "הסטטוס הבולט מפרופילים שאהבת"
+      : "סטטוס מוביל";
+  const emptyFilterMessage =
+    activeFilter === "topRated"
+      ? "אין עדיין סטטוסים מובילים."
+      : activeFilter === "likedProfiles"
+        ? user
+          ? "אין כרגע סטטוסים מפרופילים שאהבת."
+          : "יש להתחבר כדי לראות סטטוסים מפרופילים שאהבת."
+        : "אין עדיין סטטוסים. היה הראשון לפרסם.";
+  const renderStatusCard = (
+    item: FeedItem,
+    { highlighted = false }: { highlighted?: boolean } = {},
+  ) => (
+    <div
+      key={item.id}
+      className={`relative rounded-2xl border p-4 transition-all ${
+        highlighted
+          ? "bg-amber-50/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50 shadow-lg ring-2 ring-amber-200/50 dark:ring-amber-700/30"
+          : "bg-white/80 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50"
+      }`}
+    >
+      <div
+        className="absolute left-2 top-2"
+        ref={openStatusMenuId === item.id ? statusMenuRef : undefined}
+      >
+        <button
+          type="button"
+          onClick={() =>
+            setOpenStatusMenuId((id) => (id === item.id ? null : item.id))
+          }
+          className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          aria-label="תפריט סטטוס"
+        >
+          <MoreVertical size={18} />
+        </button>
+      </div>
+      <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap mb-2">
+        {item.content}
+      </p>
+      <div className="relative flex items-center justify-between flex-wrap gap-1.5 pt-2 mt-0">
+        <div
+          className={`absolute top-0 right-0 left-[90px] h-px ${
+            highlighted
+              ? "bg-amber-200 dark:bg-amber-700/60"
+              : "bg-gray-100 dark:bg-gray-700"
+          }`}
+          aria-hidden
+        />
+        <div
+          className={`absolute left-0 -top-[10px] px-2 text-xs flex items-center gap-1 ${
+            highlighted
+              ? "bg-amber-50/90 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+              : "bg-white/80 dark:bg-gray-800/80 text-gray-400 dark:text-gray-500"
+          }`}
+        >
+          <Clock size={12} />
+          <span>{timeAgo(item.createdAt)}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {item.author.username ? (
+            <Link
+              href={
+                profile?.username &&
+                item.author.username &&
+                profile.username === item.author.username
+                  ? "/profile"
+                  : `/profile/${encodeURIComponent(item.author.username)}`
+              }
+              className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+            >
+              {item.author.avatar_url ? (
+                <Image
+                  src={item.author.avatar_url}
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                />
+              ) : (
+                <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                  <User size={14} className="text-white" />
+                </div>
+              )}
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {item.author.fullName || item.author.username}
+                </span>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {item.author.reputation ?? 0} מוניטין
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <>
+              {item.author.avatar_url ? (
+                <Image
+                  src={item.author.avatar_url}
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                />
+              ) : (
+                <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                  <User size={14} className="text-white" />
+                </div>
+              )}
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {item.author.fullName || item.author.username}
+                </span>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {item.author.reputation ?? 0} מוניטין
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => toggleStar(item.id)}
+            disabled={starringId === item.id}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors translate-y-[5px] ${
+              item.starredByMe
+                ? "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30"
+            }`}
+          >
+            <Star
+              size={16}
+              className={item.starredByMe ? "fill-current" : ""}
+            />
+            {item.starsCount}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   if (authLoading) {
     return (
@@ -592,128 +844,175 @@ export default function StatusPage() {
 
       <main className="max-w-6xl mx-auto px-5 py-8">
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-            <Star size={22} className="text-amber-500 dark:text-amber-400" />
-            פיד סטטוסים
-          </h2>
+          <div className="relative grid grid-cols-3 rounded-2xl border border-gray-200/70 dark:border-gray-700/70 bg-white/70 dark:bg-gray-800/60 p-1 mb-5 shadow-sm overflow-hidden">
+            <div
+              className="absolute top-1 bottom-1 right-1 rounded-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] bg-black/10 dark:bg-white/10"
+              style={{
+                width: "calc((100% - 0.5rem) / 3)",
+                transform: `translateX(-${activeFilterIndex * 100}%)`,
+              }}
+              aria-hidden
+            />
+            {STATUS_FILTERS.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => setActiveFilter(filter.id)}
+                className={`relative z-10 px-3 py-2.5 text-[13px] sm:text-sm font-medium rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                  activeFilter === filter.id
+                    ? "text-gray-900 dark:text-white"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
           {feedLoading ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 dark:border-indigo-400" />
             </div>
-          ) : feed.length === 0 ? (
+          ) : filteredFeed.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-800/60 rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
-              אין עדיין סטטוסים. היה הראשון לפרסם.
+              {emptyFilterMessage}
             </div>
           ) : (
-            <div className="space-y-4">
-              {feed.map((item) => (
-                <div
-                  key={item.id}
-                  className={`rounded-2xl border p-5 transition-all ${
-                    item.id === topStatusId
-                      ? "bg-amber-50/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50 shadow-lg ring-2 ring-amber-200/50 dark:ring-amber-700/30"
-                      : "bg-white/80 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50"
-                  }`}
-                >
-                  {item.id === topStatusId && (
-                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-semibold mb-3">
-                      <Star size={18} fill="currentColor" /> סטטוס מוביל
+            <div className="space-y-6">
+              {topStatusId &&
+                (() => {
+                  const topItem = filteredFeed.find(
+                    (s) => s.id === topStatusId,
+                  );
+                  if (!topItem) return null;
+
+                  return (
+                    <div>
+                      <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-3 flex items-center gap-2">
+                        <Star size={16} fill="currentColor" />
+                        {topSectionTitle}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {renderStatusCard(topItem, { highlighted: true })}
+                      </div>
                     </div>
-                  )}
-                  <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap mb-4">
-                    {item.content}
-                  </p>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      {item.author.username ? (
-                        <Link
-                          href={
-                            profile?.username &&
-                            item.author.username &&
-                            profile.username === item.author.username
-                              ? "/profile"
-                              : `/profile/${encodeURIComponent(item.author.username)}`
-                          }
-                          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
-                        >
-                          {item.author.avatar_url ? (
-                            <Image
-                              src={item.author.avatar_url}
-                              alt=""
-                              width={28}
-                              height={28}
-                              className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                            />
-                          ) : (
-                            <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                              <User size={14} className="text-white" />
-                            </div>
-                          )}
-                          <span className="font-medium text-gray-700 dark:text-gray-200">
-                            {item.author.fullName || item.author.username}
-                          </span>
-                        </Link>
-                      ) : (
-                        <>
-                          {item.author.avatar_url ? (
-                            <Image
-                              src={item.author.avatar_url}
-                              alt=""
-                              width={28}
-                              height={28}
-                              className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                            />
-                          ) : (
-                            <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                              <User size={14} className="text-white" />
-                            </div>
-                          )}
-                          <span className="font-medium text-gray-700 dark:text-gray-200">
-                            {item.author.fullName || item.author.username}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {timeAgo(item.createdAt)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleStar(item.id)}
-                        disabled={starringId === item.id}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          item.starredByMe
-                            ? "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
-                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30"
-                        }`}
-                      >
-                        <Star
-                          size={16}
-                          className={item.starredByMe ? "fill-current" : ""}
-                        />
-                        {item.starsCount}
-                      </button>
-                      {profile?.is_moderator && (
-                        <button
-                          type="button"
-                          onClick={() => openAdminStars(item.id)}
-                          disabled={adminStarsLoading}
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50"
-                          title="צפה במי סימן בכוכב"
-                        >
-                          <Shield size={14} />
-                          מי סימן?
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  );
+                })()}
+
+              {remainingStatuses.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {remainingStatuses.map((item) => renderStatusCard(item))}
                 </div>
-              ))}
+              )}
             </div>
           )}
+
+          {/* Status menu portal */}
+          {openStatusMenuId &&
+            statusMenuPosition &&
+            (() => {
+              const selectedItem = feed.find((s) => s.id === openStatusMenuId);
+              if (!selectedItem) return null;
+              return createPortal(
+                <div
+                  ref={statusMenuPortalRef}
+                  className="fixed min-w-[140px] py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50"
+                  style={{
+                    top: statusMenuPosition.top,
+                    left: statusMenuPosition.left,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleOpenStatusReport(selectedItem)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <Flag size={14} />
+                    דווח
+                  </button>
+                  {profile?.is_moderator && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenStatusMenuId(null);
+                        openAdminStars(selectedItem.id);
+                      }}
+                      disabled={adminStarsLoading}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                    >
+                      <Shield size={14} />
+                      מי סימן
+                    </button>
+                  )}
+                </div>,
+                document.body,
+              );
+            })()}
         </div>
       </main>
+
+      {/* Report status modal */}
+      {reportingStatus && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            onClick={() => {
+              if (!reportSubmitting) {
+                setReportingStatus(null);
+                setReportReason("");
+                setReportError("");
+              }
+            }}
+          />
+          <form
+            onSubmit={handleSubmitStatusReport}
+            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700"
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+              דווח על סטטוס
+            </h3>
+            {reportError && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                {reportError}
+              </p>
+            )}
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">
+              סיבה (לא חובה)
+            </label>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+              rows={4}
+              maxLength={2000}
+              placeholder="תאר בקצרה את הבעיה..."
+            />
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setReportingStatus(null);
+                  setReportReason("");
+                  setReportError("");
+                }}
+                disabled={reportSubmitting}
+                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                ביטול
+              </button>
+              <button
+                type="submit"
+                disabled={reportSubmitting}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {reportSubmitting ? "..." : "שלח דיווח"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Fixed "סטטוס חדש" button - mobile only (matches כתוב תשובה in question details) */}
       {!isComposerOpen && user && (
@@ -735,7 +1034,9 @@ export default function StatusPage() {
           ) : (
             <>
               <Lock size={18} />
-              {nextPostAt ? `נעול (${cooldownRemaining(nextPostAt)} דק')` : "נעול"}
+              {nextPostAt
+                ? `נעול (${cooldownRemaining(nextPostAt)} דק')`
+                : "נעול"}
             </>
           )}
         </button>

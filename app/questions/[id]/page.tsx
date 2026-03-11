@@ -1142,7 +1142,7 @@ export default function QuestionDetailPage() {
       />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-5 py-8 relative">
+      <main className="max-w-4xl mx-auto px-5 pt-4 pb-8 relative">
         {/* Back Button */}
         <Link
           href="/questions"
@@ -1174,15 +1174,15 @@ export default function QuestionDetailPage() {
             <div className="bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
               <div className="flex">
                 {/* Vote sidebar */}
-                <div className="flex flex-col items-center gap-1 px-4 py-4 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
+                <div className="flex flex-col items-center justify-center gap-0.5 pl-1.5 pr-2 py-1.5 sm:pl-2 sm:pr-3 sm:py-2 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
                   <button
                     type="button"
                     onClick={() => void handleQuestionVote(1)}
                     disabled={!!updatingVoteIds[`question:${question.id}`]}
-                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
                   >
                     <ArrowUp
-                      size={22}
+                      size={18}
                       className={
                         question.userVote === 1
                           ? "text-indigo-600 dark:text-indigo-400"
@@ -1190,17 +1190,17 @@ export default function QuestionDetailPage() {
                       }
                     />
                   </button>
-                  <span className="font-bold text-xl text-gray-800 dark:text-gray-100">
+                  <span className="font-bold text-base text-gray-800 dark:text-gray-100">
                     {question.votes}
                   </span>
                   <button
                     type="button"
                     onClick={() => void handleQuestionVote(-1)}
                     disabled={!!updatingVoteIds[`question:${question.id}`]}
-                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
                   >
                     <ArrowDown
-                      size={22}
+                      size={18}
                       className={
                         question.userVote === -1
                           ? "text-indigo-600 dark:text-indigo-400"
@@ -1210,11 +1210,11 @@ export default function QuestionDetailPage() {
                   </button>
                   {question.isAnswered && (
                     <div
-                      className="mt-3 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full"
+                      className="mt-1.5 p-1 bg-green-100 dark:bg-green-900/50 rounded-full"
                       title="נענתה"
                     >
                       <Star
-                        size={18}
+                        size={14}
                         className="text-green-600 dark:text-green-400"
                         fill="currentColor"
                       />
@@ -1223,9 +1223,9 @@ export default function QuestionDetailPage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 pt-3 px-6 pb-4">
+                <div className="flex-1 pt-1.5 pl-6 pr-3 pb-4">
                   {/* Status badges */}
-                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
                     {question.isAnswered && (
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
                         נענתה
@@ -1371,7 +1371,7 @@ export default function QuestionDetailPage() {
                       </div>
                     </form>
                   ) : (
-                    <div className="flex items-center gap-3 mb-1.5">
+                    <div className="flex items-center gap-3 mb-1">
                       <h1 className="flex-1 min-w-0 text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug">
                         {question.title}
                       </h1>
@@ -1399,7 +1399,7 @@ export default function QuestionDetailPage() {
 
                   {/* Content body (only when not editing) */}
                   {!isEditMode && (
-                    <div className="prose prose-gray max-w-none mb-3 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    <div className="prose prose-gray max-w-none mb-2 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                       {question.content}
                     </div>
                   )}
@@ -1462,19 +1462,21 @@ export default function QuestionDetailPage() {
                     </div>
 
                     {/* Stats + Show Tags */}
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div className="flex items-center gap-1" title="תגובות">
-                        <MessageCircle size={15} />
-                        <span>{question.replies}</span>
-                      </div>
-                      <div className="flex items-center gap-1" title="צפיות">
-                        <Eye size={15} />
-                        <span>{question.views}</span>
+                    <div className="flex flex-col items-end gap-0 text-sm text-gray-500 dark:text-gray-400 ml-2.5 translate-y-[3px]">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1" title="תגובות">
+                          <MessageCircle size={15} />
+                          <span>{question.replies}</span>
+                        </div>
+                        <div className="flex items-center gap-1" title="צפיות">
+                          <Eye size={15} />
+                          <span>{question.views}</span>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowTagsExpanded((v) => !v)}
-                        className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 -mt-0.5 translate-x-[-10px] md:translate-x-[-10px] text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         aria-expanded={showTagsExpanded}
                         title={showTagsExpanded ? "הסתר תגיות" : "הצג תגיות"}
                       >
@@ -1486,9 +1488,9 @@ export default function QuestionDetailPage() {
                       </button>
                     </div>
                   </div>
-                  {/* Tags (desktop when expanded) */}
+                  {/* Tags (shown when הצג תגיות is expanded) */}
                   {showTagsExpanded && (
-                    <div className="hidden md:flex gap-2 mt-3 flex-wrap">
+                    <div className="flex gap-2 mt-3 flex-wrap">
                       {question.tags.length > 0 ? (
                         question.tags.map((tag) => (
                           <Link
@@ -1505,32 +1507,6 @@ export default function QuestionDetailPage() {
                         </span>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile tags card */}
-            <div className="md:hidden bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-              <div className="px-5 py-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    תגיות
-                  </div>
-                  {question.tags.length > 0 ? (
-                    question.tags.map((tag) => (
-                      <Link
-                        key={tag}
-                        href={`/questions?tag=${encodeURIComponent(tag)}`}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
-                      >
-                        {tag}
-                      </Link>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      אין תגיות
-                    </span>
                   )}
                 </div>
               </div>

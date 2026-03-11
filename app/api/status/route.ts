@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 const COOLDOWN_MINUTES = 5;
 
@@ -7,11 +7,14 @@ const COOLDOWN_MINUTES = 5;
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { data: rows, error } = await supabase
-      .from('user_statuses')
-      .select(`
+      .from("user_statuses")
+      .select(
+        `
         id,
         content,
         is_active,
@@ -23,51 +26,90 @@ export async function GET(request: NextRequest) {
           id,
           username,
           avatar_url,
-          full_name
+          full_name,
+          reputation
         )
-      `)
-      .eq('is_active', true)
-      .order('stars_count', { ascending: false })
-      .order('created_at', { ascending: false });
+      `,
+      )
+      .eq("is_active", true)
+      .order("stars_count", { ascending: false })
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error('Error fetching status feed:', error);
-      return NextResponse.json({ error: 'שגיאה בטעינת הסטטוסים' }, { status: 500 });
+      console.error("Error fetching status feed:", error);
+      return NextResponse.json(
+        { error: "שגיאה בטעינת הסטטוסים" },
+        { status: 500 },
+      );
     }
 
     const statusIds = (rows || []).map((r: { id: string }) => r.id);
+    const authorIds = (rows || [])
+      .map((r: Record<string, unknown>) => {
+        const profile = (r.profiles as Record<string, unknown> | null) ?? null;
+        return (profile?.id ?? r.user_id) as string | undefined;
+      })
+      .filter((id): id is string => Boolean(id));
     let starredSet: Set<string> = new Set();
+    let likedAuthorSet: Set<string> = new Set();
     if (user && statusIds.length > 0) {
       const { data: stars } = await supabase
-        .from('status_stars')
-        .select('status_id')
-        .eq('user_id', user.id)
-        .in('status_id', statusIds);
-      starredSet = new Set((stars || []).map((s: { status_id: string }) => s.status_id));
+        .from("status_stars")
+        .select("status_id")
+        .eq("user_id", user.id)
+        .in("status_id", statusIds);
+      starredSet = new Set(
+        (stars || []).map((s: { status_id: string }) => s.status_id),
+      );
+    }
+    if (user && authorIds.length > 0) {
+      const { data: likedAuthors, error: likedAuthorsError } = await supabase
+        .from("profile_likes")
+        .select("profile_id")
+        .eq("user_id", user.id)
+        .in("profile_id", authorIds);
+
+      if (likedAuthorsError) {
+        console.error("Error fetching liked profile statuses:", likedAuthorsError);
+      } else {
+        likedAuthorSet = new Set(
+          (likedAuthors || []).map((row: { profile_id: string }) => row.profile_id),
+        );
+      }
     }
 
-    const feed = (rows || []).map((r: Record<string, unknown>) => ({
-      id: r.id,
-      content: r.content,
-      starsCount: r.stars_count || 0,
-      createdAt: r.created_at,
-      author: {
-        id: (r.profiles as Record<string, unknown>)?.id ?? r.user_id,
-        username: (r.profiles as Record<string, unknown>)?.username || 'אנונימי',
-        fullName: (r.profiles as Record<string, unknown>)?.full_name || null,
-        avatar_url: (r.profiles as Record<string, unknown>)?.avatar_url ?? null,
-      },
-      starredByMe: starredSet.has(r.id as string),
-    }));
+    const feed = (rows || []).map((r: Record<string, unknown>) => {
+      const profile = (r.profiles as Record<string, unknown> | null) ?? null;
+      const authorId = (profile?.id ?? r.user_id) as string;
 
-    return NextResponse.json({ feed }, {
-      headers: {
-        'Cache-Control': 'private, no-store, max-age=0',
-      },
+      return {
+        id: r.id,
+        content: r.content,
+        starsCount: r.stars_count || 0,
+        createdAt: r.created_at,
+        author: {
+          id: authorId,
+          username: profile?.username || "אנונימי",
+          fullName: profile?.full_name || null,
+          avatar_url: profile?.avatar_url ?? null,
+          reputation: profile?.reputation ?? 0,
+        },
+        starredByMe: starredSet.has(r.id as string),
+        authorLikedByMe: likedAuthorSet.has(authorId),
+      };
     });
+
+    return NextResponse.json(
+      { feed },
+      {
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0",
+        },
+      },
+    );
   } catch (err) {
-    console.error('Status GET error:', err);
-    return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
+    console.error("Status GET error:", err);
+    return NextResponse.json({ error: "שגיאה בשרת" }, { status: 500 });
   }
 }
 
@@ -75,24 +117,34 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'יש להתחבר כדי לפרסם סטטוס' }, { status: 401 });
+      return NextResponse.json(
+        { error: "יש להתחבר כדי לפרסם סטטוס" },
+        { status: 401 },
+      );
     }
 
     const body = await request.json();
-    const content = typeof body?.content === 'string' ? body.content.trim() : '';
+    const content =
+      typeof body?.content === "string" ? body.content.trim() : "";
     if (!content || content.length < 1) {
-      return NextResponse.json({ error: 'יש להזין תוכן לסטטוס' }, { status: 400 });
+      return NextResponse.json(
+        { error: "יש להזין תוכן לסטטוס" },
+        { status: 400 },
+      );
     }
 
     const COOLDOWN_MS = COOLDOWN_MINUTES * 60 * 1000;
 
     const { data: latest } = await supabase
-      .from('user_statuses')
-      .select('id, created_at, is_active')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+      .from("user_statuses")
+      .select("id, created_at, is_active")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
       .limit(1)
       .single();
 
@@ -100,68 +152,79 @@ export async function POST(request: NextRequest) {
       const lastAt = new Date(latest.created_at).getTime();
       if (Date.now() - lastAt < COOLDOWN_MS) {
         const nextAt = new Date(lastAt + COOLDOWN_MS);
-        return NextResponse.json({
-          error: `ניתן לפרסם סטטוס חדש בעוד ${COOLDOWN_MINUTES} דקות`,
-          nextPostAt: nextAt.toISOString(),
-        }, { status: 429 });
+        return NextResponse.json(
+          {
+            error: `ניתן לפרסם סטטוס חדש בעוד ${COOLDOWN_MINUTES} דקות`,
+            nextPostAt: nextAt.toISOString(),
+          },
+          { status: 429 },
+        );
       }
     }
 
     const { data: currentActive } = await supabase
-      .from('user_statuses')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
+      .from("user_statuses")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (currentActive) {
       await supabase
-        .from('user_statuses')
+        .from("user_statuses")
         .update({ is_active: false })
-        .eq('id', currentActive.id);
+        .eq("id", currentActive.id);
     }
 
     const { data: history } = await supabase
-      .from('user_statuses')
-      .select('id, created_at, is_legendary')
-      .eq('user_id', user.id)
-      .eq('is_active', false)
-      .order('created_at', { ascending: true });
+      .from("user_statuses")
+      .select("id, created_at, is_legendary")
+      .eq("user_id", user.id)
+      .eq("is_active", false)
+      .order("created_at", { ascending: true });
 
     const toKeep = 5;
-    const nonLegendary = (history || []).filter((r: { is_legendary?: boolean }) => !r.is_legendary);
+    const nonLegendary = (history || []).filter(
+      (r: { is_legendary?: boolean }) => !r.is_legendary,
+    );
     if (nonLegendary.length > toKeep) {
       const toDelete = nonLegendary.slice(0, nonLegendary.length - toKeep);
       for (const row of toDelete) {
-        await supabase.from('user_statuses').delete().eq('id', row.id);
+        await supabase.from("user_statuses").delete().eq("id", row.id);
       }
     }
 
     const { data: newStatus, error: insertErr } = await supabase
-      .from('user_statuses')
+      .from("user_statuses")
       .insert({
         user_id: user.id,
         content,
         is_active: true,
         shared_to_profile: false,
       })
-      .select('id, created_at')
+      .select("id, created_at")
       .single();
 
     if (insertErr) {
-      console.error('Error creating status:', insertErr);
-      return NextResponse.json({ error: 'שגיאה ביצירת הסטטוס' }, { status: 500 });
+      console.error("Error creating status:", insertErr);
+      return NextResponse.json(
+        { error: "שגיאה ביצירת הסטטוס" },
+        { status: 500 },
+      );
     }
 
     const nextPostAt = new Date(Date.now() + COOLDOWN_MS);
-    return NextResponse.json({
-      success: true,
-      statusId: newStatus.id,
-      createdAt: newStatus.created_at,
-      nextPostAt: nextPostAt.toISOString(),
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        statusId: newStatus.id,
+        createdAt: newStatus.created_at,
+        nextPostAt: nextPostAt.toISOString(),
+      },
+      { status: 201 },
+    );
   } catch (err) {
-    console.error('Status POST error:', err);
-    return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
+    console.error("Status POST error:", err);
+    return NextResponse.json({ error: "שגיאה בשרת" }, { status: 500 });
   }
 }

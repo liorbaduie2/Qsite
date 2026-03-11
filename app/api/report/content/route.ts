@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-const ALLOWED_CONTENT_TYPES = new Set(['question', 'answer']);
+const ALLOWED_CONTENT_TYPES = new Set(['question', 'answer', 'status']);
 const ALLOWED_REPORT_TYPES = new Set([
   'rule_violation',
   'inappropriate',
@@ -69,6 +69,27 @@ export async function POST(request: NextRequest) {
       if (!answer) {
         return NextResponse.json(
           { error: 'התשובה לא נמצאה' },
+          { status: 404 }
+        );
+      }
+    } else if (contentType === 'status') {
+      const { data: statusRow, error: statusError } = await supabase
+        .from('user_statuses')
+        .select('id')
+        .eq('id', contentId)
+        .maybeSingle();
+
+      if (statusError) {
+        console.error('Content report status lookup error:', statusError);
+        return NextResponse.json(
+          { error: 'שגיאה באיתור הסטטוס' },
+          { status: 500 }
+        );
+      }
+
+      if (!statusRow) {
+        return NextResponse.json(
+          { error: 'הסטטוס לא נמצא' },
           { status: 404 }
         );
       }
