@@ -1307,12 +1307,16 @@ export default function QuestionDetailPage() {
                             <input
                               type="text"
                               value={editCurrentTag}
-                              onChange={(e) => setEditCurrentTag(e.target.value)}
+                              onChange={(e) =>
+                                setEditCurrentTag(e.target.value)
+                              }
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   e.preventDefault();
                                   const exact = editTagMatches.find(
-                                    (t) => normalizeTagName(t) === normalizeTagName(editCurrentTag),
+                                    (t) =>
+                                      normalizeTagName(t) ===
+                                      normalizeTagName(editCurrentTag),
                                   );
                                   if (exact) handleEditTagAdd(exact);
                                 }
@@ -1406,7 +1410,7 @@ export default function QuestionDetailPage() {
                       className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
                       aria-hidden
                     />
-                    <div className="absolute left-2 -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                    <div className="absolute -left-[2px] -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
                       <Clock size={12} />
                       <span>{timeAgo(question.createdAt)}</span>
                     </div>
@@ -1470,7 +1474,7 @@ export default function QuestionDetailPage() {
                       <button
                         type="button"
                         onClick={() => setShowTagsExpanded((v) => !v)}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         aria-expanded={showTagsExpanded}
                         title={showTagsExpanded ? "הסתר תגיות" : "הצג תגיות"}
                       >
@@ -1482,9 +1486,9 @@ export default function QuestionDetailPage() {
                       </button>
                     </div>
                   </div>
-                  {/* Tags (when expanded) */}
+                  {/* Tags (desktop when expanded) */}
                   {showTagsExpanded && (
-                    <div className="flex gap-2 mt-3 flex-wrap">
+                    <div className="hidden md:flex gap-2 mt-3 flex-wrap">
                       {question.tags.length > 0 ? (
                         question.tags.map((tag) => (
                           <Link
@@ -1501,6 +1505,32 @@ export default function QuestionDetailPage() {
                         </span>
                       )}
                     </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile tags card */}
+            <div className="md:hidden bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+              <div className="px-5 py-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    תגיות
+                  </div>
+                  {question.tags.length > 0 ? (
+                    question.tags.map((tag) => (
+                      <Link
+                        key={tag}
+                        href={`/questions?tag=${encodeURIComponent(tag)}`}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
+                      >
+                        {tag}
+                      </Link>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      אין תגיות
+                    </span>
                   )}
                 </div>
               </div>
@@ -1737,7 +1767,7 @@ export default function QuestionDetailPage() {
                                 </button>
                               </div>
                               <div
-                                className={`text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap ${compact ? "mb-1.5 sm:mb-2 text-sm" : "mb-2"}`}
+                                className={`text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap ${compact ? "mb-1.5 sm:mb-2" : "mb-2"}`}
                               >
                                 {replyTargetUsername && (
                                   <span
@@ -1834,7 +1864,7 @@ export default function QuestionDetailPage() {
                                     setReplyingToId(node.id);
                                     setReplyError(null);
                                   }}
-                                  className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3"
+                                  className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-20px]"
                                 >
                                   <MessageSquare size={compact ? 12 : 14} />
                                   הגב

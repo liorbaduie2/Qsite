@@ -269,7 +269,9 @@ const QuestionsPage = () => {
 
     if (voteRequestsRef.current.has(questionId)) return;
 
-    const currentQuestion = questions.find((question) => question.id === questionId);
+    const currentQuestion = questions.find(
+      (question) => question.id === questionId,
+    );
     if (!currentQuestion) return;
 
     const previousVote = userVotes[questionId] ?? 0;
@@ -593,48 +595,6 @@ const QuestionsPage = () => {
                             נענתה
                           </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedTagsQuestionId((id) =>
-                              id === question.id ? null : question.id,
-                            );
-                          }}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                          aria-expanded={expandedTagsQuestionId === question.id}
-                          title={
-                            expandedTagsQuestionId === question.id
-                              ? "הסתר תגיות"
-                              : "הצג תגיות"
-                          }
-                        >
-                          <ChevronDown
-                            size={12}
-                            className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
-                          />
-                          הצג תגיות
-                        </button>
-                        {expandedTagsQuestionId === question.id && (
-                          <div className="flex gap-1.5 flex-wrap w-full">
-                            {question.tags.length > 0 ? (
-                              question.tags.map((tag) => (
-                                <Link
-                                  key={tag}
-                                  href={`/questions?tag=${encodeURIComponent(tag)}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
-                                >
-                                  {tag}
-                                </Link>
-                              ))
-                            ) : (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                אין תגיות
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                       <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 line-clamp-2 transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
                         {question.title}
@@ -706,7 +666,50 @@ const QuestionsPage = () => {
                         <Eye size={15} />
                         <span>{question.views}</span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedTagsQuestionId((id) =>
+                            id === question.id ? null : question.id,
+                          );
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ms-auto -translate-x-[-12px]"
+                        aria-expanded={expandedTagsQuestionId === question.id}
+                        title={
+                          expandedTagsQuestionId === question.id
+                            ? "הסתר תגיות"
+                            : "הצג תגיות"
+                        }
+                      >
+                        <ChevronDown
+                          size={12}
+                          className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
+                        />
+                        הצג תגיות
+                      </button>
                     </div>
+                    {/* Tags (when expanded) - below meta bar like Question Details */}
+                    {expandedTagsQuestionId === question.id && (
+                      <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[4px]">
+                        {question.tags.length > 0 ? (
+                          question.tags.map((tag) => (
+                            <Link
+                              key={tag}
+                              href={`/questions?tag=${encodeURIComponent(tag)}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
+                            >
+                              {tag}
+                            </Link>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            אין תגיות
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
