@@ -224,6 +224,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           const errorResult: LoginStatusResult = {
             can_login: false,
             status: "error",
+            account_state: "unknown",
             message_hebrew: "אין מזהה משתמש",
           };
           setLoginStatus(errorResult);
@@ -384,7 +385,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           .select(
             `
           id, username, full_name, avatar_url, bio, location, website,
-          reputation, phone, phone_verified_at, approval_status,
+          reputation, phone, phone_verified_at, approval_status, account_state,
           approved_at, approved_by, rejection_reason, is_moderator,
           is_verified, created_at, updated_at, email,
           questions_count, answers_count, best_answers_count, total_views,
@@ -414,13 +415,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           phone_verified_at: data.phone_verified_at
             ? String(data.phone_verified_at)
             : undefined,
-          approval_status: data.approval_status as
-            | "pending"
-            | "approved"
-            | "rejected"
-            | "suspended"
-            | "banned"
-            | "reputation_blocked",
+          approval_status:
+            data.approval_status === "approved" ||
+            data.approval_status === "rejected" ||
+            data.approval_status === "pending"
+              ? data.approval_status
+              : "approved",
+          account_state:
+            data.account_state === "active" ||
+            data.account_state === "suspended" ||
+            data.account_state === "blocked"
+              ? data.account_state
+              : "active",
           approved_at: data.approved_at ? String(data.approved_at) : undefined,
           approved_by: data.approved_by ? String(data.approved_by) : undefined,
           rejection_reason: data.rejection_reason

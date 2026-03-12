@@ -76,14 +76,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'שגיאה בטעינת הערעורים' }, { status: 500 });
     }
 
+    type AppealRow = {
+      id: string;
+      user_id: string;
+      message: string;
+      created_at: string;
+      status: string;
+    };
+    type ProfileLite = {
+      id: string;
+      username: string | null;
+      full_name: string | null;
+    };
+
     const userIds = [...new Set((rows || []).map((r: { user_id: string }) => r.user_id))];
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, username, full_name')
       .in('id', userIds);
-    const profileMap = new Map((profiles || []).map((p: { id: string }) => [p.id, p]));
+    const profileMap = new Map<string, ProfileLite>(
+      ((profiles || []) as ProfileLite[]).map((p) => [p.id, p])
+    );
 
-    const appeals = (rows || []).map((r: { id: string; user_id: string; message: string; created_at: string; status: string }) => {
+    const appeals = ((rows || []) as AppealRow[]).map((r) => {
       const p = profileMap.get(r.user_id);
       return {
         id: r.id,

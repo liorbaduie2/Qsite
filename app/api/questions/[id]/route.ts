@@ -53,7 +53,17 @@ export async function GET(
       return NextResponse.json({ error: 'השאלה לא נמצאה' }, { status: 404 });
     }
 
-    const authorProfile = question.profiles as Record<string, unknown> | null;
+    type QuestionAuthorProfile = {
+      id: string;
+      username: string | null;
+      avatar_url: string | null;
+      reputation: number | null;
+      last_seen_at: string | null;
+      account_state: string | null;
+    };
+
+    const rawProfile = question.profiles as QuestionAuthorProfile | QuestionAuthorProfile[] | null;
+    const authorProfile = Array.isArray(rawProfile) ? (rawProfile[0] ?? null) : rawProfile;
     if (authorProfile?.account_state === 'blocked') {
       return NextResponse.json({ error: 'השאלה לא נמצאה' }, { status: 404 });
     }
@@ -93,16 +103,11 @@ export async function GET(
       updatedAt: question.updated_at,
       lastActivityAt: question.last_activity_at,
       author: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        id: (question.profiles as any)?.id || question.author_id,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        username: (question.profiles as any)?.username || 'אנונימי',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        avatar_url: (question.profiles as any)?.avatar_url || null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        reputation: (question.profiles as any)?.reputation || 0,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        lastSeenAt: (question.profiles as any)?.last_seen_at ?? null,
+        id: authorProfile?.id || question.author_id,
+        username: authorProfile?.username || 'אנונימי',
+        avatar_url: authorProfile?.avatar_url || null,
+        reputation: authorProfile?.reputation || 0,
+        lastSeenAt: authorProfile?.last_seen_at ?? null,
       },
       tags: (question.question_tags || [])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
