@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { createNotification } from '@/lib/notifications';
+import { requireActiveAccount } from '@/lib/account-state';
 
 export async function POST(
   request: NextRequest,
@@ -22,6 +23,9 @@ export async function POST(
         { status: 401 }
       );
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json().catch(() => null);
     const voteType = body?.voteType;

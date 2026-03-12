@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /**
  * DELETE /api/profile/[username]/comments/[commentId]
@@ -20,6 +21,9 @@ export async function DELETE(
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const { data: profileRow, error: profileError } = await supabase
       .from('profiles')

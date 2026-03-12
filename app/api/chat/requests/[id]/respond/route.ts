@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /**
  * POST /api/chat/requests/[id]/respond
@@ -21,6 +22,9 @@ export async function POST(
     if (!user?.id) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json().catch(() => ({}));
     const action = body.action === 'accept' || body.action === 'decline' || body.action === 'block' ? body.action : null;

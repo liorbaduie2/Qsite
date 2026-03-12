@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type {
   User,
   AuthError,
@@ -34,13 +34,8 @@ interface Profile {
   email?: string;
   phone?: string;
   phone_verified_at?: string;
-  approval_status:
-    | "pending"
-    | "approved"
-    | "rejected"
-    | "suspended"
-    | "banned"
-    | "reputation_blocked";
+  approval_status: "pending" | "approved" | "rejected";
+  account_state: "active" | "suspended" | "blocked";
   approved_at?: string;
   approved_by?: string;
   rejection_reason?: string;
@@ -78,14 +73,8 @@ interface UserPermissions {
 
 interface LoginStatusResult {
   can_login: boolean;
-  status:
-    | "pending"
-    | "approved"
-    | "rejected"
-    | "suspended"
-    | "banned"
-    | "reputation_blocked"
-    | "error";
+  status: "pending" | "approved" | "rejected" | "error";
+  account_state: "active" | "suspended" | "blocked" | "unknown";
   message_hebrew: string;
   user_id?: string;
 }
@@ -155,6 +144,8 @@ interface AuthContextType {
   profile: Profile | null;
   userPermissions: UserPermissions | null;
   loginStatus: LoginStatusResult | null;
+  accountState: "active" | "suspended" | "blocked";
+  isReadOnly: boolean;
   loading: boolean;
   error: string | null;
   myProfilePreload: MyProfilePreloadState | null;
@@ -202,6 +193,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     useState<MyProfilePreloadState | null>(null);
 
   const router = useRouter();
+  const pathname = usePathname();
+
+  const accountState: "active" | "suspended" | "blocked" =
+    (profile?.account_state as "active" | "suspended" | "blocked") ?? "active";
+  const isReadOnly = accountState === "suspended";
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -251,6 +247,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const loginResult: LoginStatusResult = {
           can_login: apiResult?.can_login ?? false,
           status: (apiResult?.status as LoginStatusResult["status"]) ?? "error",
+          account_state: (apiResult?.account_state as LoginStatusResult["account_state"]) ?? "unknown",
           message_hebrew: apiResult?.message_hebrew ?? "שגיאה בבדיקת סטטוס המשתמש",
           user_id: apiResult?.user_id,
         };
@@ -261,6 +258,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const errorResult: LoginStatusResult = {
           can_login: false,
           status: "error",
+          account_state: "unknown",
           message_hebrew: "שגיאה בבדיקת סטטוס המשתמש",
         };
         setLoginStatus(errorResult);
@@ -520,7 +518,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data.user) {
         setUser(data.user);
 
-        // Check login status; block any disallowed status (including reputation_blocked)
+        // Check login status; sign out only if truly disallowed (pending/rejected)
         try {
           const status = await checkLoginStatus(data.user.id);
           if (!status.can_login) {
@@ -538,11 +536,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             };
           }
 
-          // Approved/allowed login path
+          // Allowed login path (active, blocked, or suspended)
           await fetchUserProfile(data.user.id);
           await getUserPermissions(data.user.id);
+          // Blocked/suspended redirects are handled by the useEffect above
         } catch {
-          // Allow login if status check fails, but still try to hydrate profile & permissions
           await fetchUserProfile(data.user.id);
           await getUserPermissions(data.user.id);
         }
@@ -1029,11 +1027,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
+  // Redirect blocked users to /account/blocked from any page
+  useEffect(() => {
+    if (loading || !user) return;
+    const exemptPaths = ["/account/blocked", "/auth/login", "/auth/sign-up", "/auth/pending"];
+    if (accountState === "blocked" && !exemptPaths.includes(pathname)) {
+      router.replace("/account/blocked");
+    }
+  }, [loading, user, accountState, pathname, router]);
+
   const value: AuthContextType = {
     user,
     profile,
     userPermissions,
     loginStatus,
+    accountState,
+    isReadOnly,
     loading,
     error,
     myProfilePreload,
@@ -1133,21 +1142,17 @@ export function RequireNotBlocked({
   children,
   fallback = null,
 }: RequireNotBlockedProps) {
-  const { profile, loginStatus, loading } = useAuth();
+  const { accountState, loading } = useAuth();
   const router = useRouter();
-
-  const isBlocked =
-    loginStatus?.status === "reputation_blocked" ||
-    (profile && profile.reputation === 0);
 
   useEffect(() => {
     if (loading) return;
-    if (isBlocked) {
+    if (accountState === "blocked") {
       router.replace("/account/blocked");
     }
-  }, [loading, isBlocked, router]);
+  }, [loading, accountState, router]);
 
-  if (isBlocked) {
+  if (accountState === "blocked") {
     return <>{fallback}</>;
   }
 

@@ -189,6 +189,8 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
           gender,
           birth_gender: gender === 'other' ? birthGender : null,
           age,
+          reputation: 50,
+          account_state: 'active',
           approval_status: 'pending',
           is_verified: false,
           is_moderator: false,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createNotification } from '@/lib/notifications';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /** GET: List replies for a status */
 export async function GET(
@@ -23,7 +24,13 @@ export async function GET(
 
     const { data: replies, error } = await supabase
       .from('status_replies')
-      .select('id, content, created_at, user_id')
+      .select(`
+        id, content, created_at, user_id,
+        profiles!status_replies_user_id_fkey (
+          id,
+          account_state
+        )
+      `)
       .eq('status_id', statusId)
       .order('created_at', { ascending: true });
 
@@ -32,7 +39,12 @@ export async function GET(
       return NextResponse.json({ error: 'שגיאה בטעינת התגובות' }, { status: 500 });
     }
 
-    const formatted = (replies || []).map((r: { id: string; content: string; created_at: string; user_id: string }) => ({
+    const visibleReplies = (replies || []).filter((r: any) => {
+      const p = r.profiles as Record<string, unknown> | null;
+      return p?.account_state !== 'blocked';
+    });
+
+    const formatted = visibleReplies.map((r: { id: string; content: string; created_at: string; user_id: string }) => ({
       id: r.id,
       content: r.content,
       createdAt: r.created_at,
@@ -58,6 +70,9 @@ export async function POST(
     if (authError || !user) {
       return NextResponse.json({ error: 'יש להתחבר כדי להגיב' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json().catch(() => ({}));
     const content = typeof body?.content === 'string' ? body.content.trim() : '';

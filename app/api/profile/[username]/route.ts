@@ -19,12 +19,16 @@ export async function GET(
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, full_name, avatar_url, bio, location, website, reputation, is_verified, is_moderator, created_at, questions_count, profile_likes_count')
+      .select('id, username, full_name, avatar_url, bio, location, website, reputation, is_verified, is_moderator, created_at, questions_count, profile_likes_count, account_state')
       .eq('username', username.trim())
       .single();
 
     if (error || !data) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if ((data as any).account_state === 'blocked') {
+      return NextResponse.json({ error: 'פרופיל לא נמצא' }, { status: 404 });
     }
 
     const profileId = data.id;

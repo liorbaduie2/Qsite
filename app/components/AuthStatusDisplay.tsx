@@ -64,10 +64,6 @@ const AuthStatusDisplay: React.FC<AuthStatusDisplayProps> = ({
       if (error.includes('נדחה')) {
         return { status: 'rejected' as const, message: error };
       }
-      if (error.includes('הושעה')) {
-        return { status: 'suspended' as const, message: error };
-      }
-      
       // Generic error
       if (!showOnlyErrors) {
         return { status: 'error' as const, message: error };
@@ -112,14 +108,12 @@ export const useAuthStatus = () => {
     }
     
     if (error) {
-      let status: 'pending' | 'rejected' | 'suspended' | 'error' = 'error';
+      let status: 'pending' | 'rejected' | 'error' = 'error';
       
       if (error.includes('לא אושר') || error.includes('ממתין')) {
         status = 'pending';
       } else if (error.includes('נדחה')) {
         status = 'rejected';
-      } else if (error.includes('הושעה')) {
-        status = 'suspended';
       }
       
       return {

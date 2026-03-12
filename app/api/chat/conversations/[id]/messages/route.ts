@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /**
  * GET /api/chat/conversations/[id]/messages?limit=50&before=...
@@ -101,6 +102,9 @@ export async function POST(
     if (!user?.id) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const { data: conv } = await supabase
       .from('chat_conversations')

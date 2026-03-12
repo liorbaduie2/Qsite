@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /**
  * GET /api/profile/[username]/comments
@@ -53,14 +54,14 @@ export async function GET(
     }
 
     const authorIds = [...new Set((rows || []).map((r) => r.author_id))];
-    const authorProfiles: Record<string, { username: string; avatar_url: string | null }> = {};
+    const authorProfiles: Record<string, { username: string; avatar_url: string | null; account_state?: string }> = {};
     if (authorIds.length > 0) {
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url')
+        .select('id, username, avatar_url, account_state')
         .in('id', authorIds);
       (profiles || []).forEach((p) => {
-        authorProfiles[p.id] = { username: p.username, avatar_url: p.avatar_url ?? null };
+        authorProfiles[p.id] = { username: p.username, avatar_url: p.avatar_url ?? null, account_state: (p as any).account_state };
       });
     }
 
@@ -71,7 +72,12 @@ export async function GET(
           ? rows.length
           : 0;
 
-    const comments = (rows || []).map((r) => {
+    const visibleRows = (rows || []).filter((r) => {
+      const author = authorProfiles[r.author_id];
+      return author?.account_state !== 'blocked';
+    });
+
+    const comments = visibleRows.map((r) => {
       const author = authorProfiles[r.author_id];
       return {
         id: r.id,
@@ -109,6 +115,9 @@ export async function POST(
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json().catch(() => ({}));
     const content = typeof body.content === 'string' ? body.content.trim() : '';

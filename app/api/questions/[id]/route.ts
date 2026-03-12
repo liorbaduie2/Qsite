@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 export async function GET(
   request: NextRequest,
@@ -34,7 +35,8 @@ export async function GET(
           username,
           avatar_url,
           reputation,
-          last_seen_at
+          last_seen_at,
+          account_state
         ),
         question_tags (
           tags (
@@ -48,6 +50,11 @@ export async function GET(
       .single();
 
     if (error || !question) {
+      return NextResponse.json({ error: 'השאלה לא נמצאה' }, { status: 404 });
+    }
+
+    const authorProfile = question.profiles as Record<string, unknown> | null;
+    if (authorProfile?.account_state === 'blocked') {
       return NextResponse.json({ error: 'השאלה לא נמצאה' }, { status: 404 });
     }
 
@@ -124,6 +131,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'יש להתחבר כדי לערוך' }, { status: 401 });
     }
 
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
+
     const body = await request.json();
     const { title, content, tags } = body;
     if (!title?.trim() || title.trim().length < 5) {
@@ -184,6 +194,9 @@ export async function DELETE(
     if (authError || !user) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json().catch(() => ({}));
     const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';

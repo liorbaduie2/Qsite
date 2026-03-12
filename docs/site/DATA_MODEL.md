@@ -6,9 +6,9 @@ The migration directory is the current source of truth for database structure an
 
 ## Inventory counts
 
-- Tables: 41
+- Tables: 42
 - Views: 2
-- SQL functions: 39
+- SQL functions: 40
 - Triggers: 10
 
 ## Tables
@@ -16,6 +16,7 @@ The migration directory is the current source of truth for database structure an
 - `admin_activity_log`
 - `admin_roles_config`
 - `answers`
+- `blocked_account_appeals`
 - `bookmarks`
 - `chat_conversation_read_state`
 - `chat_conversations`
@@ -55,6 +56,8 @@ The migration directory is the current source of truth for database structure an
 - `user_suspensions`
 - `votes`
 
+**Key table notes:** `profiles.account_state` (`active`|`suspended`|`blocked`) controls post-approval access; RLS and write APIs enforce it. `blocked_account_appeals` stores in-app appeals from blocked users (user_id, message, status: pending/reviewed/resolved); only the owner can read/update via admin APIs; RLS allows users to insert their own row only.
+
 ## Views
 
 - `admin_user_overview`
@@ -67,6 +70,7 @@ The migration directory is the current source of truth for database structure an
 - `apply_monthly_reputation_bonus`
 - `apply_monthly_reputation_penalties`
 - `apply_penalty`
+- `auto_expire_suspensions`
 - `can_change_username`
 - `can_user_login`
 - `check_and_award_milestones`
@@ -397,4 +401,16 @@ The migration directory is the current source of truth for database structure an
 - Tables added or changed in file: None
 - Views added or changed in file: None
 - SQL functions added or changed in file: `get_user_reputation_permissions`
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260312100000_account_state_architecture.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: `auto_expire_suspensions`, `enforce_reputation_limits`, `can_user_login`, `handle_new_user`
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260312110000_blocked_account_appeals.sql`
+- Tables added or changed in file: `blocked_account_appeals`
+- Views added or changed in file: None
+- SQL functions added or changed in file: None
 - Triggers added or changed in file: None

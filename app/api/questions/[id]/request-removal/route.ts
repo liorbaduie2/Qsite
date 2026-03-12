@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 export async function POST(
   request: NextRequest,
@@ -13,6 +14,9 @@ export async function POST(
     if (authError || !user) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const { data: perms } = await supabase.rpc('get_user_admin_permissions', {
       user_id: user.id,

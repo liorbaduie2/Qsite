@@ -6,6 +6,7 @@ import {
   syncTagEmbeddings,
   upsertQuestionEmbedding,
 } from '@/lib/tag-suggestions/embedding-sync';
+import { requireActiveAccount } from '@/lib/account-state';
 
 type TagSuggestionContext = {
   shownSuggestedTags: string[];
@@ -150,7 +151,8 @@ export async function GET(request: NextRequest) {
           id,
           username,
           avatar_url,
-          last_seen_at
+          last_seen_at,
+          account_state
         ),
         question_tags (
           tags (
@@ -216,6 +218,11 @@ export async function GET(request: NextRequest) {
         processed = processed.slice(0, limit);
       }
     }
+
+    processed = processed.filter((q: any) => {
+      const p = q.profiles as Record<string, unknown> | null;
+      return p?.account_state !== 'blocked';
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formatted = (processed || []).map((q: any, index: number) => ({
@@ -293,6 +300,9 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'יש להתחבר כדי לשאול שאלה' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json();
     const { title, content, tags, tagSuggestionContext } = body;

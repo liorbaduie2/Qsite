@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /** PATCH: Set shared_to_profile for this status (only one per user on profile) */
 export async function PATCH(
@@ -13,6 +14,9 @@ export async function PATCH(
     if (authError || !user) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json().catch(() => ({}));
     const share = body?.share !== false;

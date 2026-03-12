@@ -6,10 +6,10 @@
 
 ### `app/components/AdminDashboard.tsx`
 - Runtime: client
-- Description: Main admin control center rendered inside the admin page.
+- Description: Main admin control center rendered inside the admin page. Owner-only tab "ערעורי חסימה" (Blocked appeals) lists in-app blocked-account appeals; owner can mark reviewed/resolved or unblock the user.
 - Exports: `AdminDashboard`, `RoleConfigEntry`
-- Named functions: `formatDate`, `formatDateTime`, `formatGender`, `handleAppealDecision`, `handleApplyPenalty`, `handleApprove`, `handleGrantReputation`, `handleGrantRole`, `handleReject`, `handleRemovalDecision`, `handleSaveTagVisibility`, `handleSubmit`, `handleSuspend`, `handleUserAction`, `load`, `loadDashboardData`, `loadPenaltyTypes`, `timeAgo`
-- Fetch calls: `/api/permissions/deduct-reputation`, `/api/admin/grant-role`, `/api/admin/grant-reputation`, `/api/admin/set-role-visibility`, `/api/admin/question-removal-requests`, `/api/admin/question-deletion-appeals`, `/api/admin/activity-log?limit=100`, `/api/admin/config/admin-roles`, `/api/admin/approve-user`
+- Named functions: `formatDate`, `formatDateTime`, `formatGender`, `handleAppealDecision`, `handleApplyPenalty`, `handleApprove`, `handleBlockedAppealAction`, `handleGrantReputation`, `handleGrantRole`, `handleReject`, `handleRemovalDecision`, `handleSaveTagVisibility`, `handleSubmit`, `handleSuspend`, `handleUserAction`, `load`, `loadDashboardData`, `loadPenaltyTypes`, `timeAgo`
+- Fetch calls: `/api/permissions/deduct-reputation`, `/api/admin/grant-role`, `/api/admin/grant-reputation`, `/api/admin/set-role-visibility`, `/api/admin/question-removal-requests`, `/api/admin/question-deletion-appeals`, `/api/appeals/blocked-account`, `/api/admin/activity-log?limit=100`, `/api/admin/config/admin-roles`, `/api/admin/approve-user`
 - Supabase tables/views: `penalty_types_config`, `admin_user_overview`
 - Supabase RPCs: None
 
@@ -24,7 +24,7 @@
 
 ### `app/components/AuthProvider.tsx`
 - Runtime: client
-- Description: Central auth context for session hydration, profile loading, permissions, and login gating.
+- Description: Central auth context for session hydration, profile loading, permissions, and login gating. Exposes `accountState` and `isReadOnly`; redirects blocked users to `/account/blocked`.
 - Exports: `AdminRoute`, `AuthProvider`, `RequireNotBlocked`, `RequirePermission`, `useAuth`
 - Named functions: `AuthProvider`, `checkLoginStatus`, `clearError`, `ensureMyProfilePreload`, `fetchUserProfile`, `getInitialSession`, `getUserPermissions`, `load`, `loadUserDataInBackground`, `ping`, `refreshPermissions`, `refreshProfile`, `signIn`, `signOut`, `signUp`, `updateProfile`, `useAuth`
 - Fetch calls: `/api/permissions/can-user-login`, `/api/permissions/get-user-permissions`, `/api/auth/register`, `/api/me/ping`

@@ -41,7 +41,8 @@ import {
     Check,
     ScrollText,
     History,
-    ArrowRight
+    ArrowRight,
+    Lock
 } from 'lucide-react';
 
 const supabase = createBrowserClient(
@@ -103,6 +104,16 @@ interface QuestionRemovalRequest {
     reason: string;
     status: string;
     createdAt: string;
+}
+
+interface BlockedAccountAppeal {
+    id: string;
+    user_id: string;
+    username: string | null;
+    full_name: string | null;
+    message: string;
+    created_at: string;
+    status: string;
 }
 
 interface QuestionDeletionAppeal {
@@ -948,13 +959,15 @@ const AdminDashboard: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal' | 'appeals' | 'activityLog'>('applications');
+    const [activeTab, setActiveTab] = useState<'applications' | 'users' | 'removal' | 'appeals' | 'blockedAppeals' | 'activityLog'>('applications');
 
     const [removalRequests, setRemovalRequests] = useState<QuestionRemovalRequest[]>([]);
     const [removalActionLoading, setRemovalActionLoading] = useState<string | null>(null);
 
     const [appeals, setAppeals] = useState<QuestionDeletionAppeal[]>([]);
     const [appealActionLoading, setAppealActionLoading] = useState<string | null>(null);
+    const [blockedAccountAppeals, setBlockedAccountAppeals] = useState<BlockedAccountAppeal[]>([]);
+    const [blockedAppealActionLoading, setBlockedAppealActionLoading] = useState<string | null>(null);
     const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
     
     const [searchTerm, setSearchTerm] = useState('');
@@ -1011,11 +1024,19 @@ const AdminDashboard: React.FC = () => {
                 const appealsData = await appealsRes.json();
                 if (appealsRes.ok && Array.isArray(appealsData.appeals)) setAppeals(appealsData.appeals);
                 else setAppeals([]);
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    const blockedAppealsRes = await fetch('/api/appeals/blocked-account', {
+                        headers: { Authorization: `Bearer ${session.access_token}` },
+                    });
+                    const blockedAppealsData = await blockedAppealsRes.json();
+                    if (blockedAppealsRes.ok && Array.isArray(blockedAppealsData.appeals)) setBlockedAccountAppeals(blockedAppealsData.appeals);
+                    else setBlockedAccountAppeals([]);
+                }
                 const logRes = await fetch('/api/admin/activity-log?limit=100');
                 const logData = await logRes.json();
                 if (logRes.ok && Array.isArray(logData.entries)) setActivityLog(logData.entries);
                 else setActivityLog([]);
-                const { data: { session } } = await supabase.auth.getSession();
                 if (session?.access_token) {
                     const rolesRes = await fetch('/api/admin/config/admin-roles', {
                         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -1240,6 +1261,37 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    const handleBlockedAppealAction = async (appealId: string, status: 'reviewed' | 'resolved', unblock: boolean) => {
+        if (userPermissions?.role !== 'owner') return;
+        setBlockedAppealActionLoading(appealId);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                setError('חסר אימות');
+                return;
+            }
+            const res = await fetch(`/api/appeals/blocked-account/${appealId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ status, unblock }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'שגיאה בפעולה');
+                return;
+            }
+            setBlockedAccountAppeals((prev) => prev.map((a) => a.id === appealId ? { ...a, status } : a));
+            if (unblock) {
+                setBlockedAccountAppeals((prev) => prev.filter((a) => a.id !== appealId));
+            }
+            loadDashboardData();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'שגיאה בפעולה');
+        } finally {
+            setBlockedAppealActionLoading(null);
+        }
+    };
+
     const filteredApplications = applications.filter(app =>
         app.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1407,6 +1459,7 @@ const AdminDashboard: React.FC = () => {
                         {userPermissions?.can_view_user_list && <button onClick={() => setActiveTab('users')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors ${activeTab === 'users' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>ניהול משתמשים ({users.length})</button>}
                         {(userPermissions?.role === 'owner' || userPermissions?.role === 'guardian') && <button onClick={() => setActiveTab('removal')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'removal' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><FileQuestion className="w-4 h-4" />בקשות להסרת שאלות ({removalRequests.length})</button>}
                         {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('appeals')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'appeals' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><ScrollText className="w-4 h-4" />ערעורים ({appeals.filter(a => a.status === 'pending').length})</button>}
+                        {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('blockedAppeals')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'blockedAppeals' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><Lock className="w-4 h-4" />ערעורי חסימה ({blockedAccountAppeals.filter(a => a.status === 'pending').length})</button>}
                         {userPermissions?.role === 'owner' && <button onClick={() => setActiveTab('activityLog')} className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-1.5 ${activeTab === 'activityLog' ? 'bg-white dark:bg-slate-800 text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}><History className="w-4 h-4" />יומן פעילות</button>}
                     </div>
                 </div>
@@ -1421,6 +1474,8 @@ const AdminDashboard: React.FC = () => {
                                     ? `בקשות להסרת שאלות (${removalRequests.length})`
                                     : activeTab === 'appeals'
                                     ? `ערעורים (${appeals.length})`
+                                    : activeTab === 'blockedAppeals'
+                                    ? `ערעורי חסימה (${blockedAccountAppeals.length})`
                                     : activeTab === 'activityLog'
                                     ? 'יומן פעילות'
                                     : filterUsersWithPermissions
@@ -1562,6 +1617,39 @@ const AdminDashboard: React.FC = () => {
                                     )}
                                 </div>
                             )) : <div className="p-12 text-center"><ScrollText className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">אין ערעורים</h3></div>}
+                         </div>
+                    )}
+
+                    {activeTab === 'blockedAppeals' && (
+                         <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                            {blockedAccountAppeals.length > 0 ? blockedAccountAppeals.map((a) => (
+                                <div key={a.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-200">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-bold text-slate-800 dark:text-slate-100">{a.username || a.full_name || 'משתמש'}</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">מזהה: {a.user_id.slice(0, 8)}…</span>
+                                    </div>
+                                    <p className="text-sm text-slate-700 dark:text-slate-200 mb-2 whitespace-pre-wrap">{a.message}</p>
+                                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${a.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200' : a.status === 'reviewed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'}`}>{a.status === 'pending' ? 'ממתין' : a.status === 'reviewed' ? 'נבדק' : 'הוסדר'}</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">{timeAgo(a.created_at)}</span>
+                                    </div>
+                                    {(a.status === 'pending' || a.status === 'reviewed') && (
+                                        <div className="flex gap-2 flex-wrap">
+                                            {a.status === 'pending' && (
+                                                <button onClick={() => handleBlockedAppealAction(a.id, 'reviewed', false)} disabled={blockedAppealActionLoading === a.id} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 text-sm">
+                                                    {blockedAppealActionLoading === a.id ? '...' : <><Eye className="w-4 h-4" />סמן כנבדק</>}
+                                                </button>
+                                            )}
+                                            <button onClick={() => handleBlockedAppealAction(a.id, 'resolved', false)} disabled={blockedAppealActionLoading === a.id} className="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg font-semibold hover:bg-slate-600 disabled:opacity-50 text-sm">
+                                                {blockedAppealActionLoading === a.id ? '...' : <><CheckCircle className="w-4 h-4" />סמן כהוסדר</>}
+                                            </button>
+                                            <button onClick={() => handleBlockedAppealAction(a.id, 'resolved', true)} disabled={blockedAppealActionLoading === a.id} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 text-sm">
+                                                {blockedAppealActionLoading === a.id ? '...' : <><Check className="w-4 h-4" />שחרר חסימה</>}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )) : <div className="p-12 text-center"><Lock className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" /><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">אין ערעורי חסימה</h3></div>}
                          </div>
                     )}
 

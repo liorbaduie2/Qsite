@@ -167,6 +167,14 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
+    // When approving, ensure account_state is active
+    if (action === 'approve') {
+      await supabase
+        .from('profiles')
+        .update({ account_state: 'active', updated_at: new Date().toISOString() })
+        .eq('id', userId);
+    }
+
     return NextResponse.json({
       success: true,
       message: action === 'approve' ? 'המשתמש אושר בהצלחה' : 'המשתמש נדחה',

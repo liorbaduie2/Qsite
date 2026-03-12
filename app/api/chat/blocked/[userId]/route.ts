@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /**
  * POST /api/chat/blocked/[userId]
@@ -20,6 +21,9 @@ export async function POST(
     if (!user?.id) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     if (targetUserId === user.id) {
       return NextResponse.json({ error: 'לא ניתן לחסום את עצמך' }, { status: 400 });
@@ -63,6 +67,9 @@ export async function DELETE(
     if (!user?.id) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const { error } = await supabase
       .from('user_blocks')

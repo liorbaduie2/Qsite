@@ -108,7 +108,7 @@
 - Kind: page
 - Surface: Core product
 - Runtime: client
-- Description: Question detail page with answers, votes, reports, and moderation actions. Includes "הצג תגיות" (Show Tags) toggle to expand/collapse tags, and tag editing in edit mode (owner or ממונה מוסמך) using catalog-only selection.
+- Description: Question detail page with answers, votes, reports, and moderation actions.
 - Exports: `QuestionDetailPage`
 - Named functions: `buildAnswerThreads`, `fetchAnswers`, `fetchEditTagMatches`, `fetchQuestion`, `handleAnswerVote`, `handleAuthAction`, `handleCancelEdit`, `handleClickOutside`, `handleConfirmRemove`, `handleEditTagAdd`, `handleEditTagRemove`, `handleOpenAnswerReport`, `handleOpenAnswerVoteDetails`, `handleOpenRequestRemoval`, `handleOpenVoteDetails`, `handleQuestionVote`, `handleSaveEdit`, `handleSignOut`, `handleStartEdit`, `handleSubmitAnswer`, `handleSubmitAnswerReport`, `handleSubmitReply`, `handleSubmitRequestRemoval`, `onClick`, `renderAnswerCard`, `renderReplyItem`, `renderTopLevelAnswer`, `resolveRootId`, `setVoteLoading`, `timeAgo`
 - Fetch calls: `/api/report/content`
@@ -120,7 +120,7 @@
 - Kind: page
 - Surface: Core product
 - Runtime: client
-- Description: Question index with search, sort, filters, and question-creation entry points. Each question card has a "הצג תגיות" (Show Tags) toggle to expand/collapse tags.
+- Description: Question index with search, sort, filters, and question-creation entry points.
 - Exports: `QuestionsPage`
 - Named functions: `QuestionsPage`, `fetchQuestions`, `handleNewQuestion`, `handleSignOut`, `handleVote`, `onClick`, `onKeyDown`, `timeAgo`
 - Fetch calls: None
@@ -134,8 +134,8 @@
 - Runtime: client
 - Description: Status feed for short-form posting, starring, sharing, and replies.
 - Exports: `StatusPage`
-- Named functions: `cooldownRemaining`, `fetchFeed`, `fetchMe`, `handleNewStatus`, `handlePost`, `handleSignOut`, `openAdminStars`, `timeAgo`, `toggleShare`, `toggleStar`
-- Fetch calls: `/api/status`, `/api/status/me`
+- Named functions: `cooldownRemaining`, `fetchFeed`, `fetchMe`, `handleNewStatus`, `handleOpenStatusReport`, `handlePost`, `handleSignOut`, `handleSubmitStatusReport`, `onClick`, `openAdminStars`, `timeAgo`, `toggleShare`, `toggleStar`
+- Fetch calls: `/api/report/content`, `/api/status`, `/api/status/me`
 - Supabase tables/views: None
 - Supabase RPCs: None
 
@@ -261,10 +261,10 @@
 - Kind: page
 - Surface: Account and settings
 - Runtime: client
-- Description: Page implementation for `/account/blocked`.
+- Description: Shown when `account_state = blocked`. In-app appeal form (textarea + submit); no email. User can submit an appeal (POST `/api/appeals/blocked-account`), see success message, or log out. Only the owner can view and manage appeals in the admin dashboard.
 - Exports: `BlockedAccountPage`
-- Named functions: `handleAppeal`, `handleLogout`
-- Fetch calls: None
+- Named functions: `handleLogout`, `handleSubmitAppeal`
+- Fetch calls: `/api/appeals/blocked-account`
 - Supabase tables/views: None
 - Supabase RPCs: None
 

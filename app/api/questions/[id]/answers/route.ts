@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createNotification } from '@/lib/notifications';
+import { requireActiveAccount } from '@/lib/account-state';
 
 export async function GET(
   request: NextRequest,
@@ -29,7 +30,8 @@ export async function GET(
           username,
           avatar_url,
           reputation,
-          last_seen_at
+          last_seen_at,
+          account_state
         )
       `)
       .eq('question_id', id)
@@ -43,9 +45,14 @@ export async function GET(
       return NextResponse.json({ error: 'שגיאה בטעינת התשובות' }, { status: 500 });
     }
 
+    const visibleAnswers = (answers || []).filter((a: any) => {
+      const p = a.profiles as Record<string, unknown> | null;
+      return p?.account_state !== 'blocked';
+    });
+
     let answerUserVotes: Record<string, 1 | -1> = {};
-    if (user?.id && (answers?.length ?? 0) > 0) {
-      const answerIds = (answers ?? []).map((answer) => answer.id);
+    if (user?.id && (visibleAnswers?.length ?? 0) > 0) {
+      const answerIds = visibleAnswers.map((answer) => answer.id);
       const { data: voteRows, error: voteError } = await supabase
         .from('votes')
         .select('answer_id, vote_type')
@@ -69,7 +76,7 @@ export async function GET(
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const formatted = (answers || []).map((a: Record<string, any>) => ({
+    const formatted = visibleAnswers.map((a: Record<string, any>) => ({
       id: a.id,
       content: a.content,
       votes: a.votes_count || 0,
@@ -106,6 +113,9 @@ export async function POST(
     if (authError || !user) {
       return NextResponse.json({ error: 'יש להתחבר כדי להגיב' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json();
     const { content, parentAnswerId } = body;

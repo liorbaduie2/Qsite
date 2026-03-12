@@ -39,6 +39,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: message }, { status: 403 })
     }
 
+    // Set account_state to suspended
+    await supabase
+      .from('profiles')
+      .update({ account_state: 'suspended', updated_at: new Date().toISOString() })
+      .eq('id', targetUserId);
+
     const userClient = await createClient()
     await userClient.rpc('log_admin_activity', {
       p_action_type: 'user_suspended',

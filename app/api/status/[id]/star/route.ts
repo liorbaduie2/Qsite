@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { createNotification } from '@/lib/notifications';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /** POST: Toggle star for current user on this status */
 export async function POST(
@@ -15,6 +16,9 @@ export async function POST(
     if (authError || !user) {
       return NextResponse.json({ error: 'יש להתחבר כדי לסמן בכוכב' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id);
+    if (!access.allowed) return access.errorResponse!;
 
     const { data: status } = await supabase
       .from('user_statuses')

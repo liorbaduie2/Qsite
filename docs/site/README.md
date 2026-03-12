@@ -2,7 +2,7 @@
 
 This documentation set is auto-generated from the codebase and organized to make the app easy to audit by route, feature, and supporting module.
 
-Generated: 2026-03-10T21:37:32.122Z
+Generated: 2026-03-12T14:11:17.697Z
 
 ## Navigation
 
@@ -28,15 +28,15 @@ Generated: 2026-03-10T21:37:32.122Z
 | Layout files | 2 |
 | Page files | 24 |
 | Non-API route handlers | 1 |
-| API route files | 75 |
+| API route files | 78 |
 | App components | 20 |
 | Hooks | 4 |
 | Shared or starter components | 24 |
-| Library files | 18 |
+| Library files | 19 |
 | Script files | 4 |
-| Migrations | 47 |
-| Tables discovered in migrations | 41 |
-| SQL functions discovered in migrations | 39 |
+| Migrations | 49 |
+| Tables discovered in migrations | 42 |
+| SQL functions discovered in migrations | 40 |
 
 ## Maintenance
 

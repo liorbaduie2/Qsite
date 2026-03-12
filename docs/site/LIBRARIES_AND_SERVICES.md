@@ -4,6 +4,15 @@
 
 ## Shared libraries
 
+### `lib/account-state.ts`
+- Runtime: shared/server
+- Description: Supporting code file for account state.
+- Exports: `requireActiveAccount`
+- Named functions: None
+- Fetch calls: None
+- Supabase tables/views: `profiles`
+- Supabase RPCs: None
+
 ### `lib/ai/embeddings.ts`
 - Runtime: shared/server
 - Description: Embedding helpers used by the semantic tag-suggestion pipeline.

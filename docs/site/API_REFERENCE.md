@@ -29,7 +29,7 @@
 - Domain: Questions and tags
 - Methods: `GET`, `POST`
 - Description: Lists or creates answers for a question.
-- Named functions: `answerIds`, `formatted`
+- Named functions: `visibleAnswers`
 - Fetch calls: None
 - Supabase tables/views: `answers`, `votes`, `questions`
 - Supabase RPCs: None
@@ -48,11 +48,11 @@
 - Endpoint: `/api/questions/[id]`
 - Domain: Questions and tags
 - Methods: `GET`, `PATCH`, `DELETE`
-- Description: Fetches or updates a single question. PATCH accepts `title`, `content`, and `tags` (array of catalog tag names); updates question and question_tags.
+- Description: Fetches or updates a single question.
 - Named functions: None
 - Fetch calls: None
-- Supabase tables/views: `questions`, `votes`, `question_tags`
-- Supabase RPCs: `update_question_with_permission`
+- Supabase tables/views: `questions`, `votes`
+- Supabase RPCs: None
 
 ### `app/api/questions/[id]/vote/route.ts`
 - Endpoint: `/api/questions/[id]/vote`
@@ -122,7 +122,7 @@
 - Domain: Profiles and social
 - Methods: `GET`, `POST`
 - Description: Fetches or mutates profile-related public or private social data.
-- Named functions: `comments`
+- Named functions: `visibleRows`
 - Fetch calls: None
 - Supabase tables/views: `profiles`, `profile_comments`
 - Supabase RPCs: None
@@ -368,7 +368,7 @@
 - Domain: Statuses and notifications
 - Methods: `GET`, `POST`
 - Description: Handles status feed reads, writes, replies, stars, or shares.
-- Named functions: `formatted`
+- Named functions: `visibleReplies`
 - Fetch calls: None
 - Supabase tables/views: `user_statuses`, `status_replies`
 - Supabase RPCs: None
@@ -408,9 +408,9 @@
 - Domain: Statuses and notifications
 - Methods: `GET`, `POST`
 - Description: Route handler for `/api/status`.
-- Named functions: `feed`, `nonLegendary`, `statusIds`
+- Named functions: `nonLegendary`, `profile`, `visibleRows`
 - Fetch calls: None
-- Supabase tables/views: `user_statuses`, `status_stars`
+- Supabase tables/views: `user_statuses`, `status_stars`, `profile_likes`
 - Supabase RPCs: None
 
 
@@ -629,6 +629,16 @@
 - Supabase tables/views: `user_roles`, `admin_activity_log`
 - Supabase RPCs: None
 
+### `app/api/admin/set-account-state/route.ts`
+- Endpoint: `/api/admin/set-account-state`
+- Domain: Permissions and admin
+- Methods: `POST`
+- Description: Handles admin policy, user management, permissions, or moderation actions.
+- Named functions: None
+- Fetch calls: None
+- Supabase tables/views: `profiles`, `user_suspensions`, `admin_activity_log`
+- Supabase RPCs: None
+
 ### `app/api/admin/set-role-visibility/route.ts`
 - Endpoint: `/api/admin/set-role-visibility`
 - Domain: Permissions and admin
@@ -706,11 +716,31 @@
 - Description: Handles admin policy, user management, permissions, or moderation actions.
 - Named functions: None
 - Fetch calls: None
-- Supabase tables/views: None
+- Supabase tables/views: `profiles`
 - Supabase RPCs: None
 
 
 ## Moderation and appeals
+
+### `app/api/appeals/blocked-account/[id]/route.ts`
+- Endpoint: `/api/appeals/blocked-account/[id]`
+- Domain: Moderation and appeals
+- Methods: `PATCH`
+- Description: Owner-only. Update an appeal's status (`reviewed`/`resolved`) and optionally set the user's `account_state` to `active` (unblock). Body: `{ status?, unblock? }`.
+- Named functions: None
+- Fetch calls: None
+- Supabase tables/views: `blocked_account_appeals`, `profiles`
+- Supabase RPCs: None
+
+### `app/api/appeals/blocked-account/route.ts`
+- Endpoint: `/api/appeals/blocked-account`
+- Domain: Moderation and appeals
+- Methods: `POST`, `GET`
+- Description: **POST**: Authenticated (including blocked) users submit an in-app appeal (body: `{ message }`); stored in `blocked_account_appeals`. **GET**: Owner-only; returns all appeals with profile info (username, full_name).
+- Named functions: `appeals`
+- Fetch calls: None
+- Supabase tables/views: `blocked_account_appeals`, `profiles`
+- Supabase RPCs: None
 
 ### `app/api/appeals/question-deletion/route.ts`
 - Endpoint: `/api/appeals/question-deletion`
@@ -729,7 +759,7 @@
 - Description: Handles reporting, removal requests, or appeal workflows.
 - Named functions: None
 - Fetch calls: None
-- Supabase tables/views: `answers`, `questions`, `content_reports`
+- Supabase tables/views: `answers`, `user_statuses`, `questions`, `content_reports`
 - Supabase RPCs: None
 
 ### `app/api/report/user/route.ts`

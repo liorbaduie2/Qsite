@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /** PATCH /api/notifications/[id]/read - Mark one notification as read */
 export async function PATCH(
@@ -13,6 +14,9 @@ export async function PATCH(
     if (!user?.id) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id, ['active', 'suspended', 'blocked']);
+    if (!access.allowed) return access.errorResponse!;
 
     const { error } = await supabase
       .from('notifications')

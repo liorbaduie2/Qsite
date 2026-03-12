@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireActiveAccount } from '@/lib/account-state';
 
 /** GET /api/notifications - List notifications for current user */
 export async function GET(request: NextRequest) {
@@ -45,6 +46,9 @@ export async function PATCH(request: NextRequest) {
     if (!user?.id) {
       return NextResponse.json({ error: 'יש להתחבר' }, { status: 401 });
     }
+
+    const access = await requireActiveAccount(supabase, user.id, ['active', 'suspended', 'blocked']);
+    if (!access.allowed) return access.errorResponse!;
 
     const body = await request.json().catch(() => ({}));
     const ids = Array.isArray(body?.ids) ? body.ids as string[] : undefined;

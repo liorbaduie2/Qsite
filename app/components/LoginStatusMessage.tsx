@@ -6,10 +6,7 @@ export interface LoginStatusMessageProps {
   status:
     | 'pending'
     | 'rejected'
-    | 'suspended'
     | 'approved'
-    | 'banned'
-    | 'reputation_blocked'
     | 'error'
     | null;
   message: string;
@@ -43,25 +40,6 @@ const LoginStatusMessage: React.FC<LoginStatusMessageProps> = ({
           textColor: 'text-red-800',
           iconColor: 'text-red-600',
           title: 'החשבון נדחה',
-          titleColor: 'text-red-900'
-        };
-      case 'suspended':
-        return {
-          icon: Shield,
-          bgColor: 'bg-gray-50 border-gray-200',
-          textColor: 'text-gray-800',
-          iconColor: 'text-gray-600',
-          title: 'החשבון הושעה',
-          titleColor: 'text-gray-900'
-        };
-      case 'banned':
-      case 'reputation_blocked':
-        return {
-          icon: Shield,
-          bgColor: 'bg-red-50 border-red-200',
-          textColor: 'text-red-800',
-          iconColor: 'text-red-600',
-          title: 'החשבון נחסם',
           titleColor: 'text-red-900'
         };
       case 'approved':
@@ -140,7 +118,7 @@ const LoginStatusMessage: React.FC<LoginStatusMessageProps> = ({
             </div>
           )}
           
-          {(status === 'rejected' || status === 'suspended') && (
+          {(status === 'rejected') && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Mail className="w-4 h-4 text-blue-600" />
