@@ -1,36 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { authenticateAdmin, isAdminAuth } from '@/lib/admin-auth';
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = getAdminClient();
-    const { userId, accountState, adminId } = await request.json();
 
-    if (!userId || !accountState || !adminId) {
+    const auth = await authenticateAdmin(request);
+    if (!isAdminAuth(auth)) return auth;
+
+    if (!auth.permissions.can_suspend_user && !auth.permissions.can_block_user) {
+      return NextResponse.json({ error: 'אין הרשאה לשנות סטטוס חשבון' }, { status: 403 });
+    }
+
+    const { userId, accountState } = await request.json();
+
+    if (!userId || !accountState) {
       return NextResponse.json({ error: 'חסרים פרמטרים נדרשים' }, { status: 400 });
     }
 
     if (!['active', 'suspended', 'blocked'].includes(accountState)) {
       return NextResponse.json({ error: 'סטטוס לא חוקי' }, { status: 400 });
-    }
-
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'חסר אימות' }, { status: 401 });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return NextResponse.json({ error: 'אימות לא חוקי' }, { status: 401 });
-    }
-
-    const { data: adminPerms } = await supabase.rpc('get_user_admin_permissions', {
-      user_id: user.id,
-    });
-
-    if (!adminPerms?.can_suspend_user && !adminPerms?.can_block_user) {
-      return NextResponse.json({ error: 'אין הרשאה לשנות סטטוס חשבון' }, { status: 403 });
     }
 
     const { error: updateError } = await supabase
@@ -43,7 +33,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'שגיאה בעדכון סטטוס החשבון' }, { status: 500 });
     }
 
-    // If restoring to active, deactivate any active suspensions
     if (accountState === 'active') {
       await supabase
         .from('user_suspensions')
@@ -52,7 +41,6 @@ export async function POST(request: NextRequest) {
         .eq('is_active', true);
     }
 
-    // Log the action
     const actionLabels: Record<string, string> = {
       active: 'שחזור חשבון',
       suspended: 'השעיית חשבון',
@@ -66,7 +54,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     await supabase.from('admin_activity_log').insert({
-      admin_id: adminId,
+      actor_id: auth.user.id,
       action_type: 'account_state_change',
       target_type: 'user',
       target_id: userId,

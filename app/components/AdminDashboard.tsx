@@ -991,12 +991,19 @@ const AdminDashboard: React.FC = () => {
         { key: 'can_view_private_chats', label: "צפייה בצ'אטים פרטיים" },
     ];
 
+    const getAuthHeaders = async (): Promise<Record<string, string>> => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return { 'Content-Type': 'application/json' };
+        return { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+    };
+
     const loadDashboardData = async () => {
         if (!currentUser || !userPermissions?.can_view_user_list) return;
         
         try {
             setLoading(true);
             setError(null);
+            const headers = await getAuthHeaders();
     
             if (userPermissions.can_approve_registrations) {
                 const { data: statsData, error: statsError } = await supabase.rpc('get_admin_dashboard_stats', { admin_id: currentUser.id });
@@ -1008,43 +1015,38 @@ const AdminDashboard: React.FC = () => {
                 setApplications(appsData || []);
             }
 
-            const { data: usersData, error: usersError } = await supabase.from('admin_user_overview').select('*');
-            if (usersError) throw new Error('שגיאה בטעינת רשימת משתמשים');
+            const usersRes = await fetch('/api/admin/users-overview', { headers });
+            if (!usersRes.ok) throw new Error('שגיאה בטעינת רשימת משתמשים');
+            const usersData = await usersRes.json();
             setUsers(usersData || []);
 
             if (userPermissions.role === 'owner' || userPermissions.role === 'guardian') {
-                const res = await fetch('/api/admin/question-removal-requests');
+                const res = await fetch('/api/admin/question-removal-requests', { headers });
                 const data = await res.json();
                 if (res.ok && Array.isArray(data.requests)) setRemovalRequests(data.requests);
                 else setRemovalRequests([]);
             }
 
             if (userPermissions.role === 'owner') {
-                const appealsRes = await fetch('/api/admin/question-deletion-appeals');
+                const appealsRes = await fetch('/api/admin/question-deletion-appeals', { headers });
                 const appealsData = await appealsRes.json();
                 if (appealsRes.ok && Array.isArray(appealsData.appeals)) setAppeals(appealsData.appeals);
                 else setAppeals([]);
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.access_token) {
-                    const blockedAppealsRes = await fetch('/api/appeals/blocked-account', {
-                        headers: { Authorization: `Bearer ${session.access_token}` },
-                    });
-                    const blockedAppealsData = await blockedAppealsRes.json();
-                    if (blockedAppealsRes.ok && Array.isArray(blockedAppealsData.appeals)) setBlockedAccountAppeals(blockedAppealsData.appeals);
-                    else setBlockedAccountAppeals([]);
-                }
-                const logRes = await fetch('/api/admin/activity-log?limit=100');
+
+                const blockedAppealsRes = await fetch('/api/appeals/blocked-account', { headers });
+                const blockedAppealsData = await blockedAppealsRes.json();
+                if (blockedAppealsRes.ok && Array.isArray(blockedAppealsData.appeals)) setBlockedAccountAppeals(blockedAppealsData.appeals);
+                else setBlockedAccountAppeals([]);
+
+                const logRes = await fetch('/api/admin/activity-log?limit=100', { headers });
                 const logData = await logRes.json();
                 if (logRes.ok && Array.isArray(logData.entries)) setActivityLog(logData.entries);
                 else setActivityLog([]);
-                if (session?.access_token) {
-                    const rolesRes = await fetch('/api/admin/config/admin-roles', {
-                        headers: { Authorization: `Bearer ${session.access_token}` },
-                    });
-                    const rolesJson = await rolesRes.json();
-                    if (rolesRes.ok && Array.isArray(rolesJson.roles)) setRolesConfig(rolesJson.roles);
-                    else setRolesConfig([]);
-                }
+
+                const rolesRes = await fetch('/api/admin/config/admin-roles', { headers });
+                const rolesJson = await rolesRes.json();
+                if (rolesRes.ok && Array.isArray(rolesJson.roles)) setRolesConfig(rolesJson.roles);
+                else setRolesConfig([]);
             }
 
         } catch (err: unknown) {
@@ -1082,13 +1084,13 @@ const AdminDashboard: React.FC = () => {
           throw new Error('בקשה לא נמצאה');
         }
 
+        const headers = await getAuthHeaders();
         const response = await fetch('/api/admin/approve-user', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             userId: application.user_id,
             action: 'approve',
-            adminId: currentUser.id,
             notes: reason || null
           })
         });
@@ -1145,13 +1147,13 @@ const AdminDashboard: React.FC = () => {
           throw new Error('בקשה לא נמצאה');
         }
 
+        const headers = await getAuthHeaders();
         const response = await fetch('/api/admin/approve-user', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             userId: application.user_id,
             action: 'reject',
-            adminId: currentUser.id,
             notes: reason.trim()
           })
         });
@@ -1210,9 +1212,10 @@ const AdminDashboard: React.FC = () => {
         if (userPermissions?.role !== 'owner' && userPermissions?.role !== 'guardian') return;
         setRemovalActionLoading(requestId);
         try {
+            const headers = await getAuthHeaders();
             const res = await fetch(`/api/admin/question-removal-requests/${requestId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ action }),
             });
             const data = await res.json();
@@ -1237,9 +1240,10 @@ const AdminDashboard: React.FC = () => {
         if (userPermissions?.role !== 'owner') return;
         setAppealActionLoading(appealId);
         try {
+            const headers = await getAuthHeaders();
             const res = await fetch(`/api/admin/question-deletion-appeals/${appealId}/decision`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ action }),
             });
             const data = await res.json();
@@ -1265,14 +1269,10 @@ const AdminDashboard: React.FC = () => {
         if (userPermissions?.role !== 'owner') return;
         setBlockedAppealActionLoading(appealId);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) {
-                setError('חסר אימות');
-                return;
-            }
+            const headers = await getAuthHeaders();
             const res = await fetch(`/api/appeals/blocked-account/${appealId}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                headers,
                 body: JSON.stringify({ status, unblock }),
             });
             const data = await res.json();

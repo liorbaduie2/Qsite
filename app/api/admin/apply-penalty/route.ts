@@ -1,10 +1,21 @@
-//app\api\admin\apply-penalty
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { authenticateAdmin, isAdminAuth } from '@/lib/admin-auth'
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = getAdminClient()
+
+    const auth = await authenticateAdmin(request);
+    if (!isAdminAuth(auth)) return auth;
+
+    if (!auth.permissions.can_deduct_reputation) {
+      return NextResponse.json(
+        { error: 'אין הרשאה להטלת עונשים' },
+        { status: 403 },
+      )
+    }
+
     const {
       targetUserId,
       penaltyType,
@@ -13,22 +24,9 @@ export async function POST(request: NextRequest) {
       relatedContentId = null
     } = await request.json()
 
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'חסר אימות' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'אימות לא חוקי' }, { status: 401 })
-    }
-
-    // Call the modular penalty function
     const { data, error } = await supabase.rpc('apply_penalty', {
       target_user_id: targetUserId,
-      admin_user_id: user.id,
+      admin_user_id: auth.user.id,
       penalty_type: penaltyType,
       reason_text: reason,
       reason_hebrew: reasonHebrew,

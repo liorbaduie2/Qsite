@@ -4,8 +4,8 @@ import { getAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json();
     const supabase = getAdminClient();
+    const { userId } = await request.json();
 
     if (!userId) {
       return NextResponse.json(
@@ -14,12 +14,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Require authentication: caller must have a valid JWT
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { success: false, error: "חסר אימות" },
+        { status: 401 },
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const {
+      data: { user: callerUser },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+
+    if (authError || !callerUser) {
+      return NextResponse.json(
+        { success: false, error: "אימות לא חוקי" },
+        { status: 401 },
+      );
+    }
+
+    // Authorization: user can only request their own permissions.
+    // Admins (owner / guardian) may request another user's permissions.
+    if (callerUser.id !== userId) {
+      const { data: callerPerms } = await supabase.rpc(
+        "get_user_admin_permissions",
+        { user_id: callerUser.id },
+      );
+      const callerRole = callerPerms?.role;
+      if (callerRole !== "owner" && callerRole !== "guardian") {
+        return NextResponse.json(
+          { success: false, error: "אין הרשאה לצפות בהרשאות משתמש אחר" },
+          { status: 403 },
+        );
+      }
+    }
+
     // 1) Ask Postgres for the combined permissions (reputation + admin)
     const { data, error } = await supabase.rpc("get_user_all_permissions", {
       check_user_id: userId,
     });
 
-    let permissions: any = data || {};
+    let permissions: Record<string, unknown> = data || {};
 
     // 2) Independently check the canonical role from user_roles
     const { data: roleRow } = await supabase
@@ -33,7 +71,6 @@ export async function POST(request: NextRequest) {
       permissions.role_hebrew =
         roleRow.role_name_hebrew || roleRow.role || permissions.role_hebrew;
 
-      // Derive admin booleans from the canonical role slug
       const role = roleRow.role;
       const isOwner = role === "owner";
       const isGuardian = role === "guardian";
@@ -65,42 +102,15 @@ export async function POST(request: NextRequest) {
         permissions.can_mark_rule_violation ??
         (isOwner || isGuardian || isAdmin || isModerator);
 
-      // 2c) Hard guarantee: owner always has very high limits
       if (isOwner) {
         permissions.max_reputation_deduction = 999;
-        // null here means \"no enforced cap\" at the API level
         permissions.max_suspension_hours = null;
       }
     }
 
-    // 3) If the RPC itself failed, still fall back to safe defaults.
-    //    For non-owner roles, we now derive limits directly from admin_roles_config
-    //    so they always match what was configured in מטריצת הרשאות.
+    // 3) If the RPC itself failed, derive from admin_roles_config or return defaults
     if (error) {
-      // Special case: original owner user ID gets hard-coded full owner perms
-      if (userId === "25928cfa-123a-4b66-935c-8ffff11d5d09") {
-        permissions = {
-          role: "owner",
-          role_hebrew: "בעלים",
-          is_hidden: false,
-          reputation: 50,
-          can_approve_registrations: true,
-          can_manage_user_ranks: true,
-          can_view_user_list: true,
-          can_view_private_chats: true,
-          can_block_user: true,
-          can_suspend_user: true,
-          can_permanent_ban: true,
-          can_edit_delete_content: true,
-          can_deduct_reputation: true,
-          can_mark_rule_violation: true,
-          max_reputation_deduction: 999,
-          max_suspension_hours: null,
-          default_reputation_deduction: 10,
-          default_suspension_hours: 24,
-        };
-      } else if (roleRow) {
-        // If we have a role row but RPC failed, derive perms from admin_roles_config
+      if (roleRow) {
         const role = roleRow.role;
         const isOwner = role === "owner";
         const isGuardian = role === "guardian";
@@ -150,7 +160,6 @@ export async function POST(request: NextRequest) {
           can_mark_rule_violation:
             roleConfig?.can_mark_rule_violation ??
             (isOwner || isGuardian || isAdmin || isModerator),
-          // Limits and defaults: always mirror admin_roles_config so they match מטריצת הרשאות
           max_reputation_deduction:
             roleConfig?.max_reputation_deduction ?? 0,
           max_suspension_hours: roleConfig?.max_suspension_hours ?? null,
@@ -160,7 +169,6 @@ export async function POST(request: NextRequest) {
             roleConfig?.default_suspension_hours ?? null,
         };
       } else {
-        // No role row and RPC failed: plain user
         permissions = {
           role: "user",
           role_hebrew: "משתמש",
@@ -185,8 +193,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, permissions });
-  } catch (error) {
-    // In case of total failure, always return safe defaults (never 500)
+  } catch {
     return NextResponse.json({
       success: true,
       permissions: {

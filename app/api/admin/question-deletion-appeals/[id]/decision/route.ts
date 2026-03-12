@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { requireOwner, isAdminAuth } from '@/lib/admin-auth';
 
 export async function POST(
   request: NextRequest,
@@ -7,22 +8,11 @@ export async function POST(
 ) {
   try {
     const { id: appealId } = await params;
-    const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'חסר אימות' }, { status: 401 });
-    }
+    const auth = await requireOwner(request, 'רק בעלים יכול לאשר או לדחות ערעור');
+    if (!isAdminAuth(auth)) return auth;
 
-    const { data: perms } = await supabase.rpc('get_user_admin_permissions', {
-      user_id: user.id,
-    });
-    if (perms?.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'רק בעלים יכול לאשר או לדחות ערעור' },
-        { status: 403 }
-      );
-    }
+    const supabase = getAdminClient();
 
     const body = await request.json().catch(() => ({}));
     const action = body.action === 'reject' ? 'reject' : 'approve';

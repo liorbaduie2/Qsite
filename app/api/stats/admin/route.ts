@@ -1,40 +1,24 @@
-// app/api/admin/stats/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { authenticateAdmin, isAdminAuth } from '@/lib/admin-auth';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getAdminClient();
-    // For now, we'll get the current user from the session
-    // In production, you should properly validate the admin token
-    const { data: { session } } = await supabase.auth.getSession();
+    const auth = await authenticateAdmin(request);
+    if (!isAdminAuth(auth)) return auth;
 
-    if (!session?.user) {
+    if (!auth.permissions.can_view_user_list) {
       return NextResponse.json({
-        error: 'נדרש להתחבר כמנהל',
-        error_code: 'UNAUTHORIZED'
-      }, { status: 401 });
-    }
-
-    // Check if user has admin permissions
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_moderator, is_verified')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profileError || (!profile?.is_moderator && !profile?.is_verified)) {
-      return NextResponse.json({
-        error: 'אין הרשאות מנהל',
+        error: 'אין הרשאות צפייה בסטטיסטיקות',
         error_code: 'FORBIDDEN'
       }, { status: 403 });
     }
 
-    // Get dashboard stats using the SQL function
+    const supabase = getAdminClient();
+
     const { data: stats, error: statsError } = await supabase
       .rpc('get_admin_dashboard_stats', {
-        admin_id: session.user.id
+        admin_id: auth.user.id
       });
 
     if (statsError) {

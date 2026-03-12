@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { authenticateAdmin, isAdminAuth } from '@/lib/admin-auth';
 
 export async function POST(
   request: NextRequest,
@@ -7,23 +8,19 @@ export async function POST(
 ) {
   try {
     const { id: requestId } = await params;
-    const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'חסר אימות' }, { status: 401 });
-    }
+    const auth = await authenticateAdmin(request);
+    if (!isAdminAuth(auth)) return auth;
 
-    const { data: perms } = await supabase.rpc('get_user_admin_permissions', {
-      user_id: user.id,
-    });
-    const role = perms?.role;
+    const role = auth.permissions.role;
     if (role !== 'owner' && role !== 'guardian') {
       return NextResponse.json(
         { error: 'רק בעלים או ממונה מוסמך יכולים לאשר או לדחות בקשת הסרה' },
         { status: 403 }
       );
     }
+
+    const supabase = getAdminClient();
 
     const body = await request.json().catch(() => ({}));
     const action = body.action === 'reject' ? 'reject' : 'approve';
@@ -51,7 +48,7 @@ export async function POST(
       .from('question_removal_requests')
       .update({
         status: action === 'approve' ? 'approved' : 'rejected',
-        decided_by: user.id,
+        decided_by: auth.user.id,
         decided_at: now,
       })
       .eq('id', requestId);

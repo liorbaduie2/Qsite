@@ -1,13 +1,13 @@
 // app/api/admin/approve-user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { authenticateAdmin, isAdminAuth } from '@/lib/admin-auth';
 import { Resend } from 'resend';
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
-// Function to send approval email
 async function sendApprovalEmail(email: string, username: string) {
   const emailHtml = `
     <div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
@@ -36,7 +36,6 @@ async function sendApprovalEmail(email: string, username: string) {
   return true;
 }
 
-// Function to send rejection email
 async function sendRejectionEmail(email: string, username: string, reason?: string) {
   const emailHtml = `
     <div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
@@ -62,30 +61,30 @@ async function sendRejectionEmail(email: string, username: string, reason?: stri
 export async function POST(request: NextRequest) {
   try {
     const supabase = getAdminClient();
-    const { userId, action, notes, adminId } = await request.json();
 
-    if (!userId || !action || !adminId) {
+    // Authenticate via Bearer token and resolve permissions
+    const auth = await authenticateAdmin(request);
+    if (!isAdminAuth(auth)) return auth;
+
+    if (!auth.permissions.can_approve_registrations) {
+      return NextResponse.json({
+        error: 'אין הרשאה לאישור או דחיית משתמשים',
+        error_code: 'FORBIDDEN'
+      }, { status: 403 });
+    }
+
+    // Derive admin ID from authenticated token (ignore body's adminId)
+    const adminId = auth.user.id;
+
+    const { userId, action, notes } = await request.json();
+
+    if (!userId || !action) {
       return NextResponse.json({
         error: 'חסרים פרמטרים נדרשים',
         error_code: 'MISSING_PARAMS'
       }, { status: 400 });
     }
 
-    // Verify admin permissions
-    const { data: adminProfile } = await supabase
-      .from('profiles')
-      .select('is_moderator')
-      .eq('id', adminId)
-      .single();
-
-    if (!adminProfile?.is_moderator) {
-      return NextResponse.json({
-        error: 'אין הרשאה לביצוע פעולה זו',
-        error_code: 'UNAUTHORIZED'
-      }, { status: 403 });
-    }
-
-    // Get user details
     const { data: userProfile } = await supabase
       .from('profiles')
       .select('username, full_name, email')
@@ -99,7 +98,6 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Get user email from auth.users if not in profile
     const { data: authUser } = await supabase.auth.admin.getUserById(userId);
     const userEmail = userProfile.email || authUser.user?.email;
 
@@ -116,16 +114,14 @@ export async function POST(request: NextRequest) {
     if (action === 'approve') {
       newStatus = 'approved';
 
-      // 🔥 KEY: Confirm the user's email in Supabase Auth
       const { error: confirmError } = await supabase.auth.admin.updateUserById(userId, {
-        email_confirm: true // This confirms their email
+        email_confirm: true
       });
 
       if (confirmError) {
         console.error('Error confirming user email:', confirmError);
       }
 
-      // Send approval email
       try {
         await sendApprovalEmail(userEmail, userProfile.username);
         emailSent = true;
@@ -136,7 +132,6 @@ export async function POST(request: NextRequest) {
     } else if (action === 'reject') {
       newStatus = 'rejected';
 
-      // Send rejection email
       try {
         await sendRejectionEmail(userEmail, userProfile.username, notes);
         emailSent = true;
@@ -150,7 +145,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Update user status using the admin function
     const { error: updateError } = await supabase
       .rpc('admin_update_user_status', {
         admin_user_id: adminId,
@@ -167,7 +161,6 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // When approving, ensure account_state is active
     if (action === 'approve') {
       await supabase
         .from('profiles')

@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { authenticateAdmin, isAdminAuth } from '@/lib/admin-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const auth = await authenticateAdmin(request);
+    if (!isAdminAuth(auth)) return auth;
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'חסר אימות' }, { status: 401 });
-    }
-
-    const { data: perms } = await supabase.rpc('get_user_admin_permissions', {
-      user_id: user.id,
-    });
-    const role = perms?.role;
+    const role = auth.permissions.role;
     if (role !== 'owner' && role !== 'guardian') {
       return NextResponse.json(
         { error: 'רק בעלים או ממונה מוסמך יכולים לצפות בבקשות להסרה' },
         { status: 403 }
       );
     }
+
+    const supabase = getAdminClient();
 
     const { data: requests, error } = await supabase
       .from('question_removal_requests')
