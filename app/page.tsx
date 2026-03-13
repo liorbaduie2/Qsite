@@ -185,7 +185,9 @@ function ForumHomepage() {
     }
     if (voteRequestsRef.current.has(questionId)) return;
 
-    const currentQuestion = topQuestions.find((question) => question.id === questionId);
+    const currentQuestion = topQuestions.find(
+      (question) => question.id === questionId,
+    );
     if (!currentQuestion) return;
 
     const previousVote = userVotes[questionId] ?? 0;
@@ -383,12 +385,13 @@ function ForumHomepage() {
                           }
                         : undefined
                     }
-                    className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 ${
+                    className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 group ${
                       isInteractive
                         ? "hover:scale-[1.01] cursor-pointer"
                         : "cursor-default opacity-100"
                     }`}
                   >
+                    {/* Card row: voting (left) | content (right) — same layout as questions page */}
                     <div className="flex flex-row" style={{ direction: "ltr" }}>
                       {/* Vote column */}
                       <div className="flex flex-col items-center justify-center gap-0.5 w-10 min-w-[40px] sm:min-w-[48px] sm:w-12 px-1 sm:px-2 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0 self-stretch">
@@ -409,10 +412,9 @@ function ForumHomepage() {
                           <ArrowUp
                             size={25}
                             className={
-                              (userVotes[question.id] === 1
+                              userVotes[question.id] === 1
                                 ? "text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-400 dark:text-gray-500") +
-                              " group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors"
+                                : "text-gray-400 dark:text-gray-500"
                             }
                           />
                         </button>
@@ -436,10 +438,9 @@ function ForumHomepage() {
                           <ArrowDown
                             size={25}
                             className={
-                              (userVotes[question.id] === -1
+                              userVotes[question.id] === -1
                                 ? "text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-400 dark:text-gray-500") +
-                              " group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors"
+                                : "text-gray-400 dark:text-gray-500"
                             }
                           />
                         </button>
@@ -447,13 +448,13 @@ function ForumHomepage() {
 
                       {/* Main content area */}
                       <div
-                        className="flex-1 min-w-0 flex flex-col gap-0.1 px-3 pt-2 pb-0 sm:px-4 sm:pt-3 sm:pb-2 sm:pr-6 text-right overflow-hidden"
+                        className="flex-1 min-w-0 flex flex-col gap-2 px-3 pt-2 pb-0 overflow-hidden sm:px-4 sm:pt-3 sm:pb-2 sm:pr-6 text-right"
                         style={{ direction: "rtl" }}
                       >
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             {question.isAnswered && (
-                              <span className="inline-flex items-center px-2 py-.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
                                 <Star
                                   size={12}
                                   className="ml-1"
@@ -473,7 +474,7 @@ function ForumHomepage() {
                             className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
                             aria-hidden
                           />
-                          <div className="absolute left-2 -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                          <div className="absolute left-2 -top-[8px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
                             <Clock size={12} />
                             <span>{timeAgo(question.createdAt)}</span>
                           </div>
@@ -487,12 +488,12 @@ function ForumHomepage() {
                                   : `/profile/${encodeURIComponent(question.author.username)}`
                               }
                               onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-2 hover:opacity-90 transition-opacity flex-shrink-0"
+                              className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
                             >
                               <UserAvatar
                                 avatarUrl={question.author.avatar_url}
                                 username={question.author.username}
-                                size="lg"
+                                size="lgCard"
                                 isOnline={isOnline(question.author.lastSeenAt)}
                               />
                             </Link>
@@ -501,12 +502,12 @@ function ForumHomepage() {
                               <UserAvatar
                                 avatarUrl={question.author.avatar_url}
                                 username={question.author.username}
-                                size="lg"
+                                size="lgCard"
                                 isOnline={isOnline(question.author.lastSeenAt)}
                               />
                             </>
                           )}
-                          <span className="font-medium text-gray-600 dark:text-gray-300">
+                          <span className="text-[0.9075rem] font-medium text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
                             {question.author.username ? (
                               <Link
                                 href={
@@ -526,14 +527,14 @@ function ForumHomepage() {
                             )}
                           </span>
                           <div
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-2"
                             title="תגובות"
                           >
                             <MessageCircle size={15} />
                             <span>{question.replies}</span>
                           </div>
                           <div
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-2"
                             title="צפיות"
                           >
                             <Eye size={15} />
@@ -548,7 +549,9 @@ function ForumHomepage() {
                               );
                             }}
                             className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ms-auto -translate-x-[-12px]"
-                            aria-expanded={expandedTagsQuestionId === question.id}
+                            aria-expanded={
+                              expandedTagsQuestionId === question.id
+                            }
                             title={
                               expandedTagsQuestionId === question.id
                                 ? "הסתר תגיות"
@@ -564,7 +567,7 @@ function ForumHomepage() {
                         </div>
                         {/* Tags (when expanded) - below meta bar like Question page */}
                         {expandedTagsQuestionId === question.id && (
-                          <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[4px]">
+                          <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[7px]">
                             {question.tags.length > 0 ? (
                               question.tags.map((tag) => (
                                 <Link

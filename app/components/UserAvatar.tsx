@@ -4,13 +4,14 @@ import Image from "next/image";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Size = "sm" | "sm2" | "md" | "lg" | "xl";
+type Size = "sm" | "sm2" | "md" | "lg" | "lgCard" | "xl";
 
 const sizeClasses: Record<Size, string> = {
   sm: "w-6 h-6",
   sm2: "w-7 h-7",
   md: "w-9 h-9",
   lg: "w-11 h-11 sm:w-11 sm:h-11",
+  lgCard: "w-10 h-10 sm:w-10 sm:h-10", // ~90% of lg for question cards
   xl: "w-12 h-12",
 };
 
@@ -19,6 +20,7 @@ const sizePx: Record<Size, number> = {
   sm2: 28,
   md: 36,
   lg: 44,
+  lgCard: 40,
   xl: 48,
 };
 

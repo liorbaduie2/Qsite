@@ -671,7 +671,7 @@ export default function StatusPage() {
           aria-hidden
         />
         <div
-          className={`absolute left-0 -top-[10px] px-2 text-xs flex items-center gap-1 ${
+          className={`absolute left-0 -top-[8px] px-2 text-xs flex items-center gap-1 ${
             highlighted
               ? "bg-amber-50/90 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
               : "bg-white/80 dark:bg-gray-800/80 text-gray-400 dark:text-gray-500"
@@ -696,20 +696,20 @@ export default function StatusPage() {
                 <Image
                   src={item.author.avatar_url}
                   alt=""
-                  width={28}
-                  height={28}
-                  className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
                 />
               ) : (
-                <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <User size={14} className="text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                  <User size={16} className="text-white" />
                 </div>
               )}
               <div>
                 <span className="font-medium text-gray-700 dark:text-gray-200">
                   {item.author.fullName || item.author.username}
                 </span>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">
                   {item.author.reputation ?? 0} מוניטין
                 </div>
               </div>
@@ -720,20 +720,20 @@ export default function StatusPage() {
                 <Image
                   src={item.author.avatar_url}
                   alt=""
-                  width={28}
-                  height={28}
-                  className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
                 />
               ) : (
-                <div className="w-7 h-7 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <User size={14} className="text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+                  <User size={16} className="text-white" />
                 </div>
               )}
               <div>
                 <span className="font-medium text-gray-700 dark:text-gray-200">
                   {item.author.fullName || item.author.username}
                 </span>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">
                   {item.author.reputation ?? 0} מוניטין
                 </div>
               </div>

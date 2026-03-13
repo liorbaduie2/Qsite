@@ -606,7 +606,7 @@ const QuestionsPage = () => {
                         className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
                         aria-hidden
                       />
-                      <div className="absolute left-2 -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                      <div className="absolute left-2 -top-[8px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
                         <Clock size={12} />
                         <span>{timeAgo(question.createdAt)}</span>
                       </div>
@@ -625,7 +625,7 @@ const QuestionsPage = () => {
                           <UserAvatar
                             avatarUrl={question.author.avatar_url}
                             username={question.author.username}
-                            size="lg"
+                            size="lgCard"
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
                         </Link>
@@ -634,7 +634,7 @@ const QuestionsPage = () => {
                           <UserAvatar
                             avatarUrl={question.author.avatar_url}
                             username={question.author.username}
-                            size="lg"
+                            size="lgCard"
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
                         </>
@@ -691,7 +691,7 @@ const QuestionsPage = () => {
                     </div>
                     {/* Tags (when expanded) - below meta bar like Question Details */}
                     {expandedTagsQuestionId === question.id && (
-                      <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[4px]">
+                      <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[7px]">
                         {question.tags.length > 0 ? (
                           question.tags.map((tag) => (
                             <Link
