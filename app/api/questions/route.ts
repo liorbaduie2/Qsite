@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { normalizeTagName } from '@/lib/tag-matching';
-import { getAdminClient } from '@/lib/supabase/admin';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { normalizeTagName } from "@/lib/tag-matching";
+import { getAdminClient } from "@/lib/supabase/admin";
 import {
   syncTagEmbeddings,
   upsertQuestionEmbedding,
-} from '@/lib/tag-suggestions/embedding-sync';
-import { requireActiveAccount } from '@/lib/account-state';
+} from "@/lib/tag-suggestions/embedding-sync";
+import { requireActiveAccount } from "@/lib/account-state";
 
 type TagSuggestionContext = {
   shownSuggestedTags: string[];
@@ -25,7 +25,7 @@ function normalizeTagSuggestionContext(value: unknown): TagSuggestionContext {
     acceptedSuggestedTags: [],
   };
 
-  if (!value || typeof value !== 'object') {
+  if (!value || typeof value !== "object") {
     return fallback;
   }
 
@@ -37,13 +37,13 @@ function normalizeTagSuggestionContext(value: unknown): TagSuggestionContext {
   return {
     shownSuggestedTags: Array.isArray(context.shownSuggestedTags)
       ? context.shownSuggestedTags
-          .filter((tag): tag is string => typeof tag === 'string')
+          .filter((tag): tag is string => typeof tag === "string")
           .map((tag) => normalizeTagName(tag))
           .filter(Boolean)
       : [],
     acceptedSuggestedTags: Array.isArray(context.acceptedSuggestedTags)
       ? context.acceptedSuggestedTags
-          .filter((tag): tag is string => typeof tag === 'string')
+          .filter((tag): tag is string => typeof tag === "string")
           .map((tag) => normalizeTagName(tag))
           .filter(Boolean)
       : [],
@@ -118,11 +118,11 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { searchParams } = new URL(request.url);
 
-    const search = searchParams.get('search') || '';
-    const tag = searchParams.get('tag') || '';
-    const sortBy = searchParams.get('sort') || 'newest';
-    const includeUserVotes = searchParams.get('includeUserVotes') === '1';
-    const limitParam = searchParams.get('limit');
+    const search = searchParams.get("search") || "";
+    const tag = searchParams.get("tag") || "";
+    const sortBy = searchParams.get("sort") || "newest";
+    const includeUserVotes = searchParams.get("includeUserVotes") === "1";
+    const limitParam = searchParams.get("limit");
     const limit = limitParam ? parseInt(limitParam, 10) : undefined;
     let currentUserId: string | null = null;
 
@@ -136,8 +136,9 @@ export async function GET(request: NextRequest) {
     let weekStartIso: string | null = null;
 
     let query = supabase
-      .from('questions')
-      .select(`
+      .from("questions")
+      .select(
+        `
         id,
         title,
         content,
@@ -160,48 +161,57 @@ export async function GET(request: NextRequest) {
             name
           )
         )
-      `)
-      .is('deleted_at', null);
+      `,
+      )
+      .is("deleted_at", null);
 
     if (search) {
       query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
     }
 
     switch (sortBy) {
-      case 'votes':
-        query = query.order('votes_count', { ascending: false });
+      case "votes":
+        query = query.order("votes_count", { ascending: false });
         break;
-      case 'weekly_top':
+      case "weekly_top":
         // Base ordering by votes; we'll apply weekly priority in application code
-        query = query.order('votes_count', { ascending: false });
+        query = query.order("votes_count", { ascending: false });
         break;
-      case 'replies':
-        query = query.order('replies_count', { ascending: false });
+      case "replies":
+        query = query.order("replies_count", { ascending: false });
         break;
-      case 'views':
-        query = query.order('views_count', { ascending: false });
+      case "views":
+        query = query.order("views_count", { ascending: false });
         break;
-      case 'oldest':
-        query = query.order('created_at', { ascending: true });
+      case "oldest":
+        query = query.order("created_at", { ascending: true });
         break;
       default:
-        query = query.order('created_at', { ascending: false });
+        query = query.order("created_at", { ascending: false });
     }
 
-    if (limit && Number.isFinite(limit) && limit > 0 && sortBy !== 'weekly_top') {
+    if (
+      limit &&
+      Number.isFinite(limit) &&
+      limit > 0 &&
+      sortBy !== "weekly_top"
+    ) {
       query = query.limit(limit);
     }
 
     const { data: questions, error } = await query;
 
     if (error) {
-      console.error('Error fetching questions:', error);
-      return NextResponse.json({ error: 'שגיאה בטעינת השאלות' }, { status: 500 });
+      console.error("Error fetching questions:", error);
+      return NextResponse.json(
+        { error: "שגיאה בטעינת השאלות" },
+        { status: 500 },
+      );
     }
 
     let processed = questions || [];
 
-    if (sortBy === 'weekly_top') {
+    if (sortBy === "weekly_top") {
       const now = new Date();
       const day = now.getDay(); // 0 (Sunday) - 6 (Saturday)
       const diffToMonday = (day + 6) % 7; // days since Monday
@@ -221,7 +231,7 @@ export async function GET(request: NextRequest) {
 
     processed = processed.filter((q: any) => {
       const p = q.profiles as Record<string, unknown> | null;
-      return p?.account_state !== 'blocked';
+      return p?.account_state !== "blocked";
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -236,7 +246,7 @@ export async function GET(request: NextRequest) {
       createdAt: q.created_at,
       author: {
         id: q.profiles?.id || q.author_id,
-        username: q.profiles?.username || 'אנונימי',
+        username: q.profiles?.username || "אנונימי",
         avatar_url: q.profiles?.avatar_url || null,
         lastSeenAt: q.profiles?.last_seen_at ?? null,
       },
@@ -245,14 +255,14 @@ export async function GET(request: NextRequest) {
         .map((qt: any) => qt.tags?.name)
         .filter(Boolean),
       isTopOfWeek:
-        sortBy === 'weekly_top' &&
+        sortBy === "weekly_top" &&
         index === 0 &&
         weekStartIso !== null &&
         q.created_at >= weekStartIso,
     }));
 
     const visibleQuestions =
-      tag && tag !== 'הכל'
+      tag && tag !== "הכל"
         ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
           formatted.filter((q: any) => q.tags.includes(tag))
         : formatted;
@@ -261,14 +271,20 @@ export async function GET(request: NextRequest) {
     if (includeUserVotes && currentUserId && visibleQuestions.length > 0) {
       const questionIds = visibleQuestions.map((question) => question.id);
       const { data: voteRows, error: votesError } = await supabase
-        .from('votes')
-        .select('question_id, vote_type')
-        .eq('user_id', currentUserId)
-        .in('question_id', questionIds);
+        .from("votes")
+        .select("question_id, vote_type")
+        .eq("user_id", currentUserId)
+        .in("question_id", questionIds);
 
       if (votesError) {
-        console.error('Error fetching current user question votes:', votesError);
-        return NextResponse.json({ error: 'שגיאה בטעינת ההצבעות' }, { status: 500 });
+        console.error(
+          "Error fetching current user question votes:",
+          votesError,
+        );
+        return NextResponse.json(
+          { error: "שגיאה בטעינת ההצבעות" },
+          { status: 500 },
+        );
       }
 
       userVotes = Object.fromEntries(
@@ -278,7 +294,10 @@ export async function GET(request: NextRequest) {
               vote.question_id &&
               (vote.vote_type === 1 || vote.vote_type === -1),
           )
-          .map((vote) => [vote.question_id as string, vote.vote_type as 1 | -1]),
+          .map((vote) => [
+            vote.question_id as string,
+            vote.vote_type as 1 | -1,
+          ]),
       );
     }
 
@@ -287,8 +306,8 @@ export async function GET(request: NextRequest) {
       ...(includeUserVotes ? { userVotes } : {}),
     });
   } catch (error) {
-    console.error('Questions GET error:', error);
-    return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
+    console.error("Questions GET error:", error);
+    return NextResponse.json({ error: "שגיאה בשרת" }, { status: 500 });
   }
 }
 
@@ -296,9 +315,15 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'יש להתחבר כדי לשאול שאלה' }, { status: 401 });
+      return NextResponse.json(
+        { error: "יש להתחבר כדי לשאול שאלה" },
+        { status: 401 },
+      );
     }
 
     const access = await requireActiveAccount(supabase, user.id);
@@ -310,67 +335,83 @@ export async function POST(request: NextRequest) {
       normalizeTagSuggestionContext(tagSuggestionContext);
 
     if (!title?.trim() || title.trim().length < 5) {
-      return NextResponse.json({ error: 'הכותרת חייבת להכיל לפחות 5 תווים' }, { status: 400 });
+      return NextResponse.json(
+        { error: "הכותרת חייבת להכיל לפחות 5 תווים" },
+        { status: 400 },
+      );
     }
     if (!content?.trim()) {
-      return NextResponse.json({ error: 'תוכן השאלה הוא שדה חובה' }, { status: 400 });
+      return NextResponse.json(
+        { error: "תוכן השאלה הוא שדה חובה" },
+        { status: 400 },
+      );
     }
     if (!Array.isArray(tags) || tags.length === 0) {
-      return NextResponse.json({ error: 'יש להוסיף לפחות תגית אחת' }, { status: 400 });
+      return NextResponse.json(
+        { error: "יש להוסיף לפחות תגית אחת" },
+        { status: 400 },
+      );
     }
 
     const submittedTags: string[] = tags.filter(
-      (tag): tag is string => typeof tag === 'string',
+      (tag): tag is string => typeof tag === "string",
     );
 
     const normalizedTags: string[] = Array.from(
       new Set(
-        submittedTags
-          .map((tag) => normalizeTagName(tag))
-          .filter(Boolean),
+        submittedTags.map((tag) => normalizeTagName(tag)).filter(Boolean),
       ),
     ).slice(0, 5);
 
     if (normalizedTags.length === 0) {
-      return NextResponse.json({ error: 'יש לבחור לפחות תגית קיימת אחת' }, { status: 400 });
+      return NextResponse.json(
+        { error: "יש לבחור לפחות תגית קיימת אחת" },
+        { status: 400 },
+      );
     }
 
-    const { data: existingTagsResult, error: tagsValidationError } = await supabase
-      .from('tags')
-      .select('id, name, use_count')
-      .limit(500);
+    const { data: existingTagsResult, error: tagsValidationError } =
+      await supabase.from("tags").select("id, name, use_count").limit(500);
 
     if (tagsValidationError) {
-      console.error('Error validating tags:', tagsValidationError);
-      return NextResponse.json({ error: 'שגיאה באימות התגיות' }, { status: 500 });
+      console.error("Error validating tags:", tagsValidationError);
+      return NextResponse.json(
+        { error: "שגיאה באימות התגיות" },
+        { status: 500 },
+      );
     }
 
     const existingTags = (existingTagsResult || []) as ExistingTagRow[];
     const existingTagsByName = new Map(
       existingTags.map((tag) => [normalizeTagName(tag.name), tag]),
     );
-    const invalidTags = normalizedTags.filter((tag) => !existingTagsByName.has(tag));
+    const invalidTags = normalizedTags.filter(
+      (tag) => !existingTagsByName.has(tag),
+    );
 
     if (invalidTags.length > 0) {
       return NextResponse.json(
-        { error: 'ניתן לבחור רק תגיות קיימות מהקטלוג' },
+        { error: "ניתן לבחור רק תגיות קיימות מהקטלוג" },
         { status: 400 },
       );
     }
 
     const { data: question, error: questionError } = await supabase
-      .from('questions')
+      .from("questions")
       .insert({
         title: title.trim(),
         content: content.trim(),
         author_id: user.id,
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (questionError) {
-      console.error('Error creating question:', questionError);
-      return NextResponse.json({ error: 'שגיאה ביצירת השאלה' }, { status: 500 });
+      console.error("Error creating question:", questionError);
+      return NextResponse.json(
+        { error: "שגיאה ביצירת השאלה" },
+        { status: 500 },
+      );
     }
 
     const selectedTagRows = normalizedTags.flatMap((tagName) => {
@@ -385,28 +426,31 @@ export async function POST(request: NextRequest) {
       }));
 
       const { error: questionTagsError } = await supabase
-        .from('question_tags')
+        .from("question_tags")
         .insert(questionTagRows);
 
       if (questionTagsError) {
-        console.error('Error linking question tags:', questionTagsError);
-        return NextResponse.json({ error: 'שגיאה בשמירת התגיות' }, { status: 500 });
+        console.error("Error linking question tags:", questionTagsError);
+        return NextResponse.json(
+          { error: "שגיאה בשמירת התגיות" },
+          { status: 500 },
+        );
       }
 
       const useCountUpdates = await Promise.allSettled(
         selectedTagRows.map((tag) =>
           supabase
-            .from('tags')
+            .from("tags")
             .update({ use_count: (tag.use_count || 0) + 1 })
-            .eq('id', tag.id),
+            .eq("id", tag.id),
         ),
       );
 
       useCountUpdates.forEach((result) => {
-        if (result.status === 'rejected') {
-          console.error('Error updating tag use count:', result.reason);
+        if (result.status === "rejected") {
+          console.error("Error updating tag use count:", result.reason);
         } else if (result.value.error) {
-          console.error('Error updating tag use count:', result.value.error);
+          console.error("Error updating tag use count:", result.value.error);
         }
       });
     }
@@ -436,9 +480,12 @@ export async function POST(request: NextRequest) {
       if (feedbackRows.length > 0) {
         learningTasks.push(
           (async () => {
-            const { error } = await adminClient.rpc('record_tag_feedback_batch', {
-              feedback_rows: feedbackRows,
-            });
+            const { error } = await adminClient.rpc(
+              "record_tag_feedback_batch",
+              {
+                feedback_rows: feedbackRows,
+              },
+            );
 
             if (error) {
               throw error;
@@ -449,17 +496,23 @@ export async function POST(request: NextRequest) {
 
       const learningResults = await Promise.allSettled(learningTasks);
       learningResults.forEach((result) => {
-        if (result.status === 'rejected') {
-          console.error('Question tagging learning task failed:', result.reason);
+        if (result.status === "rejected") {
+          console.error(
+            "Question tagging learning task failed:",
+            result.reason,
+          );
         }
       });
     } catch (learningError) {
-      console.error('Question tagging learning setup failed:', learningError);
+      console.error("Question tagging learning setup failed:", learningError);
     }
 
-    return NextResponse.json({ success: true, questionId: question.id }, { status: 201 });
+    return NextResponse.json(
+      { success: true, questionId: question.id },
+      { status: 201 },
+    );
   } catch (error) {
-    console.error('Questions POST error:', error);
-    return NextResponse.json({ error: 'שגיאה בשרת' }, { status: 500 });
+    console.error("Questions POST error:", error);
+    return NextResponse.json({ error: "שגיאה בשרת" }, { status: 500 });
   }
 }

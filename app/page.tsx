@@ -28,6 +28,8 @@ import { isOnline } from "@/lib/utils";
 import { usePresenceTick } from "./hooks/usePresenceTick";
 import AuthStatusDisplay from "./components/AuthStatusDisplay";
 import { SimpleThemeToggle } from "./components/SimpleThemeToggle";
+import { MobileNavbar } from "./components/MobileNavbar";
+import { MobileNavDrawer } from "./components/MobileNavDrawer";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -90,6 +92,7 @@ function timeAgo(dateStr: string): string {
 
 function ForumHomepage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [topQuestions, setTopQuestions] = useState<TopQuestion[]>([]);
@@ -615,6 +618,22 @@ function ForumHomepage() {
       />
 
       <ProfileTestComponent />
+
+      <MobileNavDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        menuItems={menuItems}
+        user={user}
+        profile={profile}
+        onSignOut={handleSignOut}
+        onOpenLoginModal={() => {
+          setIsMobileDrawerOpen(false);
+          setIsLoginModalOpen(true);
+        }}
+        headerExtra={<SimpleThemeToggle size="sm" className="shrink-0" />}
+      />
+
+      <MobileNavbar onMenuClick={() => setIsMobileDrawerOpen(true)} />
 
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Heebo:wght@400;500;700&display=swap");

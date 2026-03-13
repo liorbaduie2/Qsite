@@ -108,7 +108,7 @@ const QuestionsPage = () => {
   const [isNewQuestionModalOpen, setIsNewQuestionModalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("weekly_top");
+  const [sortBy, setSortBy] = useState("newest");
   const [filterTag, setFilterTag] = useState("הכל");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -118,10 +118,12 @@ const QuestionsPage = () => {
     Record<string, boolean>
   >({});
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [expandedTagsQuestionId, setExpandedTagsQuestionId] = useState<
     string | null
   >(null);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
   const voteRequestsRef = useRef(new Set<string>());
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
@@ -156,19 +158,12 @@ const QuestionsPage = () => {
     { label: "סיפורים", icon: BookOpen, href: "/stories" },
   ];
 
-  const allTags = [
-    "הכל",
-    "תכנות",
-    "עיצוב",
-    "קריירה",
-    "לימודים",
-    "טכנולוגי",
-    "פיתוח",
-    "React",
-    "Vue",
-    "JavaScript",
-    "CSS",
-    "HTML",
+  const allTags = ["הכל"];
+
+  const sortOptions: { value: string; label: string }[] = [
+    { value: "newest", label: "חדש" },
+    { value: "weekly_top", label: "מובילות" },
+    { value: "oldest", label: "ישן" },
   ];
 
   const fetchQuestions = useCallback(async () => {
@@ -238,6 +233,29 @@ const QuestionsPage = () => {
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
   }, [tagDropdownOpen]);
+
+  useEffect(() => {
+    if (!sortDropdownOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSortDropdownOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sortDropdownOpen]);
+
+  useEffect(() => {
+    if (!sortDropdownOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (
+        sortDropdownRef.current &&
+        !sortDropdownRef.current.contains(e.target as Node)
+      ) {
+        setSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [sortDropdownOpen]);
 
   const handleSignOut = async () => {
     try {
@@ -428,8 +446,8 @@ const QuestionsPage = () => {
         {/* Search and Filter — compact bar (visible when user clicks "חפש שאלות") */}
         {isSearchOpen && (
           <div className="mb-5 relative z-10">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm shadow-xl p-3 sm:p-4">
-              <div className="flex-1 relative min-w-0 flex items-center rounded-xl border border-gray-200/50 dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-900/50 focus-within:ring-2 focus-within:ring-indigo-500/40 dark:focus-within:ring-indigo-400/50 transition-shadow">
+            <div className="flex flex-row items-center gap-2 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm shadow-xl p-3 sm:p-4">
+              <div className="flex-1 relative min-w-0 flex items-center rounded-xl border border-gray-200/50 dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-900/50 focus-within:ring-2 focus-within:ring-indigo-500/40 dark:focus-within:ring-indigo-400/50 transition-shadow h-10">
                 <Search
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400 pointer-events-none"
                   size={18}
@@ -442,7 +460,7 @@ const QuestionsPage = () => {
                   className="w-full h-10 pr-10 pl-3 text-sm border-0 bg-transparent text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none rounded-xl"
                 />
               </div>
-              <div className="flex gap-2 sm:gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <div className="relative" ref={tagDropdownRef}>
                   <button
                     type="button"
@@ -456,7 +474,7 @@ const QuestionsPage = () => {
                     />
                   </button>
                   {tagDropdownOpen && (
-                    <div className="absolute top-full end-5 mt-1 py-1 w-30 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-64 overflow-y-auto">
+                    <div className="absolute top-full right-0 sm:right-auto sm:end-5 mt-1 py-1 w-30 min-w-[8rem] bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-64 overflow-y-auto">
                       {allTags.map((tag) => (
                         <button
                           key={tag}
@@ -473,22 +491,39 @@ const QuestionsPage = () => {
                     </div>
                   )}
                 </div>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="h-10 pl-8 pr-3 text-sm rounded-xl border border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500/40 dark:focus:ring-indigo-400/50 focus:border-transparent cursor-pointer min-w-0 flex-1 sm:flex-none sm:w-40 [color-scheme:light] dark:[color-scheme:dark] appearance-none bg-no-repeat bg-[length:1rem] bg-[left_0.75rem_center]"
-                  style={{
-                    backgroundImage:
-                      "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")",
-                  }}
-                >
-                  <option value="weekly_top">שאלת השבוע</option>
-                  <option value="newest">חדש</option>
-                  <option value="oldest">ישן</option>
-                  <option value="votes">הכי מצוינות</option>
-                  <option value="replies">הכי פופולריות</option>
-                  <option value="views">הכי נצפות</option>
-                </select>
+                <div className="relative" ref={sortDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setSortDropdownOpen((o) => !o)}
+                    className="h-10 min-w-0 flex-1 sm:flex-none sm:w-40 flex items-center justify-between gap-2 px-3 rounded-xl border border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-2 focus:ring-indigo-500/40 dark:focus:ring-indigo-400/50 focus:border-transparent cursor-pointer"
+                  >
+                    <span className="truncate">
+                      {sortOptions.find((o) => o.value === sortBy)?.label ??
+                        sortBy}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      className="text-gray-500 dark:text-gray-400 shrink-0"
+                    />
+                  </button>
+                  {sortDropdownOpen && (
+                    <div className="absolute top-full right-0 sm:right-auto sm:end-5 mt-1 py-1 w-30 min-w-[8rem] bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-64 overflow-y-auto">
+                      {sortOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setSortBy(opt.value);
+                            setSortDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2 px-4 py-2.5 text-right text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${sortBy === opt.value ? "bg-gray-100 dark:bg-gray-700" : ""}`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

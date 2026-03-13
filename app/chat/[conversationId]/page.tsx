@@ -345,11 +345,11 @@ export default function ChatThreadPage() {
 
   return (
     <div
-      className="h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 flex flex-col overflow-hidden"
+      className="h-[100dvh] bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 flex flex-col overflow-hidden"
       dir="rtl"
     >
       <header
-        className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-700/50 px-4"
+        className="shrink-0 bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-700/50 px-4"
         dir="rtl"
       >
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3 h-20">
@@ -469,7 +469,7 @@ export default function ChatThreadPage() {
 
         <form
           onSubmit={handleSend}
-          className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/70"
+          className="shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/70"
         >
           <div className="flex gap-2">
             <input

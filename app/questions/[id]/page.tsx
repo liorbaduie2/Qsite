@@ -1250,7 +1250,7 @@ export default function QuestionDetailPage() {
                         <input
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
-                          className="flex-1 min-w-0 text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
+                          className="flex-1 min-w-0 text-[1.2rem] md:text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
                           placeholder="כותרת (לפחות 5 תווים)"
                           minLength={5}
                           required
@@ -1372,7 +1372,7 @@ export default function QuestionDetailPage() {
                     </form>
                   ) : (
                     <div className="flex items-center gap-3 mb-1">
-                      <h1 className="flex-1 min-w-0 text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug">
+                      <h1 className="flex-1 min-w-0 text-[1.2rem] md:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug">
                         {question.title}
                       </h1>
                       {(canEdit ||

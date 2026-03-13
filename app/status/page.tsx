@@ -663,7 +663,7 @@ export default function StatusPage() {
       </p>
       <div className="relative flex items-center justify-between flex-wrap gap-1.5 pt-2 mt-0">
         <div
-          className={`absolute top-0 right-0 left-[90px] h-px ${
+          className={`absolute top-0 right-2 left-[6.5rem] h-px ${
             highlighted
               ? "bg-amber-200 dark:bg-amber-700/60"
               : "bg-gray-100 dark:bg-gray-700"
@@ -844,9 +844,9 @@ export default function StatusPage() {
 
       <main className="max-w-6xl mx-auto px-5 py-8">
         <div className="mb-8">
-          <div className="relative grid grid-cols-3 rounded-2xl border border-gray-200/70 dark:border-gray-700/70 bg-white/70 dark:bg-gray-800/60 p-1 mb-5 shadow-sm overflow-hidden">
+          <div className="relative mr-auto mb-5 inline-grid grid-cols-3 rounded-2xl bg-white/38 dark:bg-slate-800/28 p-1 backdrop-blur-xl shadow-[0_12px_32px_rgba(15,23,42,0.08)] overflow-hidden after:absolute after:inset-0 after:rounded-2xl after:bg-gradient-to-tr after:from-transparent after:via-white/15 after:to-white/50 dark:after:via-white/5 dark:after:to-white/5 after:pointer-events-none">
             <div
-              className="absolute top-1 bottom-1 right-1 rounded-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] bg-black/10 dark:bg-white/10"
+              className="absolute top-1 bottom-1 right-1 rounded-[0.9rem] bg-gradient-to-br from-white/70 to-white/25 dark:from-white/10 dark:to-white/3 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_10px_24px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] after:absolute after:inset-x-0 after:top-0 after:h-1/2 after:rounded-t-[0.9rem] after:bg-gradient-to-b after:from-white/70 after:to-transparent dark:after:from-white/10 after:pointer-events-none"
               style={{
                 width: "calc((100% - 0.5rem) / 3)",
                 transform: `translateX(-${activeFilterIndex * 100}%)`,
@@ -858,10 +858,10 @@ export default function StatusPage() {
                 key={filter.id}
                 type="button"
                 onClick={() => setActiveFilter(filter.id)}
-                className={`relative z-10 px-3 py-2.5 text-[13px] sm:text-sm font-medium rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                className={`relative z-10 px-1.5 py-1.5 text-[12px] sm:text-[13px] font-medium rounded-[0.9rem] transition-all duration-200 active:scale-[0.98] ${
                   activeFilter === filter.id
-                    ? "text-gray-900 dark:text-white"
-                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                    ? "text-slate-900 dark:text-white"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 {filter.label}

@@ -54,7 +54,7 @@ export default function RootLayout({
       <head>
         <ThemeHydrationScript />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <AuthProvider>
           <CustomThemeProvider>
             <main>{children}</main>

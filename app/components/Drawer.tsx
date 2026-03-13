@@ -293,7 +293,9 @@ const Drawer: React.FC<DrawerProps> = ({
                       );
                     })()}
                     {headerExtra && (
-                      <div className="sm:hidden flex-shrink-0">{headerExtra}</div>
+                      <div className="sm:hidden flex-shrink-0">
+                        {headerExtra}
+                      </div>
                     )}
                     <button
                       onClick={() => setIsDrawerOpen(false)}
