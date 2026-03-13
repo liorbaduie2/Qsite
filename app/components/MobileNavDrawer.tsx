@@ -10,11 +10,11 @@ import {
   Settings,
   ChevronDown,
   Minus,
-  Swords,
   Moon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ReputationArc } from "@/app/components/ReputationArc";
+import { RoleBadge } from "@/app/components/RoleBadge";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useNotificationsRealtime } from "@/app/hooks/useNotificationsRealtime";
 import { usePresenceTick } from "@/app/hooks/usePresenceTick";
@@ -133,15 +133,15 @@ export function MobileNavDrawer({
 
       {/* Bottom sheet panel */}
       <div
-        className={`relative mx-auto w-[92%] max-w-md max-h-[70dvh] bg-white dark:bg-[#0B1221] text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 rounded-[2rem] shadow-2xl transform transition-transform duration-300 ease-out flex flex-col mb-[7rem] ${
+        className={`relative mx-auto w-[92%] max-w-md max-h-[82dvh] bg-white dark:bg-[#0B1221] text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 rounded-[2rem] shadow-[0_4px_12px_-2px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_12px_-2px_rgba(0,0,0,0.25)] transform transition-transform duration-300 ease-out flex flex-col mb-24 ${
           isOpen ? "translate-y-0 scale-100" : "translate-y-12 scale-95"
         }`}
         style={{ direction: "rtl" }}
       >
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 flex flex-col">
-          {/* Header with theme toggle and close - close to PFP */}
-          <div className="flex items-center justify-between mb-0">
-            <div className="flex items-center justify-center">
+          {/* X and theme on same row as PFP */}
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center justify-center w-12 shrink-0 -translate-y-[31px]">
               {headerExtra ? (
                 headerExtra
               ) : (
@@ -150,52 +150,64 @@ export function MobileNavDrawer({
                 </div>
               )}
             </div>
+            {user ? (
+              <div className="relative shrink-0">
+                <div
+                  className="relative rounded-full p-1 bg-white dark:bg-[#0B1221] border border-gray-200 dark:border-white/20"
+                  style={{ width: 104, height: 104 }}
+                >
+                  <div className="absolute inset-1">
+                    <ReputationArc value={profile?.reputation ?? 0} size={96} />
+                  </div>
+                  <div className="absolute inset-3 flex items-center justify-center">
+                    {profile?.avatar_url ? (
+                      <Image
+                        src={profile.avatar_url}
+                        alt={profile?.username || ""}
+                        width={74}
+                        height={74}
+                        className="w-[74px] h-[74px] rounded-full object-cover border-[3px] border-white dark:border-[#0B1221] shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-[74px] h-[74px] bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 rounded-full flex items-center justify-center border-[3px] border-white dark:border-[#0B1221] shadow-sm">
+                        <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+                          {profile?.username
+                            ? profile.username.charAt(0).toUpperCase()
+                            : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="relative rounded-full p-1 bg-white dark:bg-[#0B1221] border border-gray-200 dark:border-white/20 shadow-sm shrink-0"
+                style={{ width: 104, height: 104 }}
+              >
+                <div className="absolute inset-3 flex items-center justify-center">
+                  <div className="w-[74px] h-[74px] bg-gray-100 dark:bg-gradient-to-br dark:from-indigo-900/50 dark:to-purple-900/50 rounded-full flex items-center justify-center border-[3px] border-white dark:border-[#0B1221]">
+                    <User
+                      size={32}
+                      className="text-gray-400 dark:text-white/50"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             <button
               onClick={onClose}
-              className="p-2 text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"
+              className="p-2 text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors shrink-0 -translate-y-[30px]"
               aria-label="סגור"
             >
               <X size={28} />
             </button>
           </div>
 
-          {/* User Section - same structure as profile page */}
+          {/* Username and role below PFP row */}
           <div className="flex flex-col items-center mb-4">
             {user ? (
               <>
-                <div className="relative mb-1">
-                  {/* PFP circle - matches profile page: outer ring + ReputationArc + inner image */}
-                  <div
-                    className="relative rounded-full p-1 bg-white dark:bg-[#0B1221] border border-gray-200 dark:border-white/20"
-                    style={{ width: 132, height: 132 }}
-                  >
-                    <div className="absolute inset-1">
-                      <ReputationArc
-                        value={profile?.reputation ?? 0}
-                        size={124}
-                      />
-                    </div>
-                    <div className="absolute inset-4 flex items-center justify-center">
-                      {profile?.avatar_url ? (
-                        <Image
-                          src={profile.avatar_url}
-                          alt={profile?.username || ""}
-                          width={96}
-                          height={96}
-                          className="w-[100px] h-[100px] rounded-full object-cover border-4 border-white dark:border-[#0B1221] shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-[100px] h-[100px] bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 rounded-full flex items-center justify-center border-4 border-white dark:border-[#0B1221] shadow-sm">
-                          <span className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
-                            {profile?.username
-                              ? profile.username.charAt(0).toUpperCase()
-                              : ""}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
                 <h2 className="text-[1.75rem] font-bold text-gray-900 dark:text-white tracking-wide">
                   {profile?.full_name || profile?.username || "משתמש"}
                 </h2>
@@ -203,29 +215,18 @@ export function MobileNavDrawer({
                   userPermissions.role !== "user" &&
                   !userPermissions.is_hidden && (
                     <div className="mt-0.5 flex justify-center">
-                      <div className="whitespace-nowrap bg-white dark:bg-[#0B1221] border border-gray-200 dark:border-white/20 text-gray-700 dark:text-white px-3 py-0.5 rounded-full flex items-center gap-1.5 text-xs shadow-sm">
-                        <Swords size={12} />
-                        <span>{userPermissions.role_hebrew || "משתמש"}</span>
-                      </div>
+                      <RoleBadge
+                        role={userPermissions.role}
+                        roleHebrew={userPermissions.role_hebrew || "משתמש"}
+                        size="sm"
+                      />
                     </div>
                   )}
               </>
             ) : (
-              <div className="py-2 flex flex-col items-center">
-                <div
-                  className="relative rounded-full p-1 bg-white dark:bg-[#0B1221] border border-gray-200 dark:border-white/20 shadow-sm"
-                  style={{ width: 132, height: 132 }}
-                >
-                  <div className="absolute inset-4 flex items-center justify-center">
-                    <div className="w-[100px] h-[100px] bg-gray-100 dark:bg-gradient-to-br dark:from-indigo-900/50 dark:to-purple-900/50 rounded-full flex items-center justify-center border-4 border-white dark:border-[#0B1221]">
-                      <User size={40} className="text-gray-400 dark:text-white/50" />
-                    </div>
-                  </div>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-wide mt-4">
-                  אורח
-                </h2>
-              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-wide mt-2">
+                אורח
+              </h2>
             )}
           </div>
 
@@ -237,9 +238,19 @@ export function MobileNavDrawer({
               // Determine left icon based on label to match the design
               let LeftIcon = null;
               if (item.label === "דיונים") {
-                LeftIcon = <Minus size={18} className="text-gray-400 dark:text-white/70" />;
+                LeftIcon = (
+                  <Minus
+                    size={18}
+                    className="text-gray-400 dark:text-white/70"
+                  />
+                );
               } else if (item.label === "שאלות" || item.label === "סיפורים") {
-                LeftIcon = <ChevronDown size={18} className="text-gray-400 dark:text-white/70" />;
+                LeftIcon = (
+                  <ChevronDown
+                    size={18}
+                    className="text-gray-400 dark:text-white/70"
+                  />
+                );
               }
 
               return (
@@ -253,9 +264,18 @@ export function MobileNavDrawer({
                   }`}
                 >
                   <div className="absolute right-5 flex items-center justify-center">
-                    <IconComponent size={22} className={item.active ? "text-indigo-600 dark:text-white" : "text-gray-700 dark:text-white"} />
+                    <IconComponent
+                      size={22}
+                      className={
+                        item.active
+                          ? "text-indigo-600 dark:text-white"
+                          : "text-gray-700 dark:text-white"
+                      }
+                    />
                   </div>
-                  <div className={`flex-1 text-center text-lg font-medium tracking-wide ${item.active ? "text-indigo-900 dark:text-white" : "text-gray-800 dark:text-white"}`}>
+                  <div
+                    className={`flex-1 text-center text-lg font-medium tracking-wide ${item.active ? "text-indigo-900 dark:text-white" : "text-gray-800 dark:text-white"}`}
+                  >
                     {item.label}
                   </div>
                   <div className="absolute left-5 flex items-center justify-center">
