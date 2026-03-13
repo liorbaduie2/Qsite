@@ -639,7 +639,7 @@ const QuestionsPage = () => {
                           />
                         </>
                       )}
-                      <span className="text-[0.9075rem] font-medium text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
+                      <span className="text-[0.9075rem] font-semibold text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
                         {question.author.username ? (
                           <Link
                             href={
@@ -650,7 +650,7 @@ const QuestionsPage = () => {
                                 : `/profile/${encodeURIComponent(question.author.username)}`
                             }
                             onClick={(e) => e.stopPropagation()}
-                            className="hover:underline"
+                            className="hover:underline font-inherit"
                           >
                             {question.author.username}
                           </Link>
@@ -691,7 +691,7 @@ const QuestionsPage = () => {
                     </div>
                     {/* Tags (when expanded) - below meta bar like Question Details */}
                     {expandedTagsQuestionId === question.id && (
-                      <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[7px]">
+                      <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[12px] sm:-translate-y-[7px]">
                         {question.tags.length > 0 ? (
                           question.tags.map((tag) => (
                             <Link

@@ -388,10 +388,10 @@ function ForumHomepage() {
                     className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 group ${
                       isInteractive
                         ? "hover:scale-[1.01] cursor-pointer"
-                        : "cursor-default opacity-100"
+                        : "cursor-default"
                     }`}
                   >
-                    {/* Card row: voting (left) | content (right) — same layout as questions page */}
+                    {/* Card row: voting (left) | content (right) — same layout as questions page (mobile + desktop) */}
                     <div className="flex flex-row" style={{ direction: "ltr" }}>
                       {/* Vote column */}
                       <div className="flex flex-col items-center justify-center gap-0.5 w-10 min-w-[40px] sm:min-w-[48px] sm:w-12 px-1 sm:px-2 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0 self-stretch">
@@ -507,7 +507,7 @@ function ForumHomepage() {
                               />
                             </>
                           )}
-                          <span className="text-[0.9075rem] font-medium text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
+                          <span className="text-[0.9075rem] font-semibold text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
                             {question.author.username ? (
                               <Link
                                 href={
@@ -518,7 +518,7 @@ function ForumHomepage() {
                                     : `/profile/${encodeURIComponent(question.author.username)}`
                                 }
                                 onClick={(e) => e.stopPropagation()}
-                                className="hover:underline"
+                                className="hover:underline font-inherit"
                               >
                                 {question.author.username}
                               </Link>
@@ -567,7 +567,7 @@ function ForumHomepage() {
                         </div>
                         {/* Tags (when expanded) - below meta bar like Question page */}
                         {expandedTagsQuestionId === question.id && (
-                          <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[7px]">
+                          <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[12px] sm:-translate-y-[7px]">
                             {question.tags.length > 0 ? (
                               question.tags.map((tag) => (
                                 <Link
