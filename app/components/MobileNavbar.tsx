@@ -30,10 +30,10 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
     <nav className="fixed bottom-0 left-0 right-0 px-4 pb-0 pt-2 z-50 md:hidden pointer-events-none">
       <div className="relative mx-auto max-w-md h-24 pointer-events-auto">
         {/* Custom Shape Background */}
-        <div className="absolute inset-0 w-full h-full drop-shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:drop-shadow-[0_25px_25px_rgba(0,0,0,0.15)]">
+        <div className="absolute inset-0 w-full h-full drop-shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:drop-shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
           {/* Gradient Overlay */}
           <div
-            className="absolute inset-0 w-full h-full bg-white dark:bg-transparent dark:opacity-90 dark:bg-gradient-to-r dark:from-[#1e3a5f] dark:via-[#2d4a6f] dark:to-[#1e3a5f]"
+            className="absolute inset-0 w-full h-full bg-white dark:bg-slate-800"
             style={{
               WebkitMaskImage: navShape ? `url(${navShape})` : undefined,
               WebkitMaskSize: "100% 100%",
@@ -70,27 +70,27 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                 }`}
                 aria-label={item.label}
               >
-                {/* Dark background circle */}
+                {/* Button background circle */}
                 <div
                   className={`absolute inset-0 rounded-full transition-all ${
-                    isCenterButton ? "bg-white dark:bg-[#0f1f33]" : "bg-white dark:bg-[#0f1f33]"
+                    isCenterButton ? "bg-white dark:bg-slate-700" : "bg-white dark:bg-slate-700"
                   }`}
                 />
 
                 {/* Outline (cutout effect matching background) */}
                 <div
                   className={`absolute inset-0 rounded-full border-8 transition-all ${
-                    isCenterButton ? "border-slate-50 dark:border-black/50" : "border-white dark:border-black/50"
+                    isCenterButton ? "border-slate-50 dark:border-slate-800" : "border-white dark:border-slate-800"
                   }`}
                 />
 
-                {/* Icon background circle with white/light outline */}
+                {/* Icon background circle with outline */}
                 <div
                   className={`absolute inset-0 rounded-full border-2 transition-all ${
                     isCenterButton
-                      ? "border-indigo-100 dark:border-[#c8d9e8] bg-indigo-600 dark:bg-transparent"
-                      : "border-gray-100 dark:border-[#c8d9e8]/40 bg-transparent"
-                  } ${isActive && !isCenterButton ? "bg-indigo-50 dark:bg-white/10 border-indigo-200 dark:border-[#c8d9e8]/40" : ""}`}
+                      ? "border-indigo-100 dark:border-slate-500 bg-indigo-600 dark:bg-indigo-600"
+                      : "border-gray-100 dark:border-slate-600 bg-transparent dark:bg-transparent"
+                  } ${isActive && !isCenterButton ? "bg-indigo-50 dark:bg-slate-600/50 border-indigo-200 dark:border-slate-500" : ""}`}
                   style={{ margin: "2px" }}
                 />
 
@@ -98,15 +98,15 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                 <Icon
                   className={`relative z-10 ${
                     isCenterButton 
-                      ? "w-8 h-8 text-white dark:text-[#c8d9e8]" 
-                      : `w-6 h-6 ${isActive ? "text-indigo-600 dark:text-[#c8d9e8]" : "text-gray-400 dark:text-[#c8d9e8]"}`
+                      ? "w-8 h-8 text-white" 
+                      : `w-6 h-6 ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400 dark:text-slate-400"}`
                   }`}
                   strokeWidth={2.5}
                 />
 
                 {/* Badge for messages */}
                 {item.badge && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 dark:bg-[#5ac8d8] text-[10px] font-bold text-white dark:text-[#1e3a5f] border-2 border-white dark:border-[#1e3a5f]">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-slate-800">
                     {item.badge}
                   </span>
                 )}
