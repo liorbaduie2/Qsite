@@ -1,7 +1,8 @@
 "use client";
 
-import { MessageCircle, Bell, Plus, Search, Menu } from "lucide-react";
+import { MessageCircle, Bell, Plus, Search, Menu, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 const navShape = "/navbar-mobile.svg";
 
@@ -10,11 +11,22 @@ interface MobileNavbarProps {
 }
 
 export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
-  const [activeTab, setActiveTab] = useState("home");
   const [messageCount] = useState(4);
+  const pathname = usePathname() || "";
+  const router = useRouter();
+
+  // Determine active tab based on current path
+  let activeTab = "home";
+  if (pathname.startsWith("/chat")) activeTab = "messages";
+  else if (pathname.startsWith("/notifications")) activeTab = "notifications";
+  else if (pathname.startsWith("/search")) activeTab = "search";
+
+  const isOnChatPage = pathname.startsWith("/chat");
+  const leftButtonIcon = isOnChatPage ? ArrowRight : Menu;
+  const leftButtonLabel = isOnChatPage ? "חזרה" : "Menu";
 
   const navItems = [
-    { id: "menu", icon: Menu, label: "Menu" },
+    { id: "menu", icon: leftButtonIcon, label: leftButtonLabel },
     { id: "search", icon: Search, label: "Search" },
     { id: "add", icon: Plus, label: "Add", isCenter: true },
     { id: "notifications", icon: Bell, label: "Notifications" },
@@ -57,10 +69,18 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
               <button
                 key={item.id}
                 onClick={() => {
-                  if (item.id === "menu" && onMenuClick) {
-                    onMenuClick();
-                  } else {
-                    setActiveTab(item.id);
+                  if (item.id === "menu") {
+                    if (isOnChatPage) {
+                      router.back();
+                    } else if (onMenuClick) {
+                      onMenuClick();
+                    }
+                  } else if (item.id === "messages") {
+                    router.push("/chat");
+                  } else if (item.id === "home") {
+                    router.push("/");
+                  } else if (item.id === "notifications") {
+                    router.push("/notifications");
                   }
                 }}
                 className={`relative flex items-center justify-center transition-all ${
@@ -97,8 +117,8 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                 {/* Icon */}
                 <Icon
                   className={`relative z-10 ${
-                    isCenterButton 
-                      ? "w-8 h-8 text-white" 
+                    isCenterButton
+                      ? "w-8 h-8 text-white"
                       : `w-6 h-6 ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400 dark:text-slate-400"}`
                   }`}
                   strokeWidth={2.5}

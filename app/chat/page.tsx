@@ -236,7 +236,7 @@ export default function ChatPage() {
 
   return (
     <div
-      className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+      className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 animate-in slide-in-from-left fade-in duration-300"
       dir="rtl"
     >
       <NavHeader

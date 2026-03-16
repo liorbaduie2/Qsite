@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "./components/AuthProvider";
 import { ThemeProvider as CustomThemeProvider } from "./components/ThemeProvider";
+import { GlobalMobileNav } from "./components/GlobalMobileNav";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -58,6 +59,7 @@ export default function RootLayout({
         <AuthProvider>
           <CustomThemeProvider>
             <main>{children}</main>
+            <GlobalMobileNav />
             {/* You can uncomment the ThemeDebugInfo component for testing if needed */}
           </CustomThemeProvider>
         </AuthProvider>
