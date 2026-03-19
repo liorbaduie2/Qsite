@@ -18,18 +18,20 @@ export default function HebrewRegistration({
   >("FILLING");
   const [userId, setUserId] = useState<string>("");
   const [showBirthGenderModal, setShowBirthGenderModal] = useState(false);
+  const [phoneVerificationToken, setPhoneVerificationToken] = useState("");
+  const [registrationToken, setRegistrationToken] = useState("");
   const [formData, setFormData] = useState({
     phone: "",
     email: "",
     dateOfBirth: "",
     gender: "",
-    birthGender: "", // Required if gender is 'other'
+    birthGender: "",
     username: "",
     password: "",
     confirmPassword: "",
-    verificationCode: Array(4).fill(""),
+    verificationCode: Array(6).fill(""),
     applicationText: "",
-    fullName: "", // Added based on the new function
+    fullName: "",
   });
   const [fieldStates, setFieldStates] = useState<{
     [key: string]: {
@@ -44,8 +46,6 @@ export default function HebrewRegistration({
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [phoneVerificationSkipped, setPhoneVerificationSkipped] =
-    useState(false);
 
   const totalSteps = 6;
   const verificationInputsRef = useRef<(HTMLInputElement | null)[]>([]);
@@ -211,6 +211,9 @@ export default function HebrewRegistration({
         setError(data.error || "שגיאה באימות טלפון");
         return false;
       }
+      if (data.success && data.verificationToken) {
+        setPhoneVerificationToken(data.verificationToken);
+      }
       return data.success;
     } catch (error) {
       console.error("Verify phone error:", error);
@@ -239,25 +242,27 @@ export default function HebrewRegistration({
           email: formData.email,
           username: formData.username,
           password: formData.password,
-          fullName: formData.fullName || "", // Add this if you have it in formData
+          fullName: formData.fullName || "",
           dateOfBirth: formData.dateOfBirth,
           gender: formData.gender,
           birthGender:
             formData.gender === "other" ? formData.birthGender : null,
-          applicationText: "", // Default application text
+          applicationText: "",
+          phoneVerificationToken,
         }),
       });
 
       const data = await response.json();
-      console.log("Registration response:", data);
 
       if (!response.ok) {
-        console.error("Registration failed:", data);
         setError(data.error || "שגיאה ברישום");
         return null;
       }
 
       if (data.success) {
+        if (data.registrationToken) {
+          setRegistrationToken(data.registrationToken);
+        }
         setSuccess(data.message || "חשבון נוצר בהצלחה");
         setTimeout(() => setSuccess(""), 5000);
         return data.userId;
@@ -285,6 +290,7 @@ export default function HebrewRegistration({
         body: JSON.stringify({
           userId,
           applicationText,
+          registrationToken,
         }),
       });
 
@@ -326,25 +332,23 @@ export default function HebrewRegistration({
   const isEmailFormatValid = emailRegex.test(formData.email.trim());
   const isEmailCheckedAndAvailable = fieldStates.email?.isValid === true;
   const isEmailStepReady =
-    currentStep !== 3 ||
-    (isEmailFormatValid && isEmailCheckedAndAvailable);
+    currentStep !== 3 || (isEmailFormatValid && isEmailCheckedAndAvailable);
 
   // Step 4: username available, gender (and birthGender if other), DOB in [16, 120]
   const isUsernameValid =
     formData.username.length >= 3 &&
     formData.username.length <= 20 &&
     fieldStates.username?.isValid === true;
-  const isGenderValid = !!formData.gender && (formData.gender !== "other" || !!formData.birthGender);
+  const isGenderValid =
+    !!formData.gender &&
+    (formData.gender !== "other" || !!formData.birthGender);
   const dobAge = formData.dateOfBirth ? calculateAge(formData.dateOfBirth) : 0;
-  const isDobValid =
-    !!formData.dateOfBirth && dobAge >= 16 && dobAge <= 120;
+  const isDobValid = !!formData.dateOfBirth && dobAge >= 16 && dobAge <= 120;
   const isStep4Ready =
-    currentStep !== 4 ||
-    (isUsernameValid && isGenderValid && isDobValid);
+    currentStep !== 4 || (isUsernameValid && isGenderValid && isDobValid);
 
   // Step 5: password at least 8 characters
-  const isStep5Ready =
-    currentStep !== 5 || formData.password.length >= 8;
+  const isStep5Ready = currentStep !== 5 || formData.password.length >= 8;
 
   const isCurrentStepReady =
     currentStep === 2 || currentStep === 6
@@ -361,8 +365,10 @@ export default function HebrewRegistration({
 
   const isContinueDisabled =
     isLoading ||
-    (currentStep === 1 && (!isPhoneFormatValid || !isPhoneCheckedAndAvailable)) ||
-    (currentStep === 3 && (!isEmailFormatValid || !isEmailCheckedAndAvailable)) ||
+    (currentStep === 1 &&
+      (!isPhoneFormatValid || !isPhoneCheckedAndAvailable)) ||
+    (currentStep === 3 &&
+      (!isEmailFormatValid || !isEmailCheckedAndAvailable)) ||
     (currentStep === 4 && !isStep4Ready) ||
     (currentStep === 5 && formData.password.length < 8);
 
@@ -380,20 +386,14 @@ export default function HebrewRegistration({
       if (!isAvailable) return false;
       const sent = await sendVerification(formData.phone);
       if (!sent) {
-        setPhoneVerificationSkipped(true);
-        setSuccess(
-          "אימות SMS לא זמין כרגע. ממשיכים לשלב הבא. הטלפון יישמר ברישום.",
-        );
-        setTimeout(() => setSuccess(""), 5000);
-      } else {
-        setPhoneVerificationSkipped(false);
+        return false;
       }
       return true;
     },
     2: async () => {
       const code = formData.verificationCode.join("");
-      if (code.length !== 4) {
-        setError("יש להזין קוד בן 4 ספרות");
+      if (code.length !== 6) {
+        setError("יש להזין קוד בן 6 ספרות");
         setFieldStates((prev) => ({
           ...prev,
           verificationCode: { isValid: false, isInvalid: true },
@@ -625,7 +625,7 @@ export default function HebrewRegistration({
     const newCode = [...formData.verificationCode];
     newCode[index] = value.slice(-1);
     setFormData((prev) => ({ ...prev, verificationCode: newCode }));
-    if (value && index < 3) {
+    if (value && index < 5) {
       verificationInputsRef.current[index + 1]?.focus();
     }
     setError("");
@@ -654,11 +654,7 @@ export default function HebrewRegistration({
         await validators[currentStep as keyof typeof validators]();
       if (isValid) {
         if (currentStep < totalSteps) {
-          if (currentStep === 1 && phoneVerificationSkipped) {
-            setCurrentStep(3);
-          } else {
-            setCurrentStep((prev) => prev + 1);
-          }
+          setCurrentStep((prev) => prev + 1);
         } else {
           setFormStage("APPLICATION");
         }
@@ -702,7 +698,7 @@ export default function HebrewRegistration({
   const getVerificationClassName = () => {
     const state = fieldStates.verificationCode;
     let className =
-      "w-14 h-14 text-center text-2xl font-bold border-2 rounded-xl transition-colors bg-slate-600 dark:bg-slate-700 text-white";
+      "w-12 h-14 text-center text-2xl font-bold border-2 rounded-xl transition-colors bg-slate-600 dark:bg-slate-700 text-white";
     if (state?.isInvalid) className += " border-red-500";
     else if (state?.isValid)
       className += " border-green-500 dark:border-green-600";
@@ -1061,17 +1057,18 @@ export default function HebrewRegistration({
                     required
                   />
                   <div className="text-right mt-1 h-4">
-                    {formData.dateOfBirth && (() => {
-                      const age = calculateAge(formData.dateOfBirth);
-                      const validAge = age >= 16 && age <= 120;
-                      return (
-                        <span
-                          className={`text-xs ${validAge ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                        >
-                          גיל: {age} שנים
-                        </span>
-                      );
-                    })()}
+                    {formData.dateOfBirth &&
+                      (() => {
+                        const age = calculateAge(formData.dateOfBirth);
+                        const validAge = age >= 16 && age <= 120;
+                        return (
+                          <span
+                            className={`text-xs ${validAge ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                          >
+                            גיל: {age} שנים
+                          </span>
+                        );
+                      })()}
                   </div>
                 </div>
               </div>

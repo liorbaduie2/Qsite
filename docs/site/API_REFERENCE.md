@@ -666,7 +666,7 @@
 - Description: Handles admin policy, user management, permissions, or moderation actions.
 - Named functions: None
 - Fetch calls: None
-- Supabase tables/views: `complete_user_overview`
+- Supabase tables/views: `admin_user_overview`
 - Supabase RPCs: None
 
 ### `app/api/permissions/can-user-login/route.ts`
@@ -726,7 +726,7 @@
 - Endpoint: `/api/appeals/blocked-account/[id]`
 - Domain: Moderation and appeals
 - Methods: `PATCH`
-- Description: Owner-only. Update an appeal's status (`reviewed`/`resolved`) and optionally set the user's `account_state` to `active` (unblock). Body: `{ status?, unblock? }`.
+- Description: Handles reporting, removal requests, or appeal workflows.
 - Named functions: None
 - Fetch calls: None
 - Supabase tables/views: `blocked_account_appeals`, `profiles`
@@ -736,7 +736,7 @@
 - Endpoint: `/api/appeals/blocked-account`
 - Domain: Moderation and appeals
 - Methods: `POST`, `GET`
-- Description: **POST**: Authenticated (including blocked) users submit an in-app appeal (body: `{ message }`); stored in `blocked_account_appeals`. **GET**: Owner-only; returns all appeals with profile info (username, full_name).
+- Description: Handles reporting, removal requests, or appeal workflows.
 - Named functions: `appeals`
 - Fetch calls: None
 - Supabase tables/views: `blocked_account_appeals`, `profiles`
@@ -802,6 +802,6 @@
 - Description: Operational or setup endpoint.
 - Named functions: None
 - Fetch calls: None
-- Supabase tables/views: `profiles`
+- Supabase tables/views: None
 - Supabase RPCs: None
 

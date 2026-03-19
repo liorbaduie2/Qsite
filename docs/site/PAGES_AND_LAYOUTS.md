@@ -86,7 +86,7 @@
 - Runtime: client
 - Description: Public profile page with comments, likes, and chat initiation.
 - Exports: `PublicProfilePage`
-- Named functions: `ReputationArc`, `animate`, `getPlaylistInfo`, `getReputationVisuals`
+- Named functions: `getPlaylistInfo`
 - Fetch calls: `/api/chat/request`
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -98,7 +98,7 @@
 - Runtime: client
 - Description: Private profile page for the signed-in user.
 - Exports: `ProfilePage`
-- Named functions: `ReputationArc`, `animate`, `fromHistory`, `getPlaylistInfo`, `getReputationVisuals`, `handleCancelEdit`, `handleEditToggle`, `handleInputChange`, `loadMoreComments`, `loadMoreLikers`, `loadMoreQuestions`, `loadMoreReplies`, `removeSharedFromProfile`
+- Named functions: `fromHistory`, `getPlaylistInfo`, `handleCancelEdit`, `handleEditToggle`, `handleInputChange`, `loadMoreComments`, `loadMoreLikers`, `loadMoreQuestions`, `loadMoreReplies`, `removeSharedFromProfile`
 - Fetch calls: `/api/status/me`, `/api/auth/check-availability`
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -261,7 +261,7 @@
 - Kind: page
 - Surface: Account and settings
 - Runtime: client
-- Description: Shown when `account_state = blocked`. In-app appeal form (textarea + submit); no email. User can submit an appeal (POST `/api/appeals/blocked-account`), see success message, or log out. Only the owner can view and manage appeals in the admin dashboard.
+- Description: Page implementation for `/account/blocked`.
 - Exports: `BlockedAccountPage`
 - Named functions: `handleLogout`, `handleSubmitAppeal`
 - Fetch calls: `/api/appeals/blocked-account`

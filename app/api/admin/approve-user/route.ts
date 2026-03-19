@@ -113,31 +113,8 @@ export async function POST(request: NextRequest) {
 
     if (action === 'approve') {
       newStatus = 'approved';
-
-      const { error: confirmError } = await supabase.auth.admin.updateUserById(userId, {
-        email_confirm: true
-      });
-
-      if (confirmError) {
-        console.error('Error confirming user email:', confirmError);
-      }
-
-      try {
-        await sendApprovalEmail(userEmail, userProfile.username);
-        emailSent = true;
-      } catch (emailError) {
-        console.error('Error sending approval email:', emailError);
-      }
-
     } else if (action === 'reject') {
       newStatus = 'rejected';
-
-      try {
-        await sendRejectionEmail(userEmail, userProfile.username, notes);
-        emailSent = true;
-      } catch (emailError) {
-        console.error('Error sending rejection email:', emailError);
-      }
     } else {
       return NextResponse.json({
         error: 'פעולה לא חוקית',
@@ -145,6 +122,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Step 1: Update status in DB first (authoritative action)
     const { error: updateError } = await supabase
       .rpc('admin_update_user_status', {
         admin_user_id: adminId,
@@ -162,10 +140,29 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'approve') {
+      const { error: confirmError } = await supabase.auth.admin.updateUserById(userId, {
+        email_confirm: true
+      });
+      if (confirmError) {
+        console.error('Error confirming user email:', confirmError);
+      }
+
       await supabase
         .from('profiles')
         .update({ account_state: 'active', updated_at: new Date().toISOString() })
         .eq('id', userId);
+    }
+
+    // Step 2: Send email notification (non-critical, best-effort)
+    try {
+      if (action === 'approve') {
+        await sendApprovalEmail(userEmail, userProfile.username);
+      } else {
+        await sendRejectionEmail(userEmail, userProfile.username, notes);
+      }
+      emailSent = true;
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
     }
 
     return NextResponse.json({

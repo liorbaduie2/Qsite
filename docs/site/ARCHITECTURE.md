@@ -24,6 +24,6 @@
 
 ## Important architectural traits
 
-- Login approval, reputation blocking, and admin permissions add a second authorization layer beyond basic auth. Post-approval access is governed by `profiles.account_state` (active/suspended/blocked); blocked users are redirected to `/account/blocked` and can submit in-app appeals (no email); only the owner manages appeals in the admin dashboard.
+- Login approval, reputation blocking, and admin permissions add a second authorization layer beyond basic auth.
 - The database is part of the business-logic surface, not just persistence.
 - The codebase mixes custom product code with a smaller amount of original Supabase starter scaffolding.

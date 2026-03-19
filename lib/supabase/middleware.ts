@@ -78,8 +78,14 @@ export async function updateSession(request: NextRequest) {
   const user = data?.claims;
   const userId = user?.sub as string | undefined;
 
-  // No session: allow selected public content routes, otherwise redirect to login
+  // No session: allow selected public content routes, otherwise block
   if (!user && !isGuestAllowedPath(request.nextUrl.pathname)) {
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "נדרש אימות", error_code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
@@ -93,7 +99,23 @@ export async function updateSession(request: NextRequest) {
       "/auth/forgot-password",
       "/auth/error",
     ].some((p) => request.nextUrl.pathname.startsWith(p));
-    if (!allowedWithoutApproval && !request.nextUrl.pathname.startsWith("/api/")) {
+
+    const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+    const isPublicApi = [
+      "/api/auth/",
+      "/api/questions",
+      "/api/status",
+      "/api/discussions",
+      "/api/stories",
+      "/api/permissions/",
+      "/api/notifications/",
+      "/api/me/",
+      "/api/chat/unread-count",
+    ].some((p) => request.nextUrl.pathname.startsWith(p));
+
+    const needsApprovalCheck = !allowedWithoutApproval && !(isApiRoute && isPublicApi);
+
+    if (needsApprovalCheck) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("approval_status")
@@ -101,6 +123,12 @@ export async function updateSession(request: NextRequest) {
         .single();
       const status = profile?.approval_status;
       if (status && status !== "approved") {
+        if (isApiRoute) {
+          return NextResponse.json(
+            { error: "החשבון ממתין לאישור", error_code: "PENDING_APPROVAL" },
+            { status: 403 }
+          );
+        }
         const url = request.nextUrl.clone();
         url.pathname = "/auth/pending";
         const redirectResponse = NextResponse.redirect(url);

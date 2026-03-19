@@ -56,8 +56,6 @@ The migration directory is the current source of truth for database structure an
 - `user_suspensions`
 - `votes`
 
-**Key table notes:** `profiles.account_state` (`active`|`suspended`|`blocked`) controls post-approval access; RLS and write APIs enforce it. `blocked_account_appeals` stores in-app appeals from blocked users (user_id, message, status: pending/reviewed/resolved); only the owner can read/update via admin APIs; RLS allows users to insert their own row only.
-
 ## Views
 
 - `admin_user_overview`
@@ -411,6 +409,18 @@ The migration directory is the current source of truth for database structure an
 
 ### `supabase/migrations/20260312110000_blocked_account_appeals.sql`
 - Tables added or changed in file: `blocked_account_appeals`
+- Views added or changed in file: None
+- SQL functions added or changed in file: None
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260312120000_secure_admin_rpcs_and_views.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: `get_admin_dashboard_stats`, `get_pending_applications`, `apply_penalty`
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260318200000_unique_phone_email_constraints.sql`
+- Tables added or changed in file: None
 - Views added or changed in file: None
 - SQL functions added or changed in file: None
 - Triggers added or changed in file: None

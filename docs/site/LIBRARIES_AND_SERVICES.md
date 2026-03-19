@@ -13,20 +13,20 @@
 - Supabase tables/views: `profiles`
 - Supabase RPCs: None
 
+### `lib/admin-auth.ts`
+- Runtime: shared/server
+- Description: Supporting code file for admin auth.
+- Exports: `AdminAuthResult`, `authenticateAdmin`, `isAdminAuth`, `requireAdminPermission`, `requireOwner`
+- Named functions: None
+- Fetch calls: None
+- Supabase tables/views: None
+- Supabase RPCs: None
+
 ### `lib/ai/embeddings.ts`
 - Runtime: shared/server
 - Description: Embedding helpers used by the semantic tag-suggestion pipeline.
 - Exports: `TAG_EMBEDDING_DIMENSION`, `TAG_EMBEDDING_MODEL`, `buildContentHash`, `generateEmbedding`, `generateEmbeddings`, `hasEmbeddingProviderConfigured`, `serializeEmbeddingVector`
 - Named functions: `normalizeEmbeddingInput`, `payload`, `vectors`
-- Fetch calls: None
-- Supabase tables/views: None
-- Supabase RPCs: None
-
-### `lib/dev-phone-codes.ts`
-- Runtime: shared/server
-- Description: Supporting code file for dev phone codes.
-- Exports: `devPhoneCodes`
-- Named functions: None
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -55,6 +55,15 @@
 - Exports: `canUserLogin`, `deductReputation`, `getUserPermissions`, `getUserRoleHebrew`, `suspendUser`
 - Named functions: None
 - Fetch calls: `/api/permissions/get-user-permissions`, `/api/permissions/can-user-login`, `/api/permissions/suspend-user`, `/api/permissions/deduct-reputation`, `/api/permissions/get-user-role-hebrew`
+- Supabase tables/views: None
+- Supabase RPCs: None
+
+### `lib/registration-token.ts`
+- Runtime: shared/server
+- Description: Supporting code file for registration token.
+- Exports: `generatePhoneVerificationToken`, `generateRegistrationToken`, `validatePhoneVerificationToken`, `validateRegistrationToken`
+- Named functions: `getSecret`, `sign`, `verify`
+- Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None
 
@@ -160,8 +169,8 @@
 ### `lib/twilio.ts`
 - Runtime: shared/server
 - Description: Twilio wrapper for SMS verification flows.
-- Exports: `sendSMS`
-- Named functions: `getClient`
+- Exports: `checkVerification`, `sendVerification`
+- Named functions: `formatPhoneE164`, `getClient`, `getVerifyServiceSid`
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None

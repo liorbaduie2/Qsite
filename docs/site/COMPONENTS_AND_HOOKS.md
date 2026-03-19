@@ -6,11 +6,11 @@
 
 ### `app/components/AdminDashboard.tsx`
 - Runtime: client
-- Description: Main admin control center rendered inside the admin page. Owner-only tab "ערעורי חסימה" (Blocked appeals) lists in-app blocked-account appeals; owner can mark reviewed/resolved or unblock the user.
+- Description: Main admin control center rendered inside the admin page.
 - Exports: `AdminDashboard`, `RoleConfigEntry`
-- Named functions: `formatDate`, `formatDateTime`, `formatGender`, `handleAppealDecision`, `handleApplyPenalty`, `handleApprove`, `handleBlockedAppealAction`, `handleGrantReputation`, `handleGrantRole`, `handleReject`, `handleRemovalDecision`, `handleSaveTagVisibility`, `handleSubmit`, `handleSuspend`, `handleUserAction`, `load`, `loadDashboardData`, `loadPenaltyTypes`, `timeAgo`
-- Fetch calls: `/api/permissions/deduct-reputation`, `/api/admin/grant-role`, `/api/admin/grant-reputation`, `/api/admin/set-role-visibility`, `/api/admin/question-removal-requests`, `/api/admin/question-deletion-appeals`, `/api/appeals/blocked-account`, `/api/admin/activity-log?limit=100`, `/api/admin/config/admin-roles`, `/api/admin/approve-user`
-- Supabase tables/views: `penalty_types_config`, `admin_user_overview`
+- Named functions: `formatDate`, `formatDateTime`, `formatGender`, `getAuthHeaders`, `handleAppealDecision`, `handleApplyPenalty`, `handleApprove`, `handleBlockedAppealAction`, `handleGrantReputation`, `handleGrantRole`, `handleReject`, `handleRemovalDecision`, `handleSaveTagVisibility`, `handleSubmit`, `handleSuspend`, `handleUserAction`, `load`, `loadDashboardData`, `loadPenaltyTypes`, `timeAgo`
+- Fetch calls: `/api/permissions/deduct-reputation`, `/api/admin/grant-role`, `/api/admin/grant-reputation`, `/api/admin/set-role-visibility`, `/api/admin/users-overview`, `/api/admin/question-removal-requests`, `/api/admin/question-deletion-appeals`, `/api/appeals/blocked-account`, `/api/admin/activity-log?limit=100`, `/api/admin/config/admin-roles`, `/api/admin/approve-user`
+- Supabase tables/views: `penalty_types_config`
 - Supabase RPCs: None
 
 ### `app/components/AuthModal.tsx`
@@ -24,7 +24,7 @@
 
 ### `app/components/AuthProvider.tsx`
 - Runtime: client
-- Description: Central auth context for session hydration, profile loading, permissions, and login gating. Exposes `accountState` and `isReadOnly`; redirects blocked users to `/account/blocked`.
+- Description: Central auth context for session hydration, profile loading, permissions, and login gating.
 - Exports: `AdminRoute`, `AuthProvider`, `RequireNotBlocked`, `RequirePermission`, `useAuth`
 - Named functions: `AuthProvider`, `checkLoginStatus`, `clearError`, `ensureMyProfilePreload`, `fetchUserProfile`, `getInitialSession`, `getUserPermissions`, `load`, `loadUserDataInBackground`, `ping`, `refreshPermissions`, `refreshProfile`, `signIn`, `signOut`, `signUp`, `updateProfile`, `useAuth`
 - Fetch calls: `/api/permissions/can-user-login`, `/api/permissions/get-user-permissions`, `/api/auth/register`, `/api/me/ping`
@@ -58,6 +58,15 @@
 - Supabase tables/views: None
 - Supabase RPCs: None
 
+### `app/components/GlobalMobileNav.tsx`
+- Runtime: client
+- Description: Reusable app component for global mobile nav.
+- Exports: `GlobalMobileNav`
+- Named functions: None
+- Fetch calls: None
+- Supabase tables/views: None
+- Supabase RPCs: None
+
 ### `app/components/HebrewRegistration.tsx`
 - Runtime: client
 - Description: Custom multi-step Hebrew registration flow with phone verification and application submission.
@@ -82,6 +91,24 @@
 - Exports: `LoginStatusMessage`, `LoginStatusMessageProps`
 - Named functions: `getStatusConfig`
 - Fetch calls: None
+- Supabase tables/views: None
+- Supabase RPCs: None
+
+### `app/components/MobileNavbar.tsx`
+- Runtime: client
+- Description: Reusable app component for mobile navbar.
+- Exports: `MobileNavbar`
+- Named functions: None
+- Fetch calls: None
+- Supabase tables/views: None
+- Supabase RPCs: None
+
+### `app/components/MobileNavDrawer.tsx`
+- Runtime: client
+- Description: Reusable app component for mobile nav drawer.
+- Exports: `MobileNavDrawer`
+- Named functions: `fetchUnreadCount`, `handleMenuClick`
+- Fetch calls: `/api/chat/unread-count`
 - Supabase tables/views: None
 - Supabase RPCs: None
 
@@ -117,6 +144,15 @@
 - Description: Modal registration entry point for the main app shell.
 - Exports: `RegisterModal`
 - Named functions: None
+- Fetch calls: None
+- Supabase tables/views: None
+- Supabase RPCs: None
+
+### `app/components/ReputationArc.tsx`
+- Runtime: client
+- Description: Reusable app component for reputation arc.
+- Exports: `ReputationArc`, `ReputationArcProps`, `getReputationVisuals`
+- Named functions: `animate`
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None

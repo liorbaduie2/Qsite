@@ -4,12 +4,10 @@
 
 ## Auth and onboarding
 
-Login is handled in the app shell, while registration is a custom multi-step flow with availability checks, phone verification, account creation, and admin approval. New users start with 50 reputation and `account_state = active` (enforced in DB trigger and register API).
-
-**Account state (post-approval):** `profiles.account_state` controls access: `active` (full access), `suspended` (read-only; write APIs return 403), `blocked` (can log in but are redirected to `/account/blocked`; all their content is hidden from public—ghosting). Blocked users can submit appeals **in-app** via a form on `/account/blocked`; appeals are stored in `blocked_account_appeals` (no email). Only the **owner** can view and manage these appeals in the admin dashboard (tab "ערעורי חסימה"): mark as reviewed/resolved or unblock the user. When reputation hits 0, the DB sets `account_state = blocked`; when an admin restores reputation above 0, it becomes `active` again.
+Login is handled in the app shell, while registration is a custom multi-step flow with availability checks, phone verification, account creation, and admin approval.
 
 Key files:
-- `app/components/AuthProvider.tsx` (exposes `accountState`, `isReadOnly`; redirects blocked users to `/account/blocked`)
+- `app/components/AuthProvider.tsx`
 - `app/components/HebrewRegistration.tsx`
 - `app/components/LoginModal.tsx`
 - `app/components/RegisterModal.tsx`
@@ -17,9 +15,7 @@ Key files:
 - `app/api/auth/send-verification/route.ts`
 - `app/api/auth/verify-phone/route.ts`
 - `app/api/auth/submit-application/route.ts`
-- `app/api/admin/approve-user/route.ts` (sets `account_state = active` on approve)
-- `app/api/admin/set-account-state/route.ts` (admin sets `account_state` directly)
-- `lib/account-state.ts` (`requireActiveAccount` used by write APIs to enforce active/suspended/blocked)
+- `app/api/admin/approve-user/route.ts`
 
 ## Questions and answers
 
@@ -53,7 +49,7 @@ Key files:
 
 ## Chat, moderation, and admin
 
-Chat is request-based and tied into blocking, reporting, unread state, and presence. Admin flows span approvals, moderation queues, permission management, and appeals. Admins can set a user's `account_state` (active/suspended/blocked) via `/api/admin/set-account-state`; suspend-user and approve-user APIs also update `account_state`. **Blocked-account appeals** are submitted in-app (no email); only the owner sees them in the admin panel ("ערעורי חסימה") and can mark reviewed/resolved or unblock the user via `/api/appeals/blocked-account` (POST submit, GET list) and `/api/appeals/blocked-account/[id]` (PATCH status/unblock).
+Chat is request-based and tied into blocking, reporting, unread state, and presence. Admin flows span approvals, moderation queues, permission management, and appeals.
 
 Key files:
 - `app/chat/page.tsx`
@@ -65,6 +61,3 @@ Key files:
 - `app/api/chat/conversations/[id]/messages/route.ts`
 - `app/api/report/content/route.ts`
 - `app/api/admin/question-deletion-appeals/[id]/decision/route.ts`
-- `app/api/admin/set-account-state/route.ts`
-- `app/api/appeals/blocked-account/route.ts` (POST submit, GET list owner-only)
-- `app/api/appeals/blocked-account/[id]/route.ts` (PATCH status/unblock owner-only)

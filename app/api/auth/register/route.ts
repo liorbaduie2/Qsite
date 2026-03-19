@@ -1,8 +1,10 @@
-// app/api/auth/register/route.ts - Based on working backup 27.09.2025
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { validatePhoneVerificationToken, generateRegistrationToken } from '@/lib/registration-token';
 
-// Helper function to calculate age
+const PHONE_REGEX = /^0(5[0-9]|7[7|6|8|9])(-?)([0-9]{3})(-?)([0-9]{4})$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+
 const calculateAge = (dateOfBirth: string): number => {
   const today = new Date();
   const birthDate = new Date(dateOfBirth);
@@ -15,8 +17,6 @@ const calculateAge = (dateOfBirth: string): number => {
 };
 
 export async function POST(request: NextRequest) {
-  console.log('=== Hebrew Registration API with DOB & Gender Called ===');
-
   try {
     const supabase = getAdminClient();
     const {
@@ -28,21 +28,11 @@ export async function POST(request: NextRequest) {
       applicationText = '',
       dateOfBirth,
       gender,
-      birthGender
+      birthGender,
+      phoneVerificationToken
     } = await request.json();
 
-    console.log('Registration data:', {
-      phone,
-      email,
-      username,
-      fullNameLength: fullName?.length,
-      dateOfBirth,
-      gender,
-      birthGender,
-      hasDateOfBirth: !!dateOfBirth
-    });
-
-    // Validate required fields
+    // ── Validate required fields ──
     if (!phone || !email || !username || !password) {
       return NextResponse.json({
         error: 'כל השדות נדרשים',
@@ -50,7 +40,29 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate Date of Birth
+    // ── Server-side phone verification (CRITICAL security check) ──
+    if (!phoneVerificationToken || !validatePhoneVerificationToken(phoneVerificationToken, phone)) {
+      return NextResponse.json({
+        error: 'יש לאמת את מספר הטלפון לפני הרשמה',
+        error_code: 'PHONE_NOT_VERIFIED'
+      }, { status: 403 });
+    }
+
+    // ── Server-side format validation ──
+    if (!PHONE_REGEX.test(phone)) {
+      return NextResponse.json({
+        error: 'פורמט מספר טלפון לא חוקי',
+        error_code: 'INVALID_PHONE_FORMAT'
+      }, { status: 400 });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return NextResponse.json({
+        error: 'פורמט אימייל לא חוקי',
+        error_code: 'INVALID_EMAIL_FORMAT'
+      }, { status: 400 });
+    }
+
     if (!dateOfBirth) {
       return NextResponse.json({
         error: 'יש למלא תאריך לידה',
@@ -58,8 +70,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate date format and calculate age
-    let age;
+    let age: number;
     try {
       age = calculateAge(dateOfBirth);
     } catch {
@@ -69,7 +80,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate age (must be 16+)
     if (age < 16) {
       return NextResponse.json({
         error: `גיל מינימום לרישום הוא 16 שנים. הגיל שלך: ${age} שנים`,
@@ -77,7 +87,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate gender
     if (!gender || !['male', 'female', 'other'].includes(gender)) {
       return NextResponse.json({
         error: 'יש לבחור מגדר תקין',
@@ -85,7 +94,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate birth gender if gender is 'other'
     if (gender === 'other' && (!birthGender || !['male', 'female'].includes(birthGender))) {
       return NextResponse.json({
         error: 'יש לציין מגדר לידה (זכר או נקבה) כאשר נבחר "אחר"',
@@ -93,15 +101,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate username
-    if (username.length < 2 || username.length > 50) {
+    if (username.length < 3 || username.length > 20) {
       return NextResponse.json({
-        error: 'שם המשתמש חייב להיות בין 2 ל-50 תווים',
+        error: 'שם המשתמש חייב להיות בין 3 ל-20 תווים',
         error_code: 'INVALID_USERNAME_LENGTH'
       }, { status: 400 });
     }
 
-    // Validate password
     if (password.length < 8) {
       return NextResponse.json({
         error: 'סיסמה חייבת להיות לפחות 8 תווים',
@@ -109,8 +115,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if user already exists
-    console.log('Checking for existing users...');
+    // ── Duplicate check (application-level, DB UNIQUE is the real guard) ──
     const { data: existingUsers } = await supabase
       .from('profiles')
       .select('phone, email, username')
@@ -138,105 +143,105 @@ export async function POST(request: NextRequest) {
       }
     }
 
-// NEW - This creates user WITHOUT sending any Supabase emails
-const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-  email,
-  password,
-  email_confirm: true, // Mark email as confirmed, skip Supabase emails completely
-  user_metadata: {
-    username,
-    phone,
-    full_name: fullName,
-    date_of_birth: dateOfBirth,
-    gender,
-    birth_gender: gender === 'other' ? birthGender : null,
-    age
-  }
-});
+    // ── Create auth user ──
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        username,
+        phone,
+        full_name: fullName,
+        date_of_birth: dateOfBirth,
+        gender,
+        birth_gender: gender === 'other' ? birthGender : null,
+        age
+      }
+    });
 
     if (authError || !authData.user) {
       console.error('Auth signup error:', authError);
+
+      if (authError?.message?.includes('already been registered')) {
+        return NextResponse.json({
+          error: 'כתובת האימייל כבר רשומה במערכת',
+          error_code: 'EMAIL_EXISTS'
+        }, { status: 400 });
+      }
+
       return NextResponse.json({
         error: `שגיאה ביצירת חשבון: ${authError?.message || 'שגיאה לא ידועה'}`,
         error_code: 'AUTH_CREATE_ERROR'
       }, { status: 500 });
     }
 
-    console.log('User created successfully:', authData.user.id);
-
-    // Wait for trigger to create profile (from working backup)
+    // Wait for handle_new_user trigger to create base profile
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Check if profile was created by trigger
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authData.user.id)
       .single();
 
+    const profilePayload = {
+      phone,
+      email,
+      full_name: fullName,
+      date_of_birth: dateOfBirth,
+      gender,
+      birth_gender: gender === 'other' ? birthGender : null,
+      age,
+      phone_verified_at: new Date().toISOString(),
+      approval_status: 'pending',
+      updated_at: new Date().toISOString()
+    };
+
     if (!existingProfile) {
-      // Create profile manually
-      console.log('Creating profile manually...');
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
           id: authData.user.id,
           username,
-          full_name: fullName,
-          phone,
-          email,
-          date_of_birth: dateOfBirth,
-          gender,
-          birth_gender: gender === 'other' ? birthGender : null,
-          age,
+          ...profilePayload,
           reputation: 50,
           account_state: 'active',
-          approval_status: 'pending',
           is_verified: false,
           is_moderator: false,
           questions_count: 0,
           answers_count: 0,
           best_answers_count: 0,
           total_views: 0,
-          phone_verified_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: new Date().toISOString()
         });
 
       if (profileError) {
         console.error('Manual profile creation failed:', profileError);
-        // Continue anyway - could be handled later
-      } else {
-        console.log('Profile created manually');
+        if (profileError.code === '23505') {
+          return NextResponse.json({
+            error: 'מספר הטלפון או האימייל כבר רשומים במערכת',
+            error_code: 'DUPLICATE_ENTRY'
+          }, { status: 400 });
+        }
       }
     } else {
-      // Update existing profile with new data (from working backup)
-      console.log('Profile exists, updating with new data...');
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          phone,
-          email,
-          full_name: fullName,
-          date_of_birth: dateOfBirth,
-          gender,
-          birth_gender: gender === 'other' ? birthGender : null,
-          age,
-          phone_verified_at: new Date().toISOString(),
-          approval_status: 'pending',
-          updated_at: new Date().toISOString()
-        })
+        .update(profilePayload)
         .eq('id', authData.user.id);
 
       if (updateError) {
         console.error('Profile update error:', updateError);
-      } else {
-        console.log('Profile updated successfully');
+        if (updateError.code === '23505') {
+          return NextResponse.json({
+            error: 'מספר הטלפון או האימייל כבר רשומים במערכת',
+            error_code: 'DUPLICATE_ENTRY'
+          }, { status: 400 });
+        }
       }
     }
 
-    // Create user application
-    console.log('Creating user application...');
+    // ── Create user application ──
     const finalApplicationText = applicationText ||
       'בקשה להצטרפות לקהילה. אני מעוניין להיות חלק מהקהילה ולתרום לדיונים.';
 
@@ -252,22 +257,21 @@ const { data: authData, error: authError } = await supabase.auth.admin.createUse
 
     if (applicationError) {
       console.error('Application creation error:', applicationError);
-      // Continue anyway - admin can create application manually if needed
-    } else {
-      console.log('Application created successfully');
     }
 
-    console.log('Registration completed successfully');
+    const registrationToken = generateRegistrationToken(authData.user.id);
+
     return NextResponse.json({
       success: true,
       userId: authData.user.id,
+      registrationToken,
       message: 'חשבון נוצר בהצלחה! בקשתך ממתינה לאישור מנהל. תקבל אימייל כשהחשבון יאושר.',
       userData: {
-        username: username,
-        email: email,
-        age: age,
-        gender: gender,
-        phone: phone
+        username,
+        email,
+        age,
+        gender,
+        phone
       }
     });
 
