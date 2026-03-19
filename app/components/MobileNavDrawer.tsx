@@ -2,15 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import {
-  X,
-  LucideIcon,
-  User,
-  LogOut,
-  Settings,
-  Moon,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { X, LucideIcon, User, LogOut, Settings, Moon } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
 import { ReputationArc } from "@/app/components/ReputationArc";
 import { RoleBadge } from "@/app/components/RoleBadge";
 import { useAuth } from "@/app/components/AuthProvider";
@@ -22,7 +15,14 @@ interface MenuItem {
   label: string;
   icon: LucideIcon;
   href: string;
+  /** Optional override; otherwise active state follows the current URL */
   active?: boolean;
+}
+
+function menuHrefMatchesCurrentPath(pathname: string, href: string): boolean {
+  const p = pathname || "/";
+  if (href === "/") return p === "/" || p === "";
+  return p === href || p.startsWith(`${href}/`);
 }
 
 interface Profile {
@@ -59,6 +59,7 @@ export function MobileNavDrawer({
 }: MobileNavDrawerProps) {
   usePresenceTick();
   const router = useRouter();
+  const pathname = usePathname() || "";
   const { userPermissions } = useAuth();
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
@@ -144,7 +145,10 @@ export function MobileNavDrawer({
                 headerExtra
               ) : (
                 <div className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 dark:border-slate-600">
-                  <Moon size={20} className="text-gray-600 dark:text-slate-400" />
+                  <Moon
+                    size={20}
+                    className="text-gray-600 dark:text-slate-400"
+                  />
                 </div>
               )}
             </div>
@@ -232,13 +236,16 @@ export function MobileNavDrawer({
           <nav className="flex flex-col gap-2 w-full">
             {menuItems.map((item) => {
               const IconComponent = item.icon;
+              const isActive =
+                item.active ??
+                menuHrefMatchesCurrentPath(pathname, item.href);
 
               return (
                 <button
                   key={item.href}
                   onClick={() => handleMenuClick(item.href)}
                   className={`relative w-full h-[2.75rem] rounded-full border transition-colors flex items-center px-5 ${
-                    item.active
+                    isActive
                       ? "border-indigo-200 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/30 shadow-sm"
                       : "border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 bg-white dark:bg-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm"
                   }`}
@@ -247,14 +254,14 @@ export function MobileNavDrawer({
                     <IconComponent
                       size={22}
                       className={
-                        item.active
+                        isActive
                           ? "text-indigo-600 dark:text-indigo-400"
                           : "text-gray-700 dark:text-slate-300"
                       }
                     />
                   </div>
                   <div
-                    className={`flex-1 text-center text-lg font-medium tracking-wide ${item.active ? "text-indigo-900 dark:text-indigo-200" : "text-gray-800 dark:text-slate-200"}`}
+                    className={`flex-1 text-center text-lg font-medium tracking-wide ${isActive ? "text-indigo-900 dark:text-indigo-200" : "text-gray-800 dark:text-slate-200"}`}
                   >
                     {item.label}
                   </div>

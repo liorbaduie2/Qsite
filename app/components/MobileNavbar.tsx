@@ -1,6 +1,14 @@
 "use client";
 
-import { MessageCircle, Bell, Plus, Search, Menu, ArrowRight } from "lucide-react";
+import {
+  MessageCircle,
+  Bell,
+  Plus,
+  Search,
+  History,
+  Menu,
+  ArrowRight,
+} from "lucide-react";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -22,12 +30,18 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
   else if (pathname.startsWith("/search")) activeTab = "search";
 
   const isOnChatPage = pathname.startsWith("/chat");
-  const leftButtonIcon = isOnChatPage ? ArrowRight : Menu;
-  const leftButtonLabel = isOnChatPage ? "חזרה" : "Menu";
+  const isOnNotificationsPage = pathname.startsWith("/notifications");
+  const isOnStatusPage = pathname.startsWith("/status");
+  const useBackInsteadOfMenu = isOnChatPage || isOnNotificationsPage;
+  const leftButtonIcon = useBackInsteadOfMenu ? ArrowRight : Menu;
+  const leftButtonLabel = useBackInsteadOfMenu ? "חזרה" : "Menu";
+
+  const searchSlotIcon = isOnStatusPage ? History : Search;
+  const searchSlotLabel = isOnStatusPage ? "היסטוריה שלי" : "Search";
 
   const navItems = [
     { id: "menu", icon: leftButtonIcon, label: leftButtonLabel },
-    { id: "search", icon: Search, label: "Search" },
+    { id: "search", icon: searchSlotIcon, label: searchSlotLabel },
     { id: "add", icon: Plus, label: "Add", isCenter: true },
     { id: "notifications", icon: Bell, label: "Notifications" },
     {
@@ -70,10 +84,20 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                 key={item.id}
                 onClick={() => {
                   if (item.id === "menu") {
-                    if (isOnChatPage) {
+                    if (useBackInsteadOfMenu) {
                       router.back();
                     } else if (onMenuClick) {
                       onMenuClick();
+                    }
+                  } else if (item.id === "search") {
+                    if (isOnStatusPage) {
+                      window.dispatchEvent(
+                        new CustomEvent("status:open-history"),
+                      );
+                    }
+                  } else if (item.id === "add") {
+                    if (pathname.startsWith("/status")) {
+                      window.dispatchEvent(new CustomEvent("status:open-create"));
                     }
                   } else if (item.id === "messages") {
                     router.push("/chat");
@@ -93,14 +117,18 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                 {/* Button background circle */}
                 <div
                   className={`absolute inset-0 rounded-full transition-all ${
-                    isCenterButton ? "bg-white dark:bg-slate-700" : "bg-white dark:bg-slate-700"
+                    isCenterButton
+                      ? "bg-white dark:bg-slate-700"
+                      : "bg-white dark:bg-slate-700"
                   }`}
                 />
 
                 {/* Outline (cutout effect matching background) */}
                 <div
                   className={`absolute inset-0 rounded-full border-8 transition-all ${
-                    isCenterButton ? "border-slate-50 dark:border-slate-800" : "border-white dark:border-slate-800"
+                    isCenterButton
+                      ? "border-slate-50 dark:border-slate-800"
+                      : "border-white dark:border-slate-800"
                   }`}
                 />
 

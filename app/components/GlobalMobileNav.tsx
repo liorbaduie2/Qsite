@@ -14,7 +14,7 @@ export function GlobalMobileNav() {
   const router = useRouter();
 
   const menuItems = [
-    { label: "ראשי", icon: Home, href: "/", active: true },
+    { label: "ראשי", icon: Home, href: "/" },
     { label: "סטטוסים", icon: Users, href: "/status" },
     { label: "דיונים", icon: MessageSquare, href: "/discussions" },
     { label: "שאלות", icon: HelpCircle, href: "/questions" },

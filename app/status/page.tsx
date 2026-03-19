@@ -37,6 +37,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import NavHeader from "../components/NavHeader";
+import BubbleButton from "../components/BubbleButton";
 
 interface FeedItem {
   id: string;
@@ -391,6 +392,27 @@ export default function StatusPage() {
     }
     setIsComposerOpen((prev) => !prev);
   };
+
+  useEffect(() => {
+    const onOpenCreate = () => handleNewStatus();
+    window.addEventListener("status:open-create", onOpenCreate);
+    return () => window.removeEventListener("status:open-create", onOpenCreate);
+  }, [handleNewStatus]);
+
+  const openHistoryFromNavbar = useCallback(() => {
+    if (!user) {
+      handleAuthAction("login");
+      return;
+    }
+    setHistoryModalOpen(true);
+  }, [user, handleAuthAction]);
+
+  useEffect(() => {
+    const onOpenHistory = () => openHistoryFromNavbar();
+    window.addEventListener("status:open-history", onOpenHistory);
+    return () =>
+      window.removeEventListener("status:open-history", onOpenHistory);
+  }, [openHistoryFromNavbar]);
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -784,31 +806,31 @@ export default function StatusPage() {
         onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
         rightContent={
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleNewStatus}
-              disabled={Boolean(user && !canPost)}
-              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 shadow-lg ${
-                user && !canPost
-                  ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-100 disabled:cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl"
-              }`}
-            >
-              {user && !canPost ? <Lock size={18} /> : <Plus size={18} />}
-              {user && !canPost && nextPostAt
-                ? `נעול (${cooldownRemaining(nextPostAt)} דק')`
-                : "סטטוס חדש"}
-            </button>
-            {user && (
-              <button
-                type="button"
-                onClick={() => setHistoryModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-all font-medium text-gray-800 dark:text-gray-100"
+            <div className="hidden md:flex items-center gap-2">
+              <BubbleButton
+                onClick={handleNewStatus}
+                disabled={Boolean(user && !canPost)}
+                size="sm"
               >
-                <History size={18} />
-                היסטוריה שלי
-              </button>
-            )}
+                <span className="flex items-center gap-1">
+                  {user && !canPost ? <Lock size={18} /> : <Plus size={18} />}
+                  {user && !canPost && nextPostAt
+                    ? `נעול (${cooldownRemaining(nextPostAt)} דק')`
+                    : "סטטוס חדש"}
+                </span>
+              </BubbleButton>
+              {user && (
+                <BubbleButton
+                  onClick={() => setHistoryModalOpen(true)}
+                  size="sm"
+                >
+                  <span className="flex items-center gap-1">
+                    <History size={18} />
+                    היסטוריה שלי
+                  </span>
+                </BubbleButton>
+              )}
+            </div>
             {!user && (
               <>
                 <button
@@ -1012,34 +1034,6 @@ export default function StatusPage() {
             </div>
           </form>
         </div>
-      )}
-
-      {/* Fixed "סטטוס חדש" button - mobile only (matches כתוב תשובה in question details) */}
-      {!isComposerOpen && user && (
-        <button
-          type="button"
-          onClick={handleNewStatus}
-          disabled={!canPost}
-          className={`md:hidden fixed left-6 bottom-8 z-40 flex items-center gap-2 px-5 py-3 rounded-full transition-all duration-300 shadow-xl font-medium ${
-            canPost
-              ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-2xl hover:scale-105"
-              : "bg-red-600 text-white opacity-90 disabled:cursor-not-allowed"
-          }`}
-        >
-          {canPost ? (
-            <>
-              <Plus size={18} />
-              סטטוס חדש
-            </>
-          ) : (
-            <>
-              <Lock size={18} />
-              {nextPostAt
-                ? `נעול (${cooldownRemaining(nextPostAt)} דק')`
-                : "נעול"}
-            </>
-          )}
-        </button>
       )}
 
       {/* New status modal (matches כתוב תשובה layout in question details) */}
