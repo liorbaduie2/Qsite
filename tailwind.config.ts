@@ -57,6 +57,27 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        "star-wiggle": {
+          "0%": { transform: "rotate(0deg) scale(1)" },
+          "12%": { transform: "rotate(-24deg) scale(1.28)" },
+          "28%": { transform: "rotate(20deg) scale(1.38)" },
+          "44%": { transform: "rotate(-14deg) scale(1.18)" },
+          "60%": { transform: "rotate(8deg) scale(1.08)" },
+          "76%": { transform: "rotate(-4deg) scale(1.03)" },
+          "100%": { transform: "rotate(0deg) scale(1)" },
+        },
+        "star-burst-ring": {
+          "0%": { transform: "scale(0.78)", opacity: "0.62" },
+          "100%": { transform: "scale(2.25)", opacity: "0" },
+        },
+      },
+      animation: {
+        "star-wiggle": "star-wiggle 0.58s cubic-bezier(0.34, 1.35, 0.64, 1) both",
+        "star-burst-ring": "star-burst-ring 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        "star-burst-ring-wave2":
+          "star-burst-ring 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.13s forwards",
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

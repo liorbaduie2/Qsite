@@ -144,6 +144,10 @@ export default function StatusPage() {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
   const [starringId, setStarringId] = useState<string | null>(null);
+  /** UI-only: replay star icon / ring animation on each click (does not affect star API logic). */
+  const [starClickAnim, setStarClickAnim] = useState<Record<string, boolean>>(
+    {},
+  );
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   /** Kept mounted briefly after close so exit animation can run (matches MobileNavDrawer). */
@@ -176,6 +180,9 @@ export default function StatusPage() {
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const statusMenuRef = useRef<HTMLDivElement>(null);
   const statusMenuPortalRef = useRef<HTMLDivElement>(null);
+  const starAnimClearTimersRef = useRef<
+    Record<string, ReturnType<typeof setTimeout>>
+  >({});
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const isGuest = !user;
@@ -196,6 +203,13 @@ export default function StatusPage() {
       document.body.classList.remove("modal-open");
     }
   }, [isLoginModalOpen, isRegisterModalOpen]);
+
+  useEffect(() => {
+    const timers = starAnimClearTimersRef.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (openStatusMenuId && statusMenuRef.current) {
@@ -843,19 +857,74 @@ export default function StatusPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => toggleStar(item.id)}
+            onClick={() => {
+              const id = item.id;
+              if (!item.starredByMe) {
+                const prevT = starAnimClearTimersRef.current[id];
+                if (prevT) clearTimeout(prevT);
+                setStarClickAnim((m) => ({ ...m, [id]: true }));
+                starAnimClearTimersRef.current[id] = setTimeout(() => {
+                  setStarClickAnim((m) => {
+                    const next = { ...m };
+                    delete next[id];
+                    return next;
+                  });
+                  delete starAnimClearTimersRef.current[id];
+                }, 720);
+              }
+              void toggleStar(id);
+            }}
             disabled={starringId === item.id}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors translate-y-[5px] ${
+            className={`relative isolate flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 translate-y-[5px] overflow-visible active:scale-[0.96] motion-reduce:active:scale-100 motion-safe:transition-transform ${
               item.starredByMe
                 ? "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
                 : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30"
             }`}
           >
-            <Star
-              size={16}
-              className={item.starredByMe ? "fill-current" : ""}
-            />
-            {item.starsCount}
+            <span className="relative z-10 inline-flex size-4 shrink-0 items-center justify-center overflow-visible">
+              {starClickAnim[item.id] ? (
+                <span
+                  className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2"
+                  aria-hidden
+                >
+                  <span className="absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="size-10 origin-center overflow-visible text-amber-400/80 dark:text-amber-300/70 motion-safe:animate-star-burst-ring"
+                    >
+                      <polygon
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.65"
+                        strokeLinejoin="round"
+                        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"
+                      />
+                    </svg>
+                  </span>
+                  <span className="absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="size-10 origin-center overflow-visible text-amber-400/65 dark:text-amber-300/55 motion-safe:animate-star-burst-ring-wave2"
+                    >
+                      <polygon
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.65"
+                        strokeLinejoin="round"
+                        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"
+                      />
+                    </svg>
+                  </span>
+                </span>
+              ) : null}
+              <Star
+                size={16}
+                className={`relative z-10 motion-safe:origin-center ${
+                  item.starredByMe ? "fill-current" : ""
+                } ${starClickAnim[item.id] ? "motion-safe:animate-star-wiggle" : ""}`}
+              />
+            </span>
+            <span className="relative z-10 tabular-nums">{item.starsCount}</span>
           </button>
         </div>
       </div>
