@@ -226,6 +226,15 @@ export default function BubbleButton({
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
+        /* Lucide icons inside label: clockwise hover tilt from center */
+        .bubble-text svg {
+          transform-origin: center center;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bubble-btn:not(:disabled):hover .bubble-text svg {
+          transform: rotate(18deg);
+        }
+
         /* Floating bubbles */
         .float-bubble {
           position: absolute;

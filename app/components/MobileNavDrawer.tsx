@@ -116,6 +116,14 @@ export function MobileNavDrawer({
     return () => document.body.classList.remove("modal-open");
   }, [isOpen]);
 
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("mobile-nav-drawer-state", {
+        detail: { open: isOpen },
+      }),
+    );
+  }, [isOpen]);
+
   const handleMenuClick = (href: string) => {
     onClose();
     router.push(href);

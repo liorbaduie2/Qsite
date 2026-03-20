@@ -119,11 +119,16 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString("he-IL");
 }
 
-function cooldownRemaining(nextPostAt: string): string {
-  const remaining = new Date(nextPostAt).getTime() - Date.now();
-  if (remaining <= 0) return "0";
-  const mins = Math.ceil(remaining / 60000);
-  return String(mins);
+/** Lock UI: minutes + seconds (mobile tooltip, desktop button). */
+function formatCooldownLockMessage(nextPostAt: string): string {
+  const remaining = Math.max(0, new Date(nextPostAt).getTime() - Date.now());
+  if (remaining <= 0) return "נעול";
+  const totalSecs = Math.ceil(remaining / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  if (mins === 0) return `נעול (${secs} שנ')`;
+  if (secs === 0) return `נעול (${mins} דק')`;
+  return `נעול (${mins} דק' ו-${secs} שנ')`;
 }
 
 export default function StatusPage() {
@@ -141,6 +146,9 @@ export default function StatusPage() {
   const [starringId, setStarringId] = useState<string | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  /** Kept mounted briefly after close so exit animation can run (matches MobileNavDrawer). */
+  const [historyModalRendered, setHistoryModalRendered] = useState(false);
+  const [historyModalAnimOpen, setHistoryModalAnimOpen] = useState(false);
   const [adminStarsModal, setAdminStarsModal] = useState<{
     statusId: string;
     users: {
@@ -154,6 +162,8 @@ export default function StatusPage() {
   } | null>(null);
   const [adminStarsLoading, setAdminStarsLoading] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  /** Re-render every second while post cooldown active so lock text shows live seconds */
+  const [, setCooldownTick] = useState(0);
   const [openStatusMenuId, setOpenStatusMenuId] = useState<string | null>(null);
   const [statusMenuPosition, setStatusMenuPosition] = useState<{
     top: number;
@@ -399,20 +409,88 @@ export default function StatusPage() {
     return () => window.removeEventListener("status:open-create", onOpenCreate);
   }, [handleNewStatus]);
 
-  const openHistoryFromNavbar = useCallback(() => {
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("status:composer-state", {
+        detail: { open: isComposerOpen },
+      }),
+    );
+  }, [isComposerOpen]);
+
+  useEffect(() => {
+    const locked = Boolean(user && !canPost);
+    const buildMessage = () =>
+      locked && nextPostAt
+        ? formatCooldownLockMessage(nextPostAt)
+        : locked
+          ? "נעול"
+          : "";
+
+    const emit = () => {
+      window.dispatchEvent(
+        new CustomEvent("status:post-lock-state", {
+          detail: { locked, message: buildMessage() },
+        }),
+      );
+    };
+
+    emit();
+    if (!locked) return;
+    const id = setInterval(emit, 1000);
+    return () => clearInterval(id);
+  }, [user, canPost, nextPostAt]);
+
+  useEffect(() => {
+    if (!user || canPost || !nextPostAt) return;
+    const id = setInterval(() => setCooldownTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [user, canPost, nextPostAt]);
+
+  const toggleHistoryFromNavbar = useCallback(() => {
     if (!user) {
       handleAuthAction("login");
       return;
     }
-    setHistoryModalOpen(true);
+    setHistoryModalOpen((open) => !open);
   }, [user, handleAuthAction]);
 
   useEffect(() => {
-    const onOpenHistory = () => openHistoryFromNavbar();
-    window.addEventListener("status:open-history", onOpenHistory);
+    const onToggleHistory = () => toggleHistoryFromNavbar();
+    window.addEventListener("status:toggle-history", onToggleHistory);
     return () =>
-      window.removeEventListener("status:open-history", onOpenHistory);
-  }, [openHistoryFromNavbar]);
+      window.removeEventListener("status:toggle-history", onToggleHistory);
+  }, [toggleHistoryFromNavbar]);
+
+  useEffect(() => {
+    let closeTimer: ReturnType<typeof setTimeout> | null = null;
+    let raf1 = 0;
+    let raf2 = 0;
+
+    if (historyModalOpen) {
+      setHistoryModalRendered(true);
+      setHistoryModalAnimOpen(false);
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setHistoryModalAnimOpen(true));
+      });
+    } else {
+      setHistoryModalAnimOpen(false);
+      closeTimer = setTimeout(() => setHistoryModalRendered(false), 300);
+    }
+
+    return () => {
+      if (closeTimer) clearTimeout(closeTimer);
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [historyModalOpen]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("status:history-state", {
+        detail: { open: historyModalOpen },
+      }),
+    );
+  }, [historyModalOpen]);
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -800,56 +878,58 @@ export default function StatusPage() {
     >
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
 
-      <NavHeader
-        title="סטטוסים"
-        wide
-        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        rightContent={
-          <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-2">
-              <BubbleButton
-                onClick={handleNewStatus}
-                disabled={Boolean(user && !canPost)}
-                size="sm"
-              >
-                <span className="flex items-center gap-1">
-                  {user && !canPost ? <Lock size={18} /> : <Plus size={18} />}
-                  {user && !canPost && nextPostAt
-                    ? `נעול (${cooldownRemaining(nextPostAt)} דק')`
-                    : "סטטוס חדש"}
-                </span>
-              </BubbleButton>
-              {user && (
+      <div className="hidden md:block">
+        <NavHeader
+          title="סטטוסים"
+          wide
+          onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+          rightContent={
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
                 <BubbleButton
-                  onClick={() => setHistoryModalOpen(true)}
+                  onClick={handleNewStatus}
+                  disabled={Boolean(user && !canPost)}
                   size="sm"
                 >
                   <span className="flex items-center gap-1">
-                    <History size={18} />
-                    היסטוריה שלי
+                    {user && !canPost ? <Lock size={18} /> : <Plus size={18} />}
+                    {user && !canPost && nextPostAt
+                      ? formatCooldownLockMessage(nextPostAt)
+                      : "סטטוס חדש"}
                   </span>
                 </BubbleButton>
+                {user && (
+                  <BubbleButton
+                    onClick={() => setHistoryModalOpen(true)}
+                    size="sm"
+                  >
+                    <span className="flex items-center gap-1">
+                      <History size={18} />
+                      היסטוריה שלי
+                    </span>
+                  </BubbleButton>
+                )}
+              </div>
+              {!user && (
+                <>
+                  <button
+                    onClick={() => handleAuthAction("login")}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 border border-indigo-200 dark:border-indigo-800"
+                  >
+                    <LogIn size={16} /> התחברות
+                  </button>
+                  <button
+                    onClick={() => handleAuthAction("register")}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg"
+                  >
+                    <User size={16} /> הרשמה
+                  </button>
+                </>
               )}
             </div>
-            {!user && (
-              <>
-                <button
-                  onClick={() => handleAuthAction("login")}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 border border-indigo-200 dark:border-indigo-800"
-                >
-                  <LogIn size={16} /> התחברות
-                </button>
-                <button
-                  onClick={() => handleAuthAction("register")}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg"
-                >
-                  <User size={16} /> הרשמה
-                </button>
-              </>
-            )}
-          </div>
-        }
-      />
+          }
+        />
+      </div>
 
       <Drawer
         isDrawerOpen={isDrawerOpen}
@@ -1101,14 +1181,27 @@ export default function StatusPage() {
         </div>
       )}
 
-      {/* History modal */}
-      {historyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* History modal — mobile layout + open/close motion matches MobileNavDrawer */}
+      {historyModalRendered && (
+        <div
+          className={`fixed inset-0 z-[55] flex flex-col justify-end items-center p-0 transition-opacity duration-300 md:flex-row md:items-center md:justify-center md:p-4 ${
+            historyModalAnimOpen
+              ? "opacity-100"
+              : "pointer-events-none opacity-0"
+          }`}
+        >
           <div
-            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            className="absolute inset-0 bg-black/40 dark:bg-black/60 max-md:bg-transparent max-md:dark:bg-transparent"
             onClick={() => setHistoryModalOpen(false)}
+            aria-hidden
           />
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div
+            className={`relative mx-auto mb-24 flex max-h-[82dvh] w-[92%] max-w-md transform flex-col overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-out dark:border-gray-700 dark:bg-gray-800 md:mb-0 md:max-h-[85vh] md:w-full md:max-w-lg md:rounded-2xl ${
+              historyModalAnimOpen
+                ? "translate-y-0 scale-100"
+                : "max-md:translate-y-12 max-md:scale-95"
+            }`}
+          >
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-l from-indigo-50 to-white dark:from-indigo-900/30 dark:to-gray-800">
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <History size={22} />

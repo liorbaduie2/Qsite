@@ -134,7 +134,7 @@
 - Runtime: client
 - Description: Status feed for short-form posting, starring, sharing, and replies.
 - Exports: `StatusPage`
-- Named functions: `cooldownRemaining`, `fetchFeed`, `fetchMe`, `handleNewStatus`, `handleOpenStatusReport`, `handlePost`, `handleSignOut`, `handleSubmitStatusReport`, `onClick`, `openAdminStars`, `timeAgo`, `toggleShare`, `toggleStar`
+- Named functions: `formatCooldownLockMessage`, `fetchFeed`, `fetchMe`, `handleNewStatus`, `handleOpenStatusReport`, `handlePost`, `handleSignOut`, `handleSubmitStatusReport`, `onClick`, `openAdminStars`, `timeAgo`, `toggleShare`, `toggleStar`
 - Fetch calls: `/api/report/content`, `/api/status`, `/api/status/me`
 - Supabase tables/views: None
 - Supabase RPCs: None
