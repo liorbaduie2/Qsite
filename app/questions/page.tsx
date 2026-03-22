@@ -26,6 +26,7 @@ import RegisterModal from "../components/RegisterModal";
 import { useForcedAuthModal } from "../components/useForcedAuthModal";
 import Drawer from "../components/Drawer";
 import NavHeader from "../components/NavHeader";
+import BubbleButton from "../components/BubbleButton";
 import NewQuestionModal from "../components/NewQuestionModal";
 import { UserAvatar } from "../components/UserAvatar";
 import { isOnline } from "@/lib/utils";
@@ -265,13 +266,39 @@ const QuestionsPage = () => {
     }
   };
 
-  const handleNewQuestion = () => {
+  const handleNewQuestion = useCallback(() => {
     if (!user) {
       handleAuthAction("login");
       return;
     }
     setIsNewQuestionModalOpen(true);
-  };
+  }, [user, handleAuthAction]);
+
+  useEffect(() => {
+    const onOpenCreate = () => {
+      handleNewQuestion();
+    };
+    window.addEventListener("questions:open-create", onOpenCreate);
+    return () =>
+      window.removeEventListener("questions:open-create", onOpenCreate);
+  }, [handleNewQuestion]);
+
+  useEffect(() => {
+    const onToggleSearch = () => {
+      setIsSearchOpen((prev) => !prev);
+    };
+    window.addEventListener("questions:toggle-search", onToggleSearch);
+    return () =>
+      window.removeEventListener("questions:toggle-search", onToggleSearch);
+  }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("questions:search-state", {
+        detail: { open: isSearchOpen },
+      }),
+    );
+  }, [isSearchOpen]);
 
   const handleVote = async (
     event: React.MouseEvent,
@@ -385,48 +412,48 @@ const QuestionsPage = () => {
     >
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_40%_40%,rgba(236,72,153,0.05)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
 
-      <NavHeader
-        title="שאלות ותשובות"
-        wide
-        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        rightContent={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen((prev) => !prev)}
-              className="flex items-center justify-center p-2.5 text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-300"
-              aria-expanded={isSearchOpen}
-              aria-label={isSearchOpen ? "סגור חיפוש" : "חפש שאלות"}
-            >
-              <Search size={20} />
-            </button>
-            <button
-              type="button"
-              onClick={handleNewQuestion}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl font-medium"
-            >
-              <Plus size={18} />
-              שאלה חדשה
-            </button>
-            {!user && (
-              <>
-                <button
-                  onClick={() => handleAuthAction("login")}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 dark:hover:border-indigo-700"
-                >
-                  <LogIn size={16} /> התחברות
-                </button>
-                <button
-                  onClick={() => handleAuthAction("register")}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-                >
-                  <User size={16} /> הרשמה
-                </button>
-              </>
-            )}
-          </div>
-        }
-      />
+      <div className="hidden md:block">
+        <NavHeader
+          title="שאלות ותשובות"
+          wide
+          onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+          rightContent={
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen((prev) => !prev)}
+                className="flex items-center justify-center p-2.5 text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-300"
+                aria-expanded={isSearchOpen}
+                aria-label={isSearchOpen ? "סגור חיפוש" : "חפש שאלות"}
+              >
+                <Search size={20} />
+              </button>
+              <BubbleButton onClick={handleNewQuestion} size="sm">
+                <span className="flex items-center gap-1">
+                  <Plus size={18} />
+                  שאלה חדשה
+                </span>
+              </BubbleButton>
+              {!user && (
+                <>
+                  <button
+                    onClick={() => handleAuthAction("login")}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 dark:hover:border-indigo-700"
+                  >
+                    <LogIn size={16} /> התחברות
+                  </button>
+                  <button
+                    onClick={() => handleAuthAction("register")}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    <User size={16} /> הרשמה
+                  </button>
+                </>
+              )}
+            </div>
+          }
+        />
+      </div>
 
       <Drawer
         isDrawerOpen={isDrawerOpen}
@@ -442,7 +469,7 @@ const QuestionsPage = () => {
       />
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-5 sm:py-6 md:py-8">
+      <main className="mx-auto w-full max-w-6xl px-4 pt-4 pb-5 sm:px-5 sm:pt-6 sm:pb-6 md:py-8">
         {/* Search and Filter — compact bar (visible when user clicks "חפש שאלות") */}
         {isSearchOpen && (
           <div className="mb-5 relative z-10">
@@ -761,8 +788,9 @@ const QuestionsPage = () => {
                 היה הראשון לשאול שאלה ולהתחיל את השיח
               </p>
               <button
+                type="button"
                 onClick={handleNewQuestion}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                className="hidden md:inline-flex px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
                 שאל שאלה חדשה
               </button>

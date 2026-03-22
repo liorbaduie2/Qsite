@@ -11,6 +11,8 @@ interface NavHeaderProps {
   /** When provided, rendered in place of the title string (e.g. avatar + name) */
   titleContent?: React.ReactNode;
   wide?: boolean;
+  /** Hide the menu control below md (e.g. home page uses bottom nav menu on mobile). */
+  hideMenuOnMobile?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export default function NavHeader({
   topContent,
   titleContent,
   wide,
+  hideMenuOnMobile,
 }: NavHeaderProps) {
   return (
     <header className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-xl shadow-xl border-b border-gray-200/20 dark:border-gray-700/50">
@@ -32,7 +35,9 @@ export default function NavHeader({
         className={`mx-auto px-4 sm:px-5 ${wide ? "max-w-6xl" : "max-w-4xl"}`}
       >
         <div className="flex items-center gap-2 h-20">
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div
+            className={`flex items-center gap-2 sm:gap-4 ${hideMenuOnMobile ? "max-md:hidden" : ""}`}
+          >
             <button
               type="button"
               onClick={onMenuClick}

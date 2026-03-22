@@ -57,22 +57,22 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-y-contain bg-black/50 dark:bg-black/60 backdrop-blur-sm px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-6 sm:pt-6 sm:pb-6"
       onClick={canClose ? handleClose : undefined}
     >
       <div
-        className="w-full max-w-2xl max-h-[95vh] overflow-y-auto relative modal-scroll"
+        className="relative my-auto w-full min-h-0 max-w-2xl max-h-[92dvh] overflow-y-auto modal-scroll sm:max-h-[95vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {canClose && (
           <button
             onClick={handleClose}
-            className="absolute top-4 right-5 z-20 p-2 flex items-center justify-center text-white hover:text-white/80 transition-colors"
+            className="absolute top-2 right-2 z-20 flex items-center justify-center p-1.5 text-white transition-colors hover:text-white/80 sm:top-4 sm:right-5 sm:p-2"
             style={{ direction: "ltr" }}
             aria-label="סגור"
           >
             <svg
-              className="w-6 h-6"
+              className="h-5 w-5 sm:h-6 sm:w-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -87,9 +87,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
           </button>
         )}
 
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-gray-700/50">
+        <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-gray-700/50 dark:bg-gray-800/95 sm:rounded-3xl">
           <div
-            className="text-center p-8 text-white relative overflow-hidden"
+            className="relative overflow-hidden px-4 pb-4 pt-5 text-center text-white sm:p-8"
             style={{
               background:
                 "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)",
@@ -101,29 +101,29 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
 
             <div className="relative z-10">
-              <h2 className="text-4xl font-bold mb-3 drop-shadow-lg">
+              <h2 className="mb-2 text-2xl font-bold drop-shadow-lg sm:mb-3 sm:text-4xl">
                 התחברות לחשבון
               </h2>
-              <p className="text-white/90 text-lg font-medium">
+              <p className="text-base font-medium text-white/90 sm:text-lg">
                 {getTimeBasedGreeting()}, ברוך שובך!
               </p>
             </div>
           </div>
 
           <div
-            className="p-8 bg-gradient-to-br from-gray-50/50 to-white/50 dark:from-gray-900/80 dark:to-gray-800/80"
+            className="bg-gradient-to-br from-gray-50/50 to-white/50 px-4 py-5 dark:from-gray-900/80 dark:to-gray-800/80 sm:p-8"
             dir="rtl"
           >
             {/* Show auth status messages prominently */}
-            <AuthStatusDisplay className="mb-6" />
+            <AuthStatusDisplay className="mb-4 sm:mb-6" />
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               <div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300/60 dark:border-gray-600/60 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 shadow-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                  className="w-full rounded-xl border border-gray-300/60 bg-white/80 px-3 py-2.5 text-gray-900 shadow-sm backdrop-blur-sm transition-all duration-300 placeholder-gray-500 focus:border-transparent focus:ring-2 focus:ring-indigo-500 dark:border-gray-600/60 dark:bg-gray-700/80 dark:text-gray-100 dark:placeholder-gray-400 sm:px-4 sm:py-3"
                   dir="ltr"
                   required
                   placeholder="כתובת דואר אלקטרוני"
@@ -136,7 +136,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300/60 dark:border-gray-600/60 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm transition-all duration-300 shadow-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                  className="w-full rounded-xl border border-gray-300/60 bg-white/80 px-3 py-2.5 text-gray-900 shadow-sm backdrop-blur-sm transition-all duration-300 placeholder-gray-500 focus:border-transparent focus:ring-2 focus:ring-indigo-500 dark:border-gray-600/60 dark:bg-gray-700/80 dark:text-gray-100 dark:placeholder-gray-400 sm:px-4 sm:py-3"
                   dir="ltr"
                   required
                   placeholder="הסיסמה"
@@ -149,8 +149,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 disabled={isSubmitDisabled}
                 className={
                   isFormReady
-                    ? "w-full py-4 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed bg-purple-600 dark:bg-purple-600 hover:bg-purple-700 dark:hover:bg-purple-500"
-                    : "w-full py-4 px-6 font-bold rounded-xl transition-all duration-300 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    ? "w-full rounded-xl bg-purple-600 px-4 py-3 text-base font-bold text-white shadow-lg transition-all duration-300 hover:bg-purple-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 dark:bg-purple-600 dark:hover:bg-purple-500 sm:px-6 sm:py-4"
+                    : "w-full cursor-not-allowed rounded-xl bg-gray-300 px-4 py-3 text-base font-bold text-gray-500 transition-all duration-300 dark:bg-gray-600 dark:text-gray-400 sm:px-6 sm:py-4"
                 }
               >
                 {loading ? (
@@ -164,19 +164,19 @@ const LoginModal: React.FC<LoginModalProps> = ({
               </button>
             </form>
 
-            <div className="mt-8 text-center">
+            <div className="mt-5 text-center sm:mt-8">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300/60 dark:border-gray-600/60"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-gradient-to-br from-gray-50/50 to-white/50 dark:from-gray-900/80 dark:to-gray-800/80 text-gray-600 dark:text-gray-400 font-medium">
+                  <span className="bg-gradient-to-br from-gray-50/50 to-white/50 px-3 font-medium text-gray-600 dark:from-gray-900/80 dark:to-gray-800/80 dark:text-gray-400 sm:px-4">
                     או
                   </span>
                 </div>
               </div>
 
-              <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 sm:mt-6">
                 אין לך חשבון?{" "}
                 <button
                   onClick={handleSwitchToRegister}

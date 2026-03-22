@@ -464,7 +464,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         let hebrewError = "שגיאה בהתחברות";
         switch (error.message) {
           case "Invalid login credentials":
-            hebrewError = "אימייל או סיסמה שגויים";
+            hebrewError = "אימייל או סיסמה שגויים נסה שנית או מאוחר יותר";
             break;
           case "Too many requests":
             hebrewError = "יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר";

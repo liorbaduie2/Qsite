@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, KeyboardEvent, useEffect } from "react";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Eye, EyeOff } from "lucide-react";
 
 interface HebrewRegistrationProps {
   onComplete?: () => void;
@@ -187,9 +187,6 @@ export default function HebrewRegistration({
       if (data.demoCode) {
         setSuccess(`קוד אימות לדמו: ${data.demoCode}`);
         setTimeout(() => setSuccess(""), 15000);
-      } else {
-        setSuccess(data.message || "קוד אימות נשלח");
-        setTimeout(() => setSuccess(""), 5000);
       }
       return true;
     } catch (error) {
@@ -678,7 +675,7 @@ export default function HebrewRegistration({
   const getFieldClassName = (field: string) => {
     const state = fieldStates[field];
     let className =
-      "px-4 py-3 bg-white/60 dark:bg-gray-700/60 border-2 rounded-xl transition-colors text-right text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400";
+      "px-4 py-3 max-md:px-3 max-md:py-2.5 bg-white/60 dark:bg-gray-700/60 border-2 rounded-xl max-md:rounded-lg transition-colors text-right max-md:text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400";
     if (state?.isValidating)
       className += " border-blue-300 dark:border-blue-500";
     else if (state?.isInvalid) className += " border-red-500";
@@ -698,7 +695,7 @@ export default function HebrewRegistration({
   const getVerificationClassName = () => {
     const state = fieldStates.verificationCode;
     let className =
-      "w-12 h-14 text-center text-2xl font-bold border-2 rounded-xl transition-colors bg-slate-600 dark:bg-slate-700 text-white";
+      "w-12 h-14 max-md:w-10 max-md:h-11 text-center text-2xl max-md:text-xl font-bold border-2 rounded-xl max-md:rounded-lg transition-colors bg-slate-600 dark:bg-slate-700 text-white";
     if (state?.isInvalid) className += " border-red-500";
     else if (state?.isValid)
       className += " border-green-500 dark:border-green-600";
@@ -753,21 +750,21 @@ export default function HebrewRegistration({
 
   if (formStage === "APPLICATION" || formStage === "CONFIRMED") {
     return (
-      <div className="text-center space-y-6 py-8">
+      <div className="text-center space-y-6 max-md:space-y-4 py-8 max-md:py-5">
         {formStage === "APPLICATION" ? (
-          <div className="animate-fadeInUp space-y-6 text-right">
-            <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+          <div className="animate-fadeInUp space-y-6 max-md:space-y-4 text-right">
+            <div className="text-center mb-6 max-md:mb-4">
+              <h2 className="text-3xl max-md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2 max-md:mb-1">
                 בקשת הצטרפות לקהילה
               </h2>
-              <p className="text-gray-700 dark:text-gray-300 text-lg">
+              <p className="text-gray-700 dark:text-gray-300 text-lg max-md:text-base max-md:leading-snug">
                 ספר לנו מעט על עצמך ולמה אתה רוצה להצטרף
               </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-md:space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 max-md:mb-1.5">
                   למה אתה רוצה להצטרף לקהילה? *
                 </label>
                 <textarea
@@ -775,7 +772,7 @@ export default function HebrewRegistration({
                   onChange={(e) =>
                     handleInputChange("applicationText", e.target.value)
                   }
-                  className="w-full px-4 py-3 bg-white/60 dark:bg-gray-700/60 border-2 border-gray-200 dark:border-gray-600 rounded-xl transition-colors focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                  className="w-full px-4 py-3 max-md:px-3 max-md:py-2.5 bg-white/60 dark:bg-gray-700/60 border-2 border-gray-200 dark:border-gray-600 rounded-xl max-md:rounded-lg transition-colors focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 max-md:text-base"
                   rows={4}
                   placeholder="ספר לנו על עצמך, התחומים שמעניינים אותך, והניסיון שלך... (לפחות 10 תווים)"
                   maxLength={2000}
@@ -810,7 +807,7 @@ export default function HebrewRegistration({
               <button
                 onClick={handleSubmitApplication}
                 disabled={isLoading || formData.applicationText.length < 10}
-                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl ${
+                className={`w-full py-4 max-md:py-3 rounded-xl max-md:rounded-lg font-bold text-lg max-md:text-base transition-all duration-300 shadow-lg hover:shadow-xl ${
                   formData.applicationText.length >= 10
                     ? "button-gradient text-white hover:translate-y-[-2px]"
                     : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
@@ -834,8 +831,8 @@ export default function HebrewRegistration({
           </div>
         ) : (
           // formStage === 'CONFIRMED'
-          <div className="animate-fadeInUp">
-            <h3 className="text-3xl font-bold text-green-500 dark:text-green-400 mb-4">
+          <div className="animate-fadeInUp max-md:px-1">
+            <h3 className="text-3xl max-md:text-2xl font-bold text-green-500 dark:text-green-400 mb-4 max-md:mb-3">
               👍 תודה רבה!
             </h3>
             <p className="text-gray-600 dark:text-gray-300 mt-2 mb-4">
@@ -865,20 +862,24 @@ export default function HebrewRegistration({
       <BirthGenderModal />
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded-xl text-right">
+        <div className="mb-4 max-md:mb-3 p-3 max-md:p-2.5 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded-xl max-md:rounded-lg text-right text-sm max-md:text-[13px] max-md:leading-snug">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 rounded-xl text-right">
+        <div className="mb-4 max-md:mb-3 p-3 max-md:p-2.5 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 rounded-xl max-md:rounded-lg text-right text-sm max-md:text-[13px] max-md:leading-snug">
           {success}
         </div>
       )}
 
-      <form className="space-y-2">
+      <form className="space-y-2 max-md:space-y-3">
         {/* Step 1: Phone */}
         <fieldset
-          className={`transition-all duration-300 ${currentStep !== 1 ? "opacity-50 pointer-events-none" : ""}`}
+          className={`transition-all duration-300 ${
+            currentStep !== 1
+              ? "max-md:hidden md:opacity-50 md:pointer-events-none"
+              : ""
+          }`}
         >
           <div className="relative w-full" dir="ltr">
             {currentStep >= 3 && (
@@ -910,18 +911,21 @@ export default function HebrewRegistration({
 
         {/* Step 2: Verification */}
         {currentStep >= 2 && currentStep === 2 && (
-          <fieldset className="transition-all duration-300">
+          <fieldset className="transition-all duration-300 max-md:-mt-1">
             <div className="text-center animate-fadeInUp">
-              <label className="block text-gray-800 dark:text-gray-100 text-lg font-bold mb-2">
+              <label className="block text-gray-800 dark:text-gray-100 text-lg max-md:text-base font-bold mb-2 max-md:mb-1">
                 🔐 אימות קוד SMS
               </label>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4 max-md:mb-3 max-md:text-sm max-md:leading-relaxed px-1 max-md:px-0">
                 הזן את הקוד שנשלח למספר{" "}
-                <b className="text-indigo-600 dark:text-indigo-400">
+                <b className="text-indigo-600 dark:text-indigo-400 break-all">
                   {formData.phone}
                 </b>
               </p>
-              <div className="flex justify-center gap-3 mb-2" dir="ltr">
+              <div
+                className="flex justify-center flex-wrap gap-3 max-md:gap-2 mb-2 max-md:mb-0"
+                dir="ltr"
+              >
                 {formData.verificationCode.map((digit, index) => (
                   <input
                     key={index}
@@ -947,7 +951,11 @@ export default function HebrewRegistration({
         {/* Step 3: Email */}
         {currentStep >= 3 && (
           <fieldset
-            className={`transition-all duration-300 ${currentStep !== 3 ? "opacity-50 pointer-events-none" : ""}`}
+            className={`transition-all duration-300 ${
+              currentStep !== 3
+                ? "max-md:hidden md:opacity-50 md:pointer-events-none"
+                : ""
+            }`}
           >
             <input
               type="email"
@@ -967,14 +975,18 @@ export default function HebrewRegistration({
         {/* Step 4: Username + Gender + DOB Combined (Right to Left Layout) */}
         {currentStep >= 4 && (
           <fieldset
-            className={`transition-all duration-300 ${currentStep !== 4 ? "opacity-50 pointer-events-none" : ""}`}
+            className={`transition-all duration-300 ${
+              currentStep !== 4
+                ? "max-md:hidden md:opacity-50 md:pointer-events-none"
+                : ""
+            }`}
           >
-            <div className="space-y-4">
+            <div className="space-y-4 max-md:space-y-3">
               {/* Row container: Username → Gender → Date of Birth (Right to Left) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-md:gap-3">
                 {/* Username (Right) */}
                 <div className="md:order-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-right">
+                  <label className="block text-sm max-md:text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1 max-md:mb-0.5 text-right">
                     שם משתמש
                   </label>
                   <input
@@ -996,8 +1008,8 @@ export default function HebrewRegistration({
 
                 {/* Gender (Center) */}
                 <div className="md:order-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-right">
-                    👤 מגדר
+                  <label className="block text-sm max-md:text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1 max-md:mb-0.5 text-right">
+                    מגדר
                   </label>
                   <select
                     value={formData.gender}
@@ -1025,7 +1037,7 @@ export default function HebrewRegistration({
 
                 {/* Date of Birth (Left) */}
                 <div className="md:order-3">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-right">
+                  <label className="block text-sm max-md:text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1 max-md:mb-0.5 text-right">
                     תאריך לידה
                   </label>
                   <input
@@ -1079,7 +1091,11 @@ export default function HebrewRegistration({
         {/* Step 5: Password */}
         {currentStep >= 5 && (
           <fieldset
-            className={`transition-all duration-300 ${currentStep !== 5 ? "opacity-50 pointer-events-none" : ""}`}
+            className={`transition-all duration-300 ${
+              currentStep !== 5
+                ? "max-md:hidden md:opacity-50 md:pointer-events-none"
+                : ""
+            }`}
           >
             <div className="relative">
               <input
@@ -1094,10 +1110,17 @@ export default function HebrewRegistration({
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility("password")}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
                 disabled={currentStep !== 5}
+                aria-label={
+                  passwordVisible.password ? "הסתר סיסמה" : "הצג סיסמה"
+                }
               >
-                {passwordVisible.password ? "🙈" : "👁️"}
+                {passwordVisible.password ? (
+                  <EyeOff className="w-5 h-5" aria-hidden />
+                ) : (
+                  <Eye className="w-5 h-5" aria-hidden />
+                )}
               </button>
             </div>
             <div className="mt-1 h-4" />
@@ -1107,7 +1130,11 @@ export default function HebrewRegistration({
         {/* Step 6: Confirm Password */}
         {currentStep >= 6 && (
           <fieldset
-            className={`transition-all duration-300 ${currentStep !== 6 ? "opacity-50 pointer-events-none" : ""}`}
+            className={`transition-all duration-300 ${
+              currentStep !== 6
+                ? "max-md:hidden md:opacity-50 md:pointer-events-none"
+                : ""
+            }`}
           >
             <div className="relative">
               <input
@@ -1124,21 +1151,31 @@ export default function HebrewRegistration({
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility("confirmPassword")}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
                 disabled={currentStep !== 6}
+                aria-label={
+                  passwordVisible.confirmPassword ? "הסתר סיסמה" : "הצג סיסמה"
+                }
               >
-                {passwordVisible.confirmPassword ? "🙈" : "👁️"}
+                {passwordVisible.confirmPassword ? (
+                  <EyeOff className="w-5 h-5" aria-hidden />
+                ) : (
+                  <Eye className="w-5 h-5" aria-hidden />
+                )}
               </button>
             </div>
             <div className="mt-1 h-4" />
           </fieldset>
         )}
 
-        <div className="flex justify-center space-x-2 pt-3" dir="ltr">
+        <div
+          className="flex justify-center space-x-2 max-md:space-x-1.5 pt-3 max-md:pt-2"
+          dir="ltr"
+        >
           {Array.from({ length: totalSteps }, (_, i) => (
             <div
               key={i}
-              className={`w-4 h-4 rounded-full transition-all duration-300 ${
+              className={`w-4 h-4 max-md:w-3 max-md:h-3 rounded-full transition-all duration-300 ${
                 i + 1 <= currentStep
                   ? "bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600 shadow-lg"
                   : "bg-gray-300 dark:bg-gray-600"
@@ -1147,15 +1184,15 @@ export default function HebrewRegistration({
           ))}
         </div>
 
-        <div className="pt-3">
+        <div className="pt-3 max-md:pt-2">
           <button
             type="button"
             onClick={handleNext}
             disabled={isContinueDisabled}
             className={
               isCurrentStepReady
-                ? "w-full bg-purple-600 dark:bg-purple-600 hover:bg-purple-700 dark:hover:bg-purple-500 text-white py-4 rounded-xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
-                : "w-full py-4 rounded-xl font-bold text-lg bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed transition-all duration-300"
+                ? "w-full bg-purple-600 dark:bg-purple-600 hover:bg-purple-700 dark:hover:bg-purple-500 text-white py-4 max-md:py-3 rounded-xl max-md:rounded-lg font-bold text-lg max-md:text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+                : "w-full py-4 max-md:py-3 rounded-xl max-md:rounded-lg font-bold text-lg max-md:text-base bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed transition-all duration-300"
             }
           >
             {isLoading ? (
@@ -1171,10 +1208,6 @@ export default function HebrewRegistration({
           </button>
         </div>
       </form>
-
-      <div className="text-center mt-4 text-sm text-gray-500 dark:text-gray-400">
-        שלב {currentStep} מתוך {totalSteps}
-      </div>
 
       <style jsx>{`
         input:focus,

@@ -44,6 +44,7 @@ import LoginModal from "../../components/LoginModal";
 import RegisterModal from "../../components/RegisterModal";
 import Drawer from "../../components/Drawer";
 import NavHeader from "../../components/NavHeader";
+import BubbleButton from "../../components/BubbleButton";
 import { UserAvatar } from "../../components/UserAvatar";
 import { isOnline } from "@/lib/utils";
 import { normalizeTagName } from "@/lib/tag-matching";
@@ -923,6 +924,25 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const openAnswerPanelForMobileNav = useCallback(() => {
+    if (!question) return;
+    if (!user) {
+      setIsRegisterModalOpen(false);
+      setIsLoginModalOpen(true);
+      return;
+    }
+    setIsAnswerPanelOpen(true);
+  }, [question, user]);
+
+  useEffect(() => {
+    const onOpenAnswer = () => {
+      openAnswerPanelForMobileNav();
+    };
+    window.addEventListener("question-detail:open-answer", onOpenAnswer);
+    return () =>
+      window.removeEventListener("question-detail:open-answer", onOpenAnswer);
+  }, [openAnswerPanelForMobileNav]);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -1117,13 +1137,17 @@ export default function QuestionDetailPage() {
               </button>
             </div>
           ) : question && !isAnswerPanelOpen ? (
-            <button
-              onClick={() => setIsAnswerPanelOpen(true)}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg font-medium"
-            >
-              <Plus size={18} />
-              כתוב תשובה
-            </button>
+            <div className="hidden md:block">
+              <BubbleButton
+                onClick={() => setIsAnswerPanelOpen(true)}
+                size="sm"
+              >
+                <span className="flex items-center gap-1">
+                  <Plus size={18} />
+                  כתוב תשובה
+                </span>
+              </BubbleButton>
+            </div>
           ) : undefined
         }
       />
@@ -2400,17 +2424,6 @@ export default function QuestionDetailPage() {
           setIsLoginModalOpen(true);
         }}
       />
-
-      {/* Fixed "Write Answer" button - mobile only */}
-      {!isAnswerPanelOpen && question && user && (
-        <button
-          onClick={() => setIsAnswerPanelOpen(true)}
-          className="md:hidden fixed left-6 bottom-8 z-40 flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 font-medium"
-        >
-          <Plus size={18} />
-          כתוב תשובה
-        </button>
-      )}
 
       {/* Answer Modal (matches create status popout) */}
       {isAnswerPanelOpen && (

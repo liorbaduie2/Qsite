@@ -9,21 +9,62 @@ import {
   Lock,
   Menu,
   ArrowRight,
+  type LucideIcon,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/app/components/AuthProvider";
+import { useNotificationsRealtime } from "@/app/hooks/useNotificationsRealtime";
+import { createClient } from "@/lib/supabase/client";
 
 const navShape = "/navbar-mobile.svg";
+
+/** Question detail — matches `public/icons/write-answer-icon.svg` (fill → currentColor). */
+function MobileNavWriteAnswerIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 40.97 32.12"
+      className={className}
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M33.92,8.98l-.38.38.53.52c-.04-.3-.09-.6-.15-.9ZM22.77,0h-11.38C5,0,0,5.01,0,11.38v18.47c0,.68.46,1.6,1.14,2.05.22.22.68.22,1.13.22s.68,0,.92-.22l4.58-6.61h9.84v-2.89l15.61-15.61c-1.73-4.03-5.72-6.79-10.45-6.79ZM24.97,12.31c0,.51-.42.93-.92.93h-5.75c-.25,0-.46.2-.46.45v5.81c0,.51-.41.93-.92.93h-.62c-.51,0-.93-.42-.93-.93v-5.81c0-.25-.2-.45-.45-.45h-5.75c-.51,0-.92-.42-.92-.93v-.61c0-.51.41-.92.92-.92h5.75c.25,0,.45-.21.45-.46v-5.81c0-.51.42-.93.93-.93h.62c.51,0,.92.42.92.93v5.81c0,.25.21.46.46.46h5.75c.5,0,.92.41.92.92v.61Z" />
+      <polygon points="40.97 9.36 37.26 13.07 34.07 9.88 33.54 9.36 33.92 8.98 37.26 5.65 40.97 9.36" />
+      <polygon points="35.79 14.54 33.89 16.45 25.31 25.02 23.37 26.96 19.65 26.96 19.65 23.25 32.08 10.83 34.16 12.91 35.79 14.54" />
+    </svg>
+  );
+}
+
+/** Questions list — matches `public/icons/create-question.svg` (fill → currentColor). */
+function MobileNavCreateQuestionIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 39.66 31.83"
+      className={className}
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M27.51,23.35h1.2c2.42,0,4.41-1.92,4.41-4.24v-1.36l-5.61,5.6ZM28.71,0H4.41C1.99,0,0,1.92,0,4.24v27.59l8.83-8.48h7.51v-1.91l13.06-13.06,1.37-1.36,2.35-2.35v-.43c0-2.32-1.99-4.24-4.41-4.24ZM16.76,20.1c-.35.34-.84.53-1.33.53-.99-.02-1.78-.78-1.8-1.75,0-.94.81-1.71,1.8-1.71h.01c1.02,0,1.8.73,1.83,1.63.01.5-.17.96-.51,1.3ZM18.85,10.96l-.62.53c-.65.42-1.11,1.11-1.26,1.89l-.02.41c-.03.49-.07,1.01-.07,1.57.02.1.01.18-.03.24h0s-.06.01-.13.01h-.08c-.16-.02-.32-.02-.48-.02h-.81c-.47,0-.96,0-1.41.02-.16,0-.16-.02-.16-.15-.05-1.37-.04-2.92.48-4.02.41-.75,1.02-1.38,1.77-1.83.63-.39,1.16-.85,1.62-1.4.63-.67.79-1.64.4-2.48-.56-.87-1.51-1.38-2.56-1.38h-.1c-1.47,0-2.72.95-3.08,2.31-.13.39-.14.39-.27.39-.07,0-.14-.01-.23-.01,0,0-2.13-.26-2.53-.32-.14-.01-.19-.03-.21-.05-.02-.03-.02-.08,0-.16.3-3.18,3.52-4.84,6.55-4.84h.15c1.59,0,3.16.53,4.41,1.5,1.04.86,1.65,2.12,1.69,3.43-.02,1.8-1.61,3.16-3.01,4.36Z" />
+      <polygon points="39.66 8.38 35.95 12.09 32.76 8.9 32.23 8.38 32.61 8 35.95 4.66 39.66 8.38" />
+      <polygon points="34.48 13.56 32.58 15.46 24 24.04 22.06 25.98 18.34 25.98 18.34 22.27 30.77 9.84 32.85 11.93 34.48 13.56" />
+    </svg>
+  );
+}
 
 interface MobileNavbarProps {
   onMenuClick?: () => void;
 }
 
 export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
-  const [messageCount] = useState(4);
+  const { user } = useAuth();
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const { unreadCount: notificationUnreadCount } = useNotificationsRealtime(
+    user?.id,
+  );
   const [statusComposerOpen, setStatusComposerOpen] = useState(false);
   const [statusHistoryOpen, setStatusHistoryOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [questionsSearchOpen, setQuestionsSearchOpen] = useState(false);
   const [statusPostLock, setStatusPostLock] = useState<{
     locked: boolean;
     message: string;
@@ -34,12 +75,62 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
   const pathname = usePathname() || "";
   const router = useRouter();
 
+  const fetchChatUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch("/api/chat/unread-count");
+      const data = await res.json();
+      if (res.ok && typeof data.count === "number")
+        setChatUnreadCount(data.count);
+    } catch {
+      // ignore
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setChatUnreadCount(0);
+      return;
+    }
+    fetchChatUnreadCount();
+  }, [user?.id, pathname, fetchChatUnreadCount]);
+
+  useEffect(() => {
+    if (user?.id && mobileDrawerOpen) {
+      fetchChatUnreadCount();
+    }
+  }, [user?.id, mobileDrawerOpen, fetchChatUnreadCount]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel("mobile-navbar-chat-unread")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        () => {
+          fetchChatUnreadCount();
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchChatUnreadCount]);
+
   useEffect(() => {
     if (!pathname.startsWith("/status")) {
       setStatusComposerOpen(false);
       setStatusHistoryOpen(false);
       setStatusPostLock({ locked: false, message: "" });
       setShowStatusLockFeedback(false);
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname !== "/questions") {
+      setQuestionsSearchOpen(false);
     }
   }, [pathname]);
 
@@ -92,6 +183,21 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
   }, []);
 
   useEffect(() => {
+    const onQuestionsSearchState = (e: Event) => {
+      const ce = e as CustomEvent<{ open?: boolean }>;
+      if (typeof ce.detail?.open === "boolean") {
+        setQuestionsSearchOpen(ce.detail.open);
+      }
+    };
+    window.addEventListener("questions:search-state", onQuestionsSearchState);
+    return () =>
+      window.removeEventListener(
+        "questions:search-state",
+        onQuestionsSearchState,
+      );
+  }, []);
+
+  useEffect(() => {
     const onPostLockState = (e: Event) => {
       const ce = e as CustomEvent<{ locked?: boolean; message?: string }>;
       setStatusPostLock({
@@ -114,23 +220,51 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
   const isOnChatPage = pathname.startsWith("/chat");
   const isOnNotificationsPage = pathname.startsWith("/notifications");
   const isOnStatusPage = pathname.startsWith("/status");
-  const useBackInsteadOfMenu = isOnChatPage || isOnNotificationsPage;
+  /** Questions list only — not /questions/[id] */
+  const isOnQuestionsListPage = pathname === "/questions";
+  /** Single-question view: /questions/[id] (not /questions list) */
+  const isOnQuestionDetailPage = /^\/questions\/[^/]+/.test(pathname);
+  const useBackInsteadOfMenu =
+    isOnChatPage || isOnNotificationsPage || isOnQuestionDetailPage;
+  /** Avoid leaving /notifications in history when using bottom nav (e.g. notif → chat → back). */
+  const navigateFromMobileNav = (path: string) => {
+    if (isOnNotificationsPage) router.replace(path);
+    else router.push(path);
+  };
   const leftButtonIcon = useBackInsteadOfMenu ? ArrowRight : Menu;
   const leftButtonLabel = useBackInsteadOfMenu ? "חזרה" : "Menu";
 
   const searchSlotIcon = isOnStatusPage ? History : Search;
   const searchSlotLabel = isOnStatusPage ? "היסטוריה שלי" : "Search";
 
-  const navItems = [
+  const addCenterIcon: LucideIcon | typeof MobileNavWriteAnswerIcon =
+    isOnQuestionDetailPage
+      ? MobileNavWriteAnswerIcon
+      : isOnQuestionsListPage
+        ? MobileNavCreateQuestionIcon
+        : Plus;
+
+  const navItems: {
+    id: string;
+    icon: LucideIcon | typeof MobileNavWriteAnswerIcon;
+    label: string;
+    isCenter?: boolean;
+    badge?: number;
+  }[] = [
     { id: "menu", icon: leftButtonIcon, label: leftButtonLabel },
     { id: "search", icon: searchSlotIcon, label: searchSlotLabel },
-    { id: "add", icon: Plus, label: "Add", isCenter: true },
-    { id: "notifications", icon: Bell, label: "Notifications" },
+    { id: "add", icon: addCenterIcon, label: "Add", isCenter: true },
+    {
+      id: "notifications",
+      icon: Bell,
+      label: "Notifications",
+      badge: user ? notificationUnreadCount : undefined,
+    },
     {
       id: "messages",
       icon: MessageCircle,
       label: "Messages",
-      badge: messageCount,
+      badge: user ? chatUnreadCount : undefined,
     },
   ];
 
@@ -305,6 +439,11 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
               isOnStatusPage &&
               item.id === "search" &&
               statusHistoryOpen;
+            const questionsSearchHighlighted =
+              !isCenterButton &&
+              isOnQuestionsListPage &&
+              item.id === "search" &&
+              questionsSearchOpen;
             const mobileMenuHighlighted =
               !isCenterButton &&
               item.id === "menu" &&
@@ -318,6 +457,20 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
               showStatusLockFeedback;
             const CenterIcon =
               statusPostLockedVisual && item.id === "add" ? Lock : Icon;
+            const centerIconClassName = isCenterButton
+              ? `w-8 h-8 ${
+                  statusPostLockedVisual
+                    ? "text-red-600 dark:text-red-400"
+                    : statusCreatePressed
+                      ? "text-pink-400/50 dark:text-indigo-300"
+                      : "text-gray-400 dark:text-slate-400"
+                }`
+              : `w-6 h-6 ${isActive || statusHistoryHighlighted || questionsSearchHighlighted || mobileMenuHighlighted ? "text-pink-400/50 dark:text-indigo-300" : "text-gray-400 dark:text-slate-400"}`;
+            const isCustomQuestionSvg =
+              item.id === "add" &&
+              !statusPostLockedVisual &&
+              (CenterIcon === MobileNavWriteAnswerIcon ||
+                CenterIcon === MobileNavCreateQuestionIcon);
 
             return (
               <button
@@ -334,6 +487,10 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                       window.dispatchEvent(
                         new CustomEvent("status:toggle-history"),
                       );
+                    } else if (isOnQuestionsListPage) {
+                      window.dispatchEvent(
+                        new CustomEvent("questions:toggle-search"),
+                      );
                     }
                   } else if (item.id === "add") {
                     if (pathname.startsWith("/status")) {
@@ -344,11 +501,19 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                       window.dispatchEvent(
                         new CustomEvent("status:open-create"),
                       );
+                    } else if (isOnQuestionsListPage) {
+                      window.dispatchEvent(
+                        new CustomEvent("questions:open-create"),
+                      );
+                    } else if (isOnQuestionDetailPage) {
+                      window.dispatchEvent(
+                        new CustomEvent("question-detail:open-answer"),
+                      );
                     }
                   } else if (item.id === "messages") {
-                    router.push("/chat");
+                    navigateFromMobileNav("/chat");
                   } else if (item.id === "home") {
-                    router.push("/");
+                    navigateFromMobileNav("/");
                   } else if (item.id === "notifications") {
                     router.push("/notifications");
                   }
@@ -358,7 +523,17 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                     ? "w-16 h-16 -mt-6 translate-y-[10%]"
                     : "w-12 h-12"
                 }`}
-                aria-label={item.label}
+                aria-label={
+                  item.id === "search" && isOnQuestionsListPage
+                    ? questionsSearchOpen
+                      ? "סגור חיפוש"
+                      : "חפש שאלות"
+                    : item.id === "add" && isOnQuestionDetailPage
+                      ? "כתוב תשובה"
+                      : item.id === "add" && isOnQuestionsListPage
+                        ? "שאלה חדשה"
+                        : item.label
+                }
               >
                 {statusPostLockedVisual && statusPostLock.message ? (
                   <div
@@ -381,6 +556,7 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                     />
                   ) : statusCreatePressed ||
                     statusHistoryHighlighted ||
+                    questionsSearchHighlighted ||
                     mobileMenuHighlighted ||
                     (isActive && !isCenterButton) ? (
                     <div
@@ -394,26 +570,22 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                 <span
                   className={`relative z-10 inline-flex ${statusPostLockedVisual ? "status-nav-lock-shake" : ""}`}
                 >
-                  <CenterIcon
-                    className={
-                      isCenterButton
-                        ? `w-8 h-8 ${
-                            statusPostLockedVisual
-                              ? "text-red-600 dark:text-red-400"
-                              : statusCreatePressed
-                                ? "text-pink-400/50 dark:text-indigo-300"
-                                : "text-gray-400 dark:text-slate-400"
-                          }`
-                        : `w-6 h-6 ${isActive || statusHistoryHighlighted || mobileMenuHighlighted ? "text-pink-400/50 dark:text-indigo-300" : "text-gray-400 dark:text-slate-400"}`
-                    }
-                    strokeWidth={2.5}
-                  />
+                  {isCustomQuestionSvg ? (
+                    <CenterIcon
+                      className={`${centerIconClassName} translate-x-0.5`}
+                    />
+                  ) : (
+                    <CenterIcon
+                      className={centerIconClassName}
+                      strokeWidth={2.5}
+                    />
+                  )}
                 </span>
 
-                {/* Badge for messages */}
-                {item.badge && item.badge > 0 && (
-                  <span className="absolute -top-2.5 end-1 z-10 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-0.5 text-[10px] font-bold leading-none tabular-nums text-white dark:border-slate-800">
-                    {item.badge}
+                {/* Unread badges — match Drawer.tsx (chat row: bg-[#6633cc], 99+) */}
+                {item.badge != null && item.badge > 0 && (
+                  <span className="absolute -top-2.5 end-1 z-10 flex h-5 min-w-[1.25rem] max-w-[2.75rem] items-center justify-center rounded-full bg-[#6633cc] px-1 text-[10px] font-medium leading-none tabular-nums text-white">
+                    {item.badge > 99 ? "99+" : item.badge}
                   </span>
                 )}
               </button>

@@ -120,9 +120,7 @@ export default function NotificationsPage() {
         const rows = Array.isArray(data.notifications)
           ? data.notifications
           : [];
-        setNotifications((prev) =>
-          append ? [...prev, ...rows] : rows,
-        );
+        setNotifications((prev) => (append ? [...prev, ...rows] : rows));
         setOffset(currentOffset);
         setHasMore(rows.length === limit);
       } catch {
@@ -163,9 +161,7 @@ export default function NotificationsPage() {
         body: JSON.stringify({}),
       });
       if (!res.ok) return;
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, is_read: true })),
-      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch {
       // ignore
     }
@@ -217,12 +213,12 @@ export default function NotificationsPage() {
     }
   };
 
-  const headerRight = (
+  const notificationToolbar = (
     <>
       {user && (
-        <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
           <span>לא נקראו:</span>
-          <span className="font-semibold">
+          <span className="font-semibold tabular-nums">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         </div>
@@ -230,7 +226,7 @@ export default function NotificationsPage() {
       <button
         type="button"
         onClick={handleMarkAllRead}
-        className="text-xs sm:text-sm px-3 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+        className="text-xs sm:text-sm px-3 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
       >
         סמן הכל כנקרא
       </button>
@@ -242,12 +238,14 @@ export default function NotificationsPage() {
       className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100"
       dir="rtl"
     >
-      <NavHeader
-        title="התראות"
-        wide
-        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        rightContent={headerRight}
-      />
+      <div className="hidden md:block">
+        <NavHeader
+          title="התראות"
+          wide
+          onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+          rightContent={notificationToolbar}
+        />
+      </div>
 
       <Drawer
         isDrawerOpen={isDrawerOpen}
@@ -258,12 +256,15 @@ export default function NotificationsPage() {
         onSignOut={handleSignOut}
       />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-5 py-6 sm:py-8">
-        <div className="mb-4 flex items-center gap-2">
-          <Bell className="text-indigo-500" size={20} />
-          <h2 className="text-lg sm:text-xl font-semibold">
-            ההתראות האחרונות שלך
-          </h2>
+      <main className="max-w-3xl mx-auto px-4 sm:px-5 pt-4 pb-6 sm:py-8">
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-2 justify-between md:justify-start">
+          <div className="flex items-center gap-2 min-w-0">
+            <Bell className="text-indigo-500 shrink-0" size={20} />
+            <h2 className="text-lg sm:text-xl font-semibold">ההתראות שלך</h2>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 md:hidden">
+            {notificationToolbar}
+          </div>
         </div>
 
         {loading ? (
@@ -349,4 +350,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-

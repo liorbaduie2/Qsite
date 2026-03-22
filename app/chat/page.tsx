@@ -239,21 +239,23 @@ export default function ChatPage() {
       className="min-h-screen bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 animate-in slide-in-from-left fade-in duration-300"
       dir="rtl"
     >
-      <NavHeader
-        title="צ'אט"
-        wide
-        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        rightContent={
-          !user && (
-            <button
-              onClick={() => handleAuthAction("login")}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              <LogIn size={16} /> התחברות
-            </button>
-          )
-        }
-      />
+      <div className="hidden md:block">
+        <NavHeader
+          title="צ'אט"
+          wide
+          onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+          rightContent={
+            !user && (
+              <button
+                onClick={() => handleAuthAction("login")}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                <LogIn size={16} /> התחברות
+              </button>
+            )
+          }
+        />
+      </div>
 
       <Drawer
         isDrawerOpen={isDrawerOpen}
@@ -268,7 +270,7 @@ export default function ChatPage() {
         }}
       />
 
-      <main className="max-w-6xl mx-auto px-5 py-8">
+      <main className="max-w-6xl mx-auto px-5 pt-4 pb-8 md:pt-8">
         {!user ? (
           <div className="text-center py-12 text-gray-600 dark:text-gray-400">
             <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />

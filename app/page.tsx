@@ -283,6 +283,7 @@ function ForumHomepage() {
           <img src="/פטפטו.svg" alt="פטפטו" className="h-8 sm:h-9 w-auto" />
         }
         wide
+        hideMenuOnMobile
         onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
         topContent={
           !user ? (
