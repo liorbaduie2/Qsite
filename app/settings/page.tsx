@@ -72,10 +72,14 @@ export default function SettingsPage() {
           <>
             <Link
               href="/profile?edit=1"
-              className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3.5 text-base font-semibold text-indigo-800 shadow-sm transition-colors hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
+              className="mb-4 flex w-full items-center gap-4 p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
-              <Edit3 size={20} className="shrink-0" aria-hidden />
-              עריכת פרופיל
+              <span className="w-10 h-10 inline-flex items-center justify-center shrink-0 text-gray-600 dark:text-gray-400">
+                <Edit3 size={19} aria-hidden />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-800 dark:text-gray-100">עריכת פרופיל</p>
+              </div>
             </Link>
             <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
