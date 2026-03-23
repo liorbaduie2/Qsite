@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  ChevronRight,
   MapPin,
   Calendar,
   MessageSquare,
@@ -20,7 +21,6 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { SimpleThemeToggle } from "../components/SimpleThemeToggle";
 import { useAuth } from "../components/AuthProvider";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -584,27 +584,30 @@ export default function ProfilePage() {
       className="min-h-screen bg-gray-50/50 dark:bg-[#0B1120] pb-12"
       dir="rtl"
     >
-      {/* Header */}
-      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
-            <button
-              onClick={() => router.push("/")}
-              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors font-medium"
-            >
-              <ArrowRight size={20} />
-              <span>חזור לעמוד הבית</span>
-            </button>
-            <SimpleThemeToggle size="sm" />
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-6 pt-8">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main Sidebar (Left in LTR, Right visually in RTL) */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 space-y-6 relative">
+            {/* Desktop back — same pattern as question details page */}
+            <Link
+              href="/"
+              className="absolute -right-12 xl:-right-16 top-8 p-3 bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-full shadow-md border border-gray-200/50 dark:border-gray-700/50 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-all hover:scale-105 hidden md:flex items-center justify-center z-10"
+              title="חזור לעמוד הבית"
+            >
+              <ChevronRight size={24} />
+            </Link>
+
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden relative">
+              {/* Mobile back on banner */}
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="absolute top-4 right-4 z-10 flex md:hidden items-center justify-center w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 text-white backdrop-blur-sm transition-colors"
+                title="חזור לעמוד הבית"
+              >
+                <ArrowRight size={20} />
+              </button>
+
               {/* Cover Photo */}
               <div className="h-32 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-600 dark:via-purple-600 dark:to-pink-600">
                 {isSkeleton && (
@@ -946,7 +949,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Main Content Area (Right in LTR, Left visually in RTL) */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-6 lg:pt-6">
             {/* Activity Dashboard */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 p-4">
               {isSkeleton ? (
