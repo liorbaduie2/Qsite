@@ -9,8 +9,8 @@
 - Kind: layout
 - Surface: Core product
 - Runtime: server
-- Description: Root shell that sets Hebrew RTL rendering, metadata, theme hydration, and global providers.
-- Exports: `RootLayout`, `metadata`
+- Description: Root shell: Hebrew RTL, metadata, exported viewport (mobile scaling limits), theme hydration script, AuthProvider, ThemeProvider, main content, and GlobalMobileNav.
+- Exports: `RootLayout`, `metadata`, `viewport`
 - Named functions: `ThemeHydrationScript`, `getInitialTheme`
 - Fetch calls: None
 - Supabase tables/views: None
@@ -110,7 +110,7 @@
 - Runtime: client
 - Description: Question detail page with answers, votes, reports, and moderation actions.
 - Exports: `QuestionDetailPage`
-- Named functions: `buildAnswerThreads`, `fetchAnswers`, `fetchEditTagMatches`, `fetchQuestion`, `handleAnswerVote`, `handleAuthAction`, `handleCancelEdit`, `handleClickOutside`, `handleConfirmRemove`, `handleEditTagAdd`, `handleEditTagRemove`, `handleOpenAnswerReport`, `handleOpenAnswerVoteDetails`, `handleOpenRequestRemoval`, `handleOpenVoteDetails`, `handleQuestionVote`, `handleSaveEdit`, `handleSignOut`, `handleStartEdit`, `handleSubmitAnswer`, `handleSubmitAnswerReport`, `handleSubmitReply`, `handleSubmitRequestRemoval`, `onClick`, `renderAnswerCard`, `renderReplyItem`, `renderTopLevelAnswer`, `resolveRootId`, `setVoteLoading`, `timeAgo`
+- Named functions: `buildAnswerThreads`, `fetchAnswers`, `fetchEditTagMatches`, `fetchQuestion`, `handleAnswerVote`, `handleAuthAction`, `handleCancelEdit`, `handleClickOutside`, `handleConfirmRemove`, `handleEditTagAdd`, `handleEditTagRemove`, `handleOpenAnswerReport`, `handleOpenAnswerVoteDetails`, `handleOpenRequestRemoval`, `handleOpenVoteDetails`, `handleQuestionVote`, `handleSaveEdit`, `handleSignOut`, `handleStartEdit`, `handleSubmitAnswer`, `handleSubmitAnswerReport`, `handleSubmitReply`, `handleSubmitRequestRemoval`, `onClick`, `onOpenAnswer`, `openAnswerPanelForMobileNav`, `renderAnswerCard`, `renderReplyItem`, `renderTopLevelAnswer`, `resolveRootId`, `setVoteLoading`, `timeAgo`
 - Fetch calls: `/api/report/content`
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -122,7 +122,7 @@
 - Runtime: client
 - Description: Question index with search, sort, filters, and question-creation entry points.
 - Exports: `QuestionsPage`
-- Named functions: `QuestionsPage`, `fetchQuestions`, `handleNewQuestion`, `handleSignOut`, `handleVote`, `onClick`, `onKeyDown`, `timeAgo`
+- Named functions: `QuestionsPage`, `fetchQuestions`, `handleNewQuestion`, `handleSignOut`, `handleVote`, `onClick`, `onKeyDown`, `onOpenCreate`, `onToggleSearch`, `timeAgo`
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -134,7 +134,7 @@
 - Runtime: client
 - Description: Status feed for short-form posting, starring, sharing, and replies.
 - Exports: `StatusPage`
-- Named functions: `formatCooldownLockMessage`, `fetchFeed`, `fetchMe`, `handleNewStatus`, `handleOpenStatusReport`, `handlePost`, `handleSignOut`, `handleSubmitStatusReport`, `onClick`, `openAdminStars`, `timeAgo`, `toggleShare`, `toggleStar`
+- Named functions: `buildMessage`, `emit`, `fetchFeed`, `fetchMe`, `formatCooldownLockMessage`, `handleNewStatus`, `handleOpenStatusReport`, `handlePost`, `handleSignOut`, `handleSubmitStatusReport`, `onClick`, `onOpenCreate`, `onToggleHistory`, `openAdminStars`, `timeAgo`, `toggleHistoryFromNavbar`, `toggleShare`, `toggleStar`
 - Fetch calls: `/api/report/content`, `/api/status`, `/api/status/me`
 - Supabase tables/views: None
 - Supabase RPCs: None

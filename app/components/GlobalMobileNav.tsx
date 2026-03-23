@@ -6,6 +6,7 @@ import { MobileNavDrawer } from "./MobileNavDrawer";
 import { useAuth } from "./AuthProvider";
 import { Home, Users, MessageSquare, HelpCircle, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { scrollToTopAfterMobileNav } from "@/lib/mobile-nav-scroll";
 import { SimpleThemeToggle } from "./SimpleThemeToggle";
 
 export function GlobalMobileNav() {
@@ -33,6 +34,7 @@ export function GlobalMobileNav() {
         onOpenLoginModal={() => {
           setIsMobileDrawerOpen(false);
           router.push("/?modal=login");
+          scrollToTopAfterMobileNav();
         }}
         headerExtra={<SimpleThemeToggle size="sm" className="shrink-0" />}
       />

@@ -141,3 +141,28 @@ select option {
   background: rgba(34, 197, 194, 0.8);
   animation: avatar-aura-pulse 2.5s ease-in-out infinite;
 }
+
+/*
+ * Form controls: iOS Safari auto-zooms focused fields when computed font-size < 16px.
+ * !important wins over utility classes (e.g. text-sm). Exclude checkboxes/radios etc.
+ * .otp-code-digit keeps larger code boxes readable (still ≥16px).
+ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+    [type="color"]
+  ):not([type="hidden"]):not([type="button"]):not([type="submit"]):not(
+    [type="reset"]
+  ):not([type="image"]):not(.otp-code-digit),
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+input.otp-code-digit {
+  font-size: 1.5rem !important;
+}
+
+@media (max-width: 767px) {
+  input.otp-code-digit {
+    font-size: 1.25rem !important;
+  }
+}

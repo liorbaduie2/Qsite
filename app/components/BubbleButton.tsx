@@ -5,6 +5,8 @@ interface BubbleButtonProps {
   onClick?: () => void;
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
+  /** Strong violet wash (e.g. register CTA). */
+  tone?: "default" | "purpleTint";
 }
 
 export default function BubbleButton({
@@ -12,6 +14,7 @@ export default function BubbleButton({
   onClick,
   size = "md",
   disabled = false,
+  tone = "default",
 }: BubbleButtonProps) {
   const sizeMap = {
     sm: { px: "px-4", py: "py-2", text: "text-base", size: "w-auto h-auto" },
@@ -214,6 +217,97 @@ export default function BubbleButton({
           );
         }
 
+        /* Purple emphasis (register CTA) — light mode dialed back vs dark */
+        .bubble-skin-purple-tint {
+          background-color: rgba(252, 250, 255, 0.88);
+          background-image:
+            radial-gradient(ellipse at 30% 35%, rgba(255,255,255,0.82) 0%, transparent 52%),
+            radial-gradient(ellipse at 70% 70%, rgba(190, 165, 255, 0.32) 0%, transparent 50%),
+            radial-gradient(ellipse at 20% 80%, rgba(175, 150, 255, 0.24) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 30%, rgba(168, 145, 252, 0.22) 0%, transparent 50%),
+            linear-gradient(
+              135deg,
+              rgba(165, 130, 235, 0.22) 0%,
+              rgba(180, 140, 248, 0.24) 22%,
+              rgba(198, 160, 252, 0.26) 50%,
+              rgba(175, 135, 240, 0.22) 78%,
+              rgba(155, 120, 228, 0.2) 100%
+            );
+          box-shadow:
+            inset 0 5px 24px rgba(255, 255, 255, 0.5),
+            inset 0 -3px 18px rgba(195, 170, 245, 0.18),
+            inset 0 -3px 14px rgba(75, 58, 120, 0.09),
+            inset 0 -1px 8px rgba(15, 23, 42, 0.07),
+            0 4px 12px rgba(124, 58, 237, 0.12),
+            0 2px 6px rgba(139, 92, 246, 0.1);
+        }
+        .bubble-btn:hover:not(:disabled) .bubble-skin-purple-tint {
+          box-shadow:
+            inset 0 5px 26px rgba(255, 255, 255, 0.54),
+            inset 0 -3px 20px rgba(185, 155, 248, 0.24),
+            inset 0 -4px 15px rgba(65, 48, 105, 0.1),
+            inset 0 -1px 9px rgba(15, 23, 42, 0.08),
+            0 5px 16px rgba(124, 58, 237, 0.18),
+            0 2px 8px rgba(139, 92, 246, 0.14);
+          filter: brightness(1.02);
+        }
+        .bubble-skin-purple-tint::before {
+          border-color: rgba(175, 145, 245, 0.38);
+        }
+        .dark .bubble-skin-purple-tint {
+          background-color: rgba(45, 32, 72, 0.55);
+          background-image:
+            radial-gradient(ellipse at 30% 35%, rgba(255,255,255,0.22) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 70%, rgba(175, 140, 255, 0.35) 0%, transparent 48%),
+            radial-gradient(ellipse at 20% 80%, rgba(160, 125, 255, 0.3) 0%, transparent 48%),
+            radial-gradient(ellipse at 80% 30%, rgba(150, 115, 250, 0.28) 0%, transparent 48%),
+            linear-gradient(
+              135deg,
+              rgba(130, 85, 220, 0.28) 0%,
+              rgba(150, 100, 235, 0.32) 25%,
+              rgba(170, 120, 250, 0.34) 50%,
+              rgba(140, 95, 225, 0.3) 75%,
+              rgba(115, 75, 200, 0.26) 100%
+            );
+          box-shadow:
+            inset 0 5px 26px rgba(230, 210, 255, 0.16),
+            inset 0 -3px 22px rgba(160, 110, 255, 0.22),
+            0 4px 18px rgba(139, 92, 246, 0.2);
+        }
+        .dark .bubble-btn:hover:not(:disabled) .bubble-skin-purple-tint {
+          box-shadow:
+            inset 0 5px 28px rgba(235, 220, 255, 0.24),
+            inset 0 -3px 24px rgba(170, 120, 255, 0.3),
+            0 6px 22px rgba(139, 92, 246, 0.28);
+          filter: brightness(1.06);
+        }
+        .dark .bubble-skin-purple-tint::before {
+          border-color: rgba(200, 170, 255, 0.55);
+        }
+        .bubble-skin-purple-tint .bubble-purple-glow {
+          width: 64%;
+          height: 64%;
+          top: -22%;
+          background: radial-gradient(
+            circle,
+            rgba(167, 139, 250, 0.38) 0%,
+            rgba(124, 58, 237, 0.2) 40%,
+            rgba(109, 40, 217, 0.09) 58%,
+            transparent 72%
+          );
+          filter: blur(8px);
+        }
+        .dark .bubble-skin-purple-tint .bubble-purple-glow {
+          background: radial-gradient(
+            circle,
+            rgba(196, 170, 255, 0.65) 0%,
+            rgba(139, 92, 246, 0.42) 38%,
+            rgba(109, 40, 217, 0.22) 58%,
+            transparent 72%
+          );
+          filter: blur(11px);
+        }
+
         /* Button text */
         .bubble-text {
           position: relative;
@@ -258,7 +352,11 @@ export default function BubbleButton({
         onClick={onClick}
         disabled={disabled}
       >
-        <div className="bubble-skin">
+        <div
+          className={
+            tone === "purpleTint" ? "bubble-skin bubble-skin-purple-tint" : "bubble-skin"
+          }
+        >
           {/* Specular highlights */}
           <div className="bubble-specular" />
           <div className="bubble-rim" />

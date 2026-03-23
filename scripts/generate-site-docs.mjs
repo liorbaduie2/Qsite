@@ -11,7 +11,7 @@ const codeExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs"]);
 
 const exactDescriptions = {
   "app/layout.tsx":
-    "Root shell that sets Hebrew RTL rendering, metadata, theme hydration, and global providers.",
+    "Root shell: Hebrew RTL, metadata, exported viewport (mobile scaling limits), theme hydration script, AuthProvider, ThemeProvider, main content, and GlobalMobileNav.",
   "app/page.tsx":
     "Homepage that anchors question discovery and acts as the main landing surface.",
   "app/questions/page.tsx":
@@ -66,6 +66,12 @@ const exactDescriptions = {
     "Main app header and navigation chrome.",
   "app/components/Drawer.tsx":
     "Navigation drawer for mobile or condensed navigation states.",
+  "app/components/GlobalMobileNav.tsx":
+    "Mobile-only shell: registers the bottom navigation bar plus the primary slide-up drawer and shared menu items.",
+  "app/components/MobileNavbar.tsx":
+    "Fixed bottom bar (menu, search/history, create, notifications, chat); uses scroll-to-top helper after push/replace navigations.",
+  "app/components/MobileNavDrawer.tsx":
+    "RTL bottom-sheet menu for core routes; closes then routes, with scroll-to-top after each navigation.",
   "app/components/ThemeProvider.tsx":
     "Client theme provider and persistence wrapper.",
   "app/components/useForcedAuthModal.ts":
@@ -82,6 +88,8 @@ const exactDescriptions = {
     "Hebrew-aware tag normalization, fuzzy matching, and scoring engine.",
   "lib/ai/embeddings.ts":
     "Embedding helpers used by the semantic tag-suggestion pipeline.",
+  "lib/mobile-nav-scroll.ts":
+    "Client helper that forces the document to scroll to the top after mobile drawer/bottom-bar navigations (mitigates experimental scroll restoration).",
   "lib/notifications.ts":
     "Service-role helper for cross-user notification inserts.",
   "lib/permissionKeys.ts":
@@ -439,7 +447,7 @@ function renderIndex({
     "## Maintenance",
     "",
     "- Refresh the generated handbook with `npm run docs:generate` from `my-app`.",
-    "- Use the trigger word `docUpdate` in future code-change requests whenever the documentation must be refreshed as part of the task.",
+    "- Use the trigger word `docUpdate` (or `updatedoc`) in code-change requests when the handbook should be refreshed with the task.",
     "",
   ].join("\n");
 }
@@ -458,6 +466,12 @@ function renderArchitecture({ pages, apiEntries, sqlInventory }) {
     "- `app/layout.tsx` is the canonical root shell.",
     "- The app uses RTL Hebrew defaults and client-side theme hydration.",
     "- `AuthProvider` is the core session/profile/permission state container.",
+    "",
+    "## Mobile UX",
+    "",
+    "- Root `viewport` export (`app/layout.tsx`): `width=device-width`, `initial-scale=1`, `maximum-scale=1`, `user-scalable=no` — limits pinch-zoom (tradeoff vs accessibility) and complements form font sizing.",
+    "- `app/globals.css`: text-bearing `input` / `textarea` / `select` use a **16px minimum** (with `!important`) so iOS Safari does not auto-zoom on focus; SMS code boxes use class `otp-code-digit` for a larger size while staying above 16px.",
+    "- `lib/mobile-nav-scroll.ts` (`scrollToTopAfterMobileNav`) is invoked from `MobileNavDrawer`, `MobileNavbar`, and `GlobalMobileNav` so routes opened from the mobile shell land at the top of the page despite experimental scroll restoration.",
     "",
     "## Product surface",
     "",

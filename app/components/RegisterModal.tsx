@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import HebrewRegistration from "./HebrewRegistration";
 import { getTimeBasedGreeting } from "../utils/timeGreeting";
 
@@ -18,11 +18,19 @@ export default function RegisterModal({
   onSwitchToLogin,
   canClose = true,
 }: RegisterModalProps) {
+  const [registrationStep, setRegistrationStep] = useState(1);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setRegistrationStep(1);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-6"
+      className="fixed inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-6 max-md:p-5"
       onClick={canClose ? onClose : undefined}
     >
       <div
@@ -54,7 +62,7 @@ export default function RegisterModal({
 
         <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-gray-700/20">
           <div
-            className="text-center p-8 text-white relative overflow-hidden"
+            className="text-center p-8 max-md:p-5 max-md:pb-4 text-white relative overflow-hidden"
             style={{
               background:
                 "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)",
@@ -66,43 +74,48 @@ export default function RegisterModal({
             </div>
 
             <div className="relative z-10">
-              <h2 className="text-4xl font-bold mb-3 drop-shadow-lg">
+              <h2 className="text-4xl max-md:text-3xl font-bold mb-3 max-md:mb-2 drop-shadow-lg">
                 הצטרפות לקהילה
               </h2>
-              <p className="text-white/90 text-lg font-medium">
+              <p className="text-white/90 text-lg max-md:text-base font-medium">
                 {getTimeBasedGreeting()}, ברוך הבא!
               </p>
             </div>
           </div>
 
-          <div className="p-8 bg-gray-50/50 dark:bg-gray-900/50">
-            <HebrewRegistration onComplete={onClose} />
+          <div className="p-8 max-md:px-6 max-md:py-4 bg-gray-50/50 dark:bg-gray-900/50">
+            <HebrewRegistration
+              onComplete={onClose}
+              onStepChange={setRegistrationStep}
+            />
 
-            <div className="mt-8 text-center">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300/60 dark:border-gray-600/60" />
+            {registrationStep === 1 && (
+              <div className="mt-8 max-md:mt-5 text-center">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300/60 dark:border-gray-600/60" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-gray-50/50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 font-medium">
+                      או
+                    </span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-gray-50/50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 font-medium">
-                    או
-                  </span>
-                </div>
-              </div>
 
-              <p
-                className="mt-6 text-sm text-gray-600 dark:text-gray-400"
-                dir="rtl"
-              >
-                יש לך כבר חשבון?{" "}
-                <button
-                  onClick={onSwitchToLogin}
-                  className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-colors duration-200 hover:underline"
+                <p
+                  className="mt-6 text-sm text-gray-600 dark:text-gray-400"
+                  dir="rtl"
                 >
-                  התחבר כאן
-                </button>
-              </p>
-            </div>
+                  יש לך כבר חשבון?{" "}
+                  <button
+                    onClick={onSwitchToLogin}
+                    className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-colors duration-200 hover:underline"
+                  >
+                    התחבר כאן
+                  </button>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

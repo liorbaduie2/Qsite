@@ -28,6 +28,7 @@ import { isOnline } from "@/lib/utils";
 import { usePresenceTick } from "./hooks/usePresenceTick";
 import AuthStatusDisplay from "./components/AuthStatusDisplay";
 import { SimpleThemeToggle } from "./components/SimpleThemeToggle";
+import BubbleButton from "./components/BubbleButton";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -300,18 +301,22 @@ function ForumHomepage() {
             </div>
             {!user && (
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={handleLogin}
-                  className="flex items-center gap-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white/60 dark:bg-gray-700/60 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 transition-all duration-300 hover:border-indigo-300 hover:bg-white/80 dark:hover:bg-gray-700/80 sm:gap-2 sm:px-4 sm:py-2 sm:text-base"
-                >
-                  <LogIn size={18} className="shrink-0" /> <span>התחברות</span>
-                </button>
-                <button
+                <BubbleButton onClick={handleLogin} size="sm">
+                  <span className="flex items-center gap-1 sm:gap-2">
+                    <LogIn size={18} className="shrink-0" />
+                    התחברות
+                  </span>
+                </BubbleButton>
+                <BubbleButton
                   onClick={handleRegister}
-                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2.5 text-sm text-white shadow-lg transition-all duration-300 hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-500 dark:to-purple-500 dark:hover:from-indigo-600 dark:hover:to-purple-600 sm:gap-2 sm:px-4 sm:py-2 sm:text-base"
+                  size="sm"
+                  tone="purpleTint"
                 >
-                  <User size={18} className="shrink-0" /> <span>הרשמה</span>
-                </button>
+                  <span className="flex items-center gap-1 sm:gap-2">
+                    <User size={18} className="shrink-0" />
+                    הרשמה
+                  </span>
+                </BubbleButton>
               </div>
             )}
           </>

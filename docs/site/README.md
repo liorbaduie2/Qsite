@@ -2,7 +2,7 @@
 
 This documentation set is auto-generated from the codebase and organized to make the app easy to audit by route, feature, and supporting module.
 
-Generated: 2026-03-18T19:23:53.845Z
+Generated: 2026-03-23T18:44:47.751Z
 
 ## Navigation
 
@@ -29,10 +29,10 @@ Generated: 2026-03-18T19:23:53.845Z
 | Page files | 24 |
 | Non-API route handlers | 1 |
 | API route files | 78 |
-| App components | 24 |
+| App components | 25 |
 | Hooks | 4 |
 | Shared or starter components | 24 |
-| Library files | 20 |
+| Library files | 21 |
 | Script files | 4 |
 | Migrations | 51 |
 | Tables discovered in migrations | 42 |
@@ -41,4 +41,4 @@ Generated: 2026-03-18T19:23:53.845Z
 ## Maintenance
 
 - Refresh the generated handbook with `npm run docs:generate` from `my-app`.
-- Use the trigger word `docUpdate` in future code-change requests whenever the documentation must be refreshed as part of the task.
+- Use the trigger word `docUpdate` (or `updatedoc`) in code-change requests when the handbook should be refreshed with the task.

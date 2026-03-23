@@ -5,6 +5,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:mobile-input": "playwright test tests/mobile-viewport-input.spec.ts",
     "docs:generate": "node scripts/generate-site-docs.mjs"
   },
   "dependencies": {

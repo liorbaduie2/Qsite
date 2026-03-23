@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { User, Shield, ArrowRight } from 'lucide-react';
+import { User, Shield, ArrowRight, Edit3 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import { SimpleThemeToggle } from '../components/SimpleThemeToggle';
 
@@ -64,13 +64,20 @@ export default function SettingsPage() {
           </Link>
           <div className="min-w-0">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">הגדרות</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">נהל את ההעדפות שלך</p>
           </div>
           <SimpleThemeToggle />
         </div>
 
         {user && (
-          <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <>
+            <Link
+              href="/profile?edit=1"
+              className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3.5 text-base font-semibold text-indigo-800 shadow-sm transition-colors hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
+            >
+              <Edit3 size={20} className="shrink-0" aria-hidden />
+              עריכת פרופיל
+            </Link>
+            <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
               <Shield size={20} className="text-gray-600 dark:text-gray-400" />
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">משתמשים חסומים</h2>
@@ -122,6 +129,7 @@ export default function SettingsPage() {
               )}
             </div>
           </section>
+          </>
         )}
       </div>
     </div>

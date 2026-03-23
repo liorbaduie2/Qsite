@@ -99,6 +99,7 @@ export default function ProfilePage() {
   } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const openedEditFromQueryRef = useRef(false);
   const [editForm, setEditForm] = useState({
     username: "",
     bio: "",
@@ -161,6 +162,17 @@ export default function ProfilePage() {
       });
     }
   }, [user, profile, loading, router]);
+
+  /** Deep-link from Settings (and elsewhere): /profile?edit=1 opens edit mode once. */
+  useEffect(() => {
+    if (openedEditFromQueryRef.current || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get("edit");
+    if (v !== "1" && v !== "true") return;
+    openedEditFromQueryRef.current = true;
+    setIsEditing(true);
+    router.replace("/profile", { scroll: false });
+  }, [router]);
 
   useEffect(() => {
     if (!user) {

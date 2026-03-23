@@ -1,5 +1,5 @@
 // app/layout.tsx
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "./components/AuthProvider";
 import { ThemeProvider as CustomThemeProvider } from "./components/ThemeProvider";
 import { GlobalMobileNav } from "./components/GlobalMobileNav";
@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   title: "פטפטוּ - קהילה מצומצמת ואיכותית",
   description:
     "פורום קהילה מצומצם ואיכותי ישראלי - שאל שאלות, שתפו דעות, הכירו חברים וקבל עזרה",
+};
+
+/** Limits pinch-zoom; together with ≥16px form fonts avoids iOS focus auto-zoom. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 // This script runs before React to prevent theme flash.

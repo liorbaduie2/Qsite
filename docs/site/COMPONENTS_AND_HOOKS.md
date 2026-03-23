@@ -40,6 +40,15 @@
 - Supabase tables/views: None
 - Supabase RPCs: None
 
+### `app/components/BubbleButton.tsx`
+- Runtime: client
+- Description: Reusable app component for bubble button.
+- Exports: `BubbleButton`
+- Named functions: None
+- Fetch calls: None
+- Supabase tables/views: None
+- Supabase RPCs: None
+
 ### `app/components/ClientWrapper.tsx`
 - Runtime: client
 - Description: Client-only wrapper for browser-dependent rendering.
@@ -60,7 +69,7 @@
 
 ### `app/components/GlobalMobileNav.tsx`
 - Runtime: client
-- Description: Reusable app component for global mobile nav.
+- Description: Mobile-only shell: registers the bottom navigation bar plus the primary slide-up drawer and shared menu items.
 - Exports: `GlobalMobileNav`
 - Named functions: None
 - Fetch calls: None
@@ -71,7 +80,7 @@
 - Runtime: client
 - Description: Custom multi-step Hebrew registration flow with phone verification and application submission.
 - Exports: `HebrewRegistration`
-- Named functions: `BirthGenderModal`, `calculateAge`, `checkAvailability`, `getFieldClassName`, `getFieldIndicator`, `getVerificationClassName`, `handleBirthGenderSelect`, `handleInputChange`, `handleNext`, `handleSubmitApplication`, `handleVerificationCodeChange`, `handleVerificationKeyDown`, `registerUser`, `sendVerification`, `submitApplication`, `togglePasswordVisibility`, `useDebounce`, `verifyPhone`
+- Named functions: `BirthGenderModal`, `calculateAge`, `checkAvailability`, `getFieldClassName`, `getFieldIndicator`, `getVerificationClassName`, `handleBirthGenderSelect`, `handleInputChange`, `handleNext`, `handleSubmitApplication`, `handleVerificationCodeChange`, `handleVerificationKeyDown`, `handleVerificationPaste`, `registerUser`, `sendVerification`, `submitApplication`, `sync`, `togglePasswordVisibility`, `useDebounce`, `verifyPhone`
 - Fetch calls: `/api/auth/check-availability`, `/api/auth/send-verification`, `/api/auth/verify-phone`, `/api/auth/register`, `/api/auth/submit-application`
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -96,18 +105,18 @@
 
 ### `app/components/MobileNavbar.tsx`
 - Runtime: client
-- Description: Reusable app component for mobile navbar.
+- Description: Fixed bottom bar (menu, search/history, create, notifications, chat); uses scroll-to-top helper after push/replace navigations.
 - Exports: `MobileNavbar`
-- Named functions: None
-- Fetch calls: None
+- Named functions: `MobileNavCreateQuestionIcon`, `MobileNavWriteAnswerIcon`, `fetchChatUnreadCount`, `navigateFromMobileNav`, `onComposerState`, `onDrawerState`, `onHistoryState`, `onPostLockState`, `onQuestionsSearchState`
+- Fetch calls: `/api/chat/unread-count`
 - Supabase tables/views: None
 - Supabase RPCs: None
 
 ### `app/components/MobileNavDrawer.tsx`
 - Runtime: client
-- Description: Reusable app component for mobile nav drawer.
+- Description: RTL bottom-sheet menu for core routes; closes then routes, with scroll-to-top after each navigation.
 - Exports: `MobileNavDrawer`
-- Named functions: `fetchUnreadCount`, `handleMenuClick`
+- Named functions: `fetchUnreadCount`, `handleMenuClick`, `menuHrefMatchesCurrentPath`
 - Fetch calls: `/api/chat/unread-count`
 - Supabase tables/views: None
 - Supabase RPCs: None

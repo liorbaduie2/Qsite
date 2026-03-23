@@ -31,6 +31,15 @@
 - Supabase tables/views: None
 - Supabase RPCs: None
 
+### `lib/mobile-nav-scroll.ts`
+- Runtime: shared/server
+- Description: Client helper that forces the document to scroll to the top after mobile drawer/bottom-bar navigations (mitigates experimental scroll restoration).
+- Exports: `scrollToTopAfterMobileNav`
+- Named functions: `toTop`
+- Fetch calls: None
+- Supabase tables/views: None
+- Supabase RPCs: None
+
 ### `lib/notifications.ts`
 - Runtime: shared/server
 - Description: Service-role helper for cross-user notification inserts.

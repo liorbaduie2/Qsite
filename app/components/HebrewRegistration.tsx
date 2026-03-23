@@ -1,14 +1,25 @@
 "use client";
 
-import { useState, useRef, useCallback, KeyboardEvent, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  KeyboardEvent,
+  ClipboardEvent,
+  useEffect,
+} from "react";
 import { CheckCircle, Eye, EyeOff } from "lucide-react";
 
 interface HebrewRegistrationProps {
   onComplete?: () => void;
+  /** Current wizard step (1–6); used by parent e.g. to hide “already have an account” after phone step. */
+  onStepChange?: (step: number) => void;
 }
 
 export default function HebrewRegistration({
   onComplete,
+  onStepChange,
 }: HebrewRegistrationProps) {
   // --- State Management ---
   const [currentStep, setCurrentStep] = useState(1);
@@ -50,6 +61,29 @@ export default function HebrewRegistration({
   const totalSteps = 6;
   const verificationInputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
+  const dateOfBirthInputBounds = useMemo(() => {
+    const today = new Date();
+    const min = new Date(
+      today.getFullYear() - 120,
+      today.getMonth(),
+      today.getDate(),
+    )
+      .toISOString()
+      .split("T")[0];
+    const max = new Date(
+      today.getFullYear() - 16,
+      today.getMonth(),
+      today.getDate(),
+    )
+      .toISOString()
+      .split("T")[0];
+    return { min, max };
+  }, []);
+
+  /** Step 4 mobile: one height for gender + DOB so rows align (Tailwind h-11 = 2.75rem). */
+  const step4MobileFieldClass =
+    "h-11 w-full min-w-0 box-border max-md:!py-0 max-md:leading-normal";
+
   // --- Helper & Hook Definitions ---
 
   // Auto-close modal after successful completion
@@ -64,6 +98,21 @@ export default function HebrewRegistration({
       return () => clearTimeout(timer);
     }
   }, [formStage, onComplete]);
+
+  useEffect(() => {
+    onStepChange?.(currentStep);
+  }, [currentStep, onStepChange]);
+
+  /** Phones only (Tailwind `max-md` / 767px): PIN numeric keypad, step-4 layout tweaks. */
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobileViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   // Debounced validation hook
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -329,7 +378,8 @@ export default function HebrewRegistration({
   const isEmailFormatValid = emailRegex.test(formData.email.trim());
   const isEmailCheckedAndAvailable = fieldStates.email?.isValid === true;
   const isEmailStepReady =
-    currentStep !== 3 || (isEmailFormatValid && isEmailCheckedAndAvailable);
+    currentStep !== 3 ||
+    (isEmailFormatValid && isEmailCheckedAndAvailable);
 
   // Step 4: username available, gender (and birthGender if other), DOB in [16, 120]
   const isUsernameValid =
@@ -642,6 +692,28 @@ export default function HebrewRegistration({
     }
   };
 
+  const handleVerificationPaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text") ?? "";
+    const digits = pasted.replace(/\D/g, "").slice(0, 6);
+    if (!digits.length) return;
+
+    const newCode: string[] = Array(6).fill("");
+    for (let i = 0; i < digits.length; i++) {
+      newCode[i] = digits[i];
+    }
+    setFormData((prev) => ({ ...prev, verificationCode: newCode }));
+    setError("");
+    setSuccess("");
+
+    const focusIdx = Math.min(digits.length - 1, 5);
+    requestAnimationFrame(() => {
+      const el = verificationInputsRef.current[focusIdx];
+      el?.focus();
+      el?.select();
+    });
+  };
+
   const handleNext = async () => {
     setIsLoading(true);
     setError("");
@@ -675,7 +747,7 @@ export default function HebrewRegistration({
   const getFieldClassName = (field: string) => {
     const state = fieldStates[field];
     let className =
-      "px-4 py-3 max-md:px-3 max-md:py-2.5 bg-white/60 dark:bg-gray-700/60 border-2 rounded-xl max-md:rounded-lg transition-colors text-right max-md:text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400";
+      "px-4 py-3 max-md:px-2 max-md:py-2 bg-white/60 dark:bg-gray-700/60 border-2 rounded-xl max-md:rounded-lg transition-colors text-right text-base text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400";
     if (state?.isValidating)
       className += " border-blue-300 dark:border-blue-500";
     else if (state?.isInvalid) className += " border-red-500";
@@ -695,7 +767,7 @@ export default function HebrewRegistration({
   const getVerificationClassName = () => {
     const state = fieldStates.verificationCode;
     let className =
-      "w-12 h-14 max-md:w-10 max-md:h-11 text-center text-2xl max-md:text-xl font-bold border-2 rounded-xl max-md:rounded-lg transition-colors bg-slate-600 dark:bg-slate-700 text-white";
+      "otp-code-digit w-12 h-14 max-md:w-10 max-md:h-11 text-center text-2xl max-md:text-xl font-bold border-2 rounded-xl max-md:rounded-lg transition-colors bg-slate-600 dark:bg-slate-700 text-white";
     if (state?.isInvalid) className += " border-red-500";
     else if (state?.isValid)
       className += " border-green-500 dark:border-green-600";
@@ -862,17 +934,17 @@ export default function HebrewRegistration({
       <BirthGenderModal />
 
       {error && (
-        <div className="mb-4 max-md:mb-3 p-3 max-md:p-2.5 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded-xl max-md:rounded-lg text-right text-sm max-md:text-[13px] max-md:leading-snug">
+        <div className="mb-4 max-md:mb-2 p-3 max-md:p-2.5 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded-xl max-md:rounded-lg text-right text-sm max-md:text-[13px] max-md:leading-snug">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 max-md:mb-3 p-3 max-md:p-2.5 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 rounded-xl max-md:rounded-lg text-right text-sm max-md:text-[13px] max-md:leading-snug">
+        <div className="mb-4 max-md:mb-2 p-3 max-md:p-2.5 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 rounded-xl max-md:rounded-lg text-right text-sm max-md:text-[13px] max-md:leading-snug">
           {success}
         </div>
       )}
 
-      <form className="space-y-2 max-md:space-y-3">
+      <form className="space-y-2 max-md:space-y-2">
         {/* Step 1: Phone */}
         <fieldset
           className={`transition-all duration-300 ${
@@ -913,11 +985,8 @@ export default function HebrewRegistration({
         {currentStep >= 2 && currentStep === 2 && (
           <fieldset className="transition-all duration-300 max-md:-mt-1">
             <div className="text-center animate-fadeInUp">
-              <label className="block text-gray-800 dark:text-gray-100 text-lg max-md:text-base font-bold mb-2 max-md:mb-1">
-                🔐 אימות קוד SMS
-              </label>
-              <p className="text-gray-600 dark:text-gray-300 mb-4 max-md:mb-3 max-md:text-sm max-md:leading-relaxed px-1 max-md:px-0">
-                הזן את הקוד שנשלח למספר{" "}
+              <p className="text-gray-700 dark:text-gray-300 text-lg max-md:text-base font-medium mb-4 max-md:mb-2 max-md:text-sm max-md:leading-relaxed px-1 max-md:px-0">
+                הזן קוד שנשלח לניידך{" "}
                 <b className="text-indigo-600 dark:text-indigo-400 break-all">
                   {formData.phone}
                 </b>
@@ -930,11 +999,14 @@ export default function HebrewRegistration({
                   <input
                     key={index}
                     type="text"
+                    inputMode={isMobileViewport ? "numeric" : undefined}
+                    pattern={isMobileViewport ? "[0-9]*" : undefined}
                     maxLength={1}
                     value={digit}
                     onChange={(e) =>
                       handleVerificationCodeChange(index, e.target.value)
                     }
+                    onPaste={handleVerificationPaste}
                     onKeyDown={(e) => handleVerificationKeyDown(index, e)}
                     ref={(el) => {
                       verificationInputsRef.current[index] = el;
@@ -972,7 +1044,7 @@ export default function HebrewRegistration({
           </fieldset>
         )}
 
-        {/* Step 4: Username + Gender + DOB Combined (Right to Left Layout) */}
+        {/* Step 4: profile row — desktop: 3 labeled columns; mobile: username full width, gender | DOB row */}
         {currentStep >= 4 && (
           <fieldset
             className={`transition-all duration-300 ${
@@ -981,12 +1053,11 @@ export default function HebrewRegistration({
                 : ""
             }`}
           >
-            <div className="space-y-4 max-md:space-y-3">
-              {/* Row container: Username → Gender → Date of Birth (Right to Left) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-md:gap-3">
-                {/* Username (Right) */}
-                <div className="md:order-1">
-                  <label className="block text-sm max-md:text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1 max-md:mb-0.5 text-right">
+            {/* Desktop */}
+            <div className="hidden md:block">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="min-w-0">
+                  <label className="mb-1 block text-right text-sm font-medium text-gray-700 dark:text-gray-300">
                     שם משתמש
                   </label>
                   <input
@@ -997,18 +1068,19 @@ export default function HebrewRegistration({
                     }
                     placeholder="שם משתמש (3-20 תווים)"
                     maxLength={20}
-                    className={getFieldClassName("username") + " w-full"}
+                    aria-label="שם משתמש"
+                    className={
+                      getFieldClassName("username") + " w-full min-h-[3rem]"
+                    }
                     disabled={currentStep !== 4}
                     required
                   />
-                  <div className="text-right mt-1 h-4">
+                  <div className="mt-1 min-h-4 text-right">
                     {getFieldIndicator("username")}
                   </div>
                 </div>
-
-                {/* Gender (Center) */}
-                <div className="md:order-2">
-                  <label className="block text-sm max-md:text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1 max-md:mb-0.5 text-right">
+                <div className="min-w-0">
+                  <label className="mb-1 block text-right text-sm font-medium text-gray-700 dark:text-gray-300">
                     מגדר
                   </label>
                   <select
@@ -1016,7 +1088,10 @@ export default function HebrewRegistration({
                     onChange={(e) =>
                       handleInputChange("gender", e.target.value)
                     }
-                    className={getFieldClassName("gender") + " w-full"}
+                    aria-label="מגדר"
+                    className={
+                      getFieldClassName("gender") + " w-full min-h-[3rem]"
+                    }
                     disabled={currentStep !== 4}
                     required
                   >
@@ -1025,7 +1100,7 @@ export default function HebrewRegistration({
                     <option value="female">נקבה</option>
                     <option value="other">אחר</option>
                   </select>
-                  <div className="text-right mt-1 h-4">
+                  <div className="mt-1 min-h-4 text-right">
                     {formData.gender === "other" && formData.birthGender && (
                       <span className="text-xs text-green-600 dark:text-green-400">
                         מגדר לידה:{" "}
@@ -1034,10 +1109,8 @@ export default function HebrewRegistration({
                     )}
                   </div>
                 </div>
-
-                {/* Date of Birth (Left) */}
-                <div className="md:order-3">
-                  <label className="block text-sm max-md:text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1 max-md:mb-0.5 text-right">
+                <div className="min-w-0">
+                  <label className="mb-1 block text-right text-sm font-medium text-gray-700 dark:text-gray-300">
                     תאריך לידה
                   </label>
                   <input
@@ -1046,29 +1119,17 @@ export default function HebrewRegistration({
                     onChange={(e) =>
                       handleInputChange("dateOfBirth", e.target.value)
                     }
-                    className={getFieldClassName("dateOfBirth") + " w-full"}
+                    dir="ltr"
+                    aria-label="תאריך לידה"
+                    className={
+                      getFieldClassName("dateOfBirth") + " w-full min-h-[3rem]"
+                    }
                     disabled={currentStep !== 4}
-                    min={
-                      new Date(
-                        new Date().getFullYear() - 120,
-                        new Date().getMonth(),
-                        new Date().getDate(),
-                      )
-                        .toISOString()
-                        .split("T")[0]
-                    }
-                    max={
-                      new Date(
-                        new Date().getFullYear() - 16,
-                        new Date().getMonth(),
-                        new Date().getDate(),
-                      )
-                        .toISOString()
-                        .split("T")[0]
-                    }
+                    min={dateOfBirthInputBounds.min}
+                    max={dateOfBirthInputBounds.max}
                     required
                   />
-                  <div className="text-right mt-1 h-4">
+                  <div className="mt-1 min-h-4 text-right">
                     {formData.dateOfBirth &&
                       (() => {
                         const age = calculateAge(formData.dateOfBirth);
@@ -1076,6 +1137,113 @@ export default function HebrewRegistration({
                         return (
                           <span
                             className={`text-xs ${validAge ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                          >
+                            גיל: {age} שנים
+                          </span>
+                        );
+                      })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile: stacked grid — [ username full ] / [ gender | dob ] */}
+            <div className="md:hidden flex w-full min-w-0 max-w-full flex-col gap-1">
+              <div className="min-w-0">
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) =>
+                    handleInputChange("username", e.target.value)
+                  }
+                  placeholder="שם משתמש"
+                  maxLength={20}
+                  aria-label="שם משתמש"
+                  className={
+                    getFieldClassName("username") + " " + step4MobileFieldClass
+                  }
+                  disabled={currentStep !== 4}
+                  required
+                />
+                <div className="mt-0.5 min-h-2.5 text-right text-xs leading-tight">
+                  {getFieldIndicator("username")}
+                </div>
+              </div>
+
+              <div className="grid w-full min-w-0 grid-cols-2 gap-2.5">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <select
+                    value={formData.gender}
+                    onChange={(e) =>
+                      handleInputChange("gender", e.target.value)
+                    }
+                    aria-label="מגדר"
+                    className={
+                      getFieldClassName("gender") + " " + step4MobileFieldClass
+                    }
+                    disabled={currentStep !== 4}
+                    required
+                  >
+                    <option value="">בחר מגדר</option>
+                    <option value="male">זכר</option>
+                    <option value="female">נקבה</option>
+                    <option value="other">אחר</option>
+                  </select>
+                  <div className="min-h-3 text-right text-xs leading-tight">
+                    {formData.gender === "other" && formData.birthGender && (
+                      <span className="text-green-600 dark:text-green-400">
+                        מגדר לידה:{" "}
+                        {formData.birthGender === "male" ? "זכר" : "נקבה"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="relative h-11 w-full min-w-0">
+                    <input
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) =>
+                        handleInputChange("dateOfBirth", e.target.value)
+                      }
+                      dir="ltr"
+                      aria-label="תאריך לידה"
+                      min={dateOfBirthInputBounds.min}
+                      max={dateOfBirthInputBounds.max}
+                      disabled={currentStep !== 4}
+                      required
+                      className={
+                        getFieldClassName("dateOfBirth") +
+                        " " +
+                        step4MobileFieldClass +
+                        (!formData.dateOfBirth
+                          ? " text-transparent caret-transparent"
+                          : "")
+                      }
+                    />
+                    {!formData.dateOfBirth && (
+                      <span
+                        className="pointer-events-none absolute right-7 top-1/2 z-[1] -translate-y-1/2 text-right text-[13px] leading-none text-gray-500 dark:text-gray-400"
+                        dir="rtl"
+                        aria-hidden
+                      >
+                        תאריך לידה
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-h-3 text-right text-xs leading-tight">
+                    {formData.dateOfBirth &&
+                      (() => {
+                        const age = calculateAge(formData.dateOfBirth);
+                        const validAge = age >= 16 && age <= 120;
+                        return (
+                          <span
+                            className={
+                              validAge
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
+                            }
                           >
                             גיל: {age} שנים
                           </span>
@@ -1143,7 +1311,7 @@ export default function HebrewRegistration({
                 onChange={(e) =>
                   handleInputChange("confirmPassword", e.target.value)
                 }
-                placeholder="🔑 אימות סיסמה"
+                placeholder="אימות סיסמה"
                 className={getFieldClassName("confirmPassword") + " w-full"}
                 disabled={currentStep !== 6}
                 required
@@ -1169,7 +1337,7 @@ export default function HebrewRegistration({
         )}
 
         <div
-          className="flex justify-center space-x-2 max-md:space-x-1.5 pt-3 max-md:pt-2"
+          className="flex justify-center space-x-2 max-md:space-x-1.5 pt-3 max-md:pt-1.5"
           dir="ltr"
         >
           {Array.from({ length: totalSteps }, (_, i) => (
@@ -1184,7 +1352,7 @@ export default function HebrewRegistration({
           ))}
         </div>
 
-        <div className="pt-3 max-md:pt-2">
+        <div className="pt-3 max-md:pt-1.5">
           <button
             type="button"
             onClick={handleNext}

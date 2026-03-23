@@ -10,6 +10,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { useNotificationsRealtime } from "@/app/hooks/useNotificationsRealtime";
 import { usePresenceTick } from "@/app/hooks/usePresenceTick";
 import { createClient } from "@/lib/supabase/client";
+import { scrollToTopAfterMobileNav } from "@/lib/mobile-nav-scroll";
 
 interface MenuItem {
   label: string;
@@ -126,7 +127,15 @@ export function MobileNavDrawer({
 
   const handleMenuClick = (href: string) => {
     onClose();
+    const atExact =
+      pathname === href ||
+      (href === "/" && (pathname === "/" || pathname === ""));
+    if (atExact) {
+      scrollToTopAfterMobileNav();
+      return;
+    }
     router.push(href);
+    scrollToTopAfterMobileNav();
   };
 
   return (
@@ -161,7 +170,12 @@ export function MobileNavDrawer({
               )}
             </div>
             {user ? (
-              <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => handleMenuClick("/profile")}
+                className="relative shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-800"
+                aria-label="מעבר לפרופיל שלי"
+              >
                 <div
                   className="relative rounded-full p-1 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600"
                   style={{ width: 104, height: 104 }}
@@ -173,13 +187,13 @@ export function MobileNavDrawer({
                     {profile?.avatar_url ? (
                       <Image
                         src={profile.avatar_url}
-                        alt={profile?.username || ""}
+                        alt=""
                         width={74}
                         height={74}
-                        className="w-[74px] h-[74px] rounded-full object-cover border-[3px] border-white dark:border-slate-700 shadow-sm"
+                        className="w-[74px] h-[74px] rounded-full object-cover border-[3px] border-white dark:border-slate-700 shadow-sm pointer-events-none"
                       />
                     ) : (
-                      <div className="w-[74px] h-[74px] bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-full flex items-center justify-center border-[3px] border-white dark:border-slate-700 shadow-sm">
+                      <div className="w-[74px] h-[74px] bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-full flex items-center justify-center border-[3px] border-white dark:border-slate-700 shadow-sm pointer-events-none">
                         <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
                           {profile?.username
                             ? profile.username.charAt(0).toUpperCase()
@@ -189,7 +203,7 @@ export function MobileNavDrawer({
                     )}
                   </div>
                 </div>
-              </div>
+              </button>
             ) : (
               <div
                 className="relative rounded-full p-1 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-sm shrink-0"
@@ -218,9 +232,14 @@ export function MobileNavDrawer({
           <div className="flex flex-col items-center mb-4">
             {user ? (
               <>
-                <h2 className="text-[1.75rem] font-bold text-gray-900 dark:text-slate-100 tracking-wide">
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick("/profile")}
+                  className="text-[1.75rem] font-bold text-gray-900 dark:text-slate-100 tracking-wide text-center bg-transparent border-0 p-0 cursor-pointer hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-800 rounded-lg max-w-full"
+                  aria-label="מעבר לפרופיל שלי"
+                >
                   {profile?.full_name || profile?.username || "משתמש"}
-                </h2>
+                </button>
                 {userPermissions?.role &&
                   userPermissions.role !== "user" &&
                   !userPermissions.is_hidden && (
@@ -279,7 +298,9 @@ export function MobileNavDrawer({
           </nav>
 
           {/* Footer Actions */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600 flex items-center justify-between px-2">
+          <div
+            className={`mt-4 pt-4 border-t border-gray-200 dark:border-slate-600 flex items-center px-2 ${user ? "justify-between" : "justify-start"}`}
+          >
             {user ? (
               <button
                 onClick={async () => {
@@ -304,13 +325,15 @@ export function MobileNavDrawer({
               </button>
             )}
 
-            <button
-              onClick={() => handleMenuClick("/settings")}
-              className="text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 transition-colors p-1"
-              aria-label="הגדרות"
-            >
-              <Settings size={28} />
-            </button>
+            {user ? (
+              <button
+                onClick={() => handleMenuClick("/settings")}
+                className="text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 transition-colors p-1"
+                aria-label="הגדרות"
+              >
+                <Settings size={28} />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

@@ -536,6 +536,7 @@ export default function StatusPage() {
         return;
       }
       setNewContent("");
+      setIsComposerOpen(false);
       setCanPost(false);
       if (data.nextPostAt) setNextPostAt(data.nextPostAt);
       fetchFeed();

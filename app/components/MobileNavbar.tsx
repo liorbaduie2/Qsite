@@ -16,6 +16,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useNotificationsRealtime } from "@/app/hooks/useNotificationsRealtime";
 import { createClient } from "@/lib/supabase/client";
+import { scrollToTopAfterMobileNav } from "@/lib/mobile-nav-scroll";
 
 const navShape = "/navbar-mobile.svg";
 
@@ -228,8 +229,17 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
     isOnChatPage || isOnNotificationsPage || isOnQuestionDetailPage;
   /** Avoid leaving /notifications in history when using bottom nav (e.g. notif → chat → back). */
   const navigateFromMobileNav = (path: string) => {
+    if (path === "/chat" && pathname === "/chat") {
+      scrollToTopAfterMobileNav();
+      return;
+    }
+    if (path === "/" && (pathname === "/" || pathname === "")) {
+      scrollToTopAfterMobileNav();
+      return;
+    }
     if (isOnNotificationsPage) router.replace(path);
     else router.push(path);
+    scrollToTopAfterMobileNav();
   };
   const leftButtonIcon = useBackInsteadOfMenu ? ArrowRight : Menu;
   const leftButtonLabel = useBackInsteadOfMenu ? "חזרה" : "Menu";
@@ -515,7 +525,12 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
                   } else if (item.id === "home") {
                     navigateFromMobileNav("/");
                   } else if (item.id === "notifications") {
-                    router.push("/notifications");
+                    if (pathname === "/notifications") {
+                      scrollToTopAfterMobileNav();
+                    } else {
+                      router.push("/notifications");
+                      scrollToTopAfterMobileNav();
+                    }
                   }
                 }}
                 className={`relative flex items-center justify-center transition-all ${
@@ -584,7 +599,7 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
 
                 {/* Unread badges — match Drawer.tsx (chat row: bg-[#6633cc], 99+) */}
                 {item.badge != null && item.badge > 0 && (
-                  <span className="absolute -top-2.5 end-1 z-10 flex h-5 min-w-[1.25rem] max-w-[2.75rem] items-center justify-center rounded-full bg-[#6633cc] px-1 text-[10px] font-medium leading-none tabular-nums text-white">
+                  <span className="absolute top-0 end-1 z-10 flex h-5 min-w-[1.25rem] max-w-[2.75rem] -translate-x-2 items-center justify-center rounded-full bg-[#6633cc] px-1 text-[10px] font-medium leading-none tabular-nums text-white">
                     {item.badge > 99 ? "99+" : item.badge}
                   </span>
                 )}
