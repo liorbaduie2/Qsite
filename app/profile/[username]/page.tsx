@@ -452,7 +452,13 @@ export default function PublicProfilePage() {
                           }
                         }}
                         disabled={likeRequesting}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                        aria-pressed={profileLiked}
+                        aria-label={
+                          profileLiked
+                            ? `ביטול לייק, ${likesCount} לייקים`
+                            : `לייק לפרופיל, ${likesCount} לייקים`
+                        }
+                        className={`flex-none inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-medium transition-all duration-200 min-w-[44px] min-h-[44px] ${
                           profileLiked
                             ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800/50"
                             : "bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -461,10 +467,8 @@ export default function PublicProfilePage() {
                         <Heart
                           size={18}
                           className={profileLiked ? "fill-current" : ""}
+                          aria-hidden
                         />
-                        <span className="text-sm">
-                          {profileLiked ? "אהבת" : "לייק"} ({likesCount})
-                        </span>
                       </button>
 
                       {chatStatus === "none" && (
@@ -599,6 +603,20 @@ export default function PublicProfilePage() {
                           className="text-gray-400 dark:text-gray-500"
                         />
                         <span>תשובות</span>
+                      </div>
+                    </div>
+
+                    {/* Likes Card */}
+                    <div className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+                      <div className="text-2xl font-extrabold tabular-nums mb-1 text-center text-gray-900 dark:text-white">
+                        {likesCount}
+                      </div>
+                      <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <Heart
+                          size={18}
+                          className="text-gray-400 dark:text-gray-500"
+                        />
+                        <span>לייקים</span>
                       </div>
                     </div>
                   </div>
