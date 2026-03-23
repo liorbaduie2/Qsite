@@ -11,7 +11,7 @@ const sizeClasses: Record<Size, string> = {
   sm2: "w-7 h-7",
   md: "w-9 h-9",
   lg: "w-11 h-11 sm:w-11 sm:h-11",
-  lgCard: "w-10 h-10 sm:w-10 sm:h-10", // ~90% of lg for question cards
+  lgCard: "w-8 h-8 sm:w-8 sm:h-8", // question list cards (compact)
   xl: "w-12 h-12",
 };
 
@@ -20,7 +20,7 @@ const sizePx: Record<Size, number> = {
   sm2: 28,
   md: 36,
   lg: 44,
-  lgCard: 40,
+  lgCard: 32,
   xl: 48,
 };
 

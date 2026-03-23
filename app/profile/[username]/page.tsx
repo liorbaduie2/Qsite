@@ -19,7 +19,10 @@ import {
 import { useAuth } from "../../components/AuthProvider";
 import Image from "next/image";
 import { RoleBadge } from "../../components/RoleBadge";
-import { ReputationArc, getReputationVisuals } from "../../components/ReputationArc";
+import {
+  ReputationArc,
+  getReputationVisuals,
+} from "../../components/ReputationArc";
 import { SimpleThemeToggle } from "../../components/SimpleThemeToggle";
 import {
   SkeletonBlock,

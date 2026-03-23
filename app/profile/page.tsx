@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   MapPin,
-  Globe,
   Calendar,
   MessageSquare,
   HelpCircle,
@@ -65,7 +64,7 @@ interface ProfileComment {
 const getPlaylistInfo = (url: string | undefined) => {
   if (!url) {
     return {
-      icon: <Globe size={18} className="text-gray-400 dark:text-gray-500" />,
+      icon: <Music size={18} className="text-gray-400 dark:text-gray-500" />,
       text: "",
     };
   }
@@ -82,7 +81,7 @@ const getPlaylistInfo = (url: string | undefined) => {
     };
   }
   return {
-    icon: <Globe size={18} className="text-gray-400 dark:text-gray-500" />,
+    icon: <Music size={18} className="text-gray-400 dark:text-gray-500" />,
     text: url,
   };
 };
@@ -716,11 +715,11 @@ export default function ProfilePage() {
                           disabled={!canChangeUsername}
                           className={`w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent transition-all ${
                             !canChangeUsername
-                              ? "opacity-70 cursor-not-allowed border border-gray-200 dark:border-gray-700"
+                              ? "text-center text-gray-400 dark:text-gray-600 opacity-60 cursor-not-allowed border border-gray-200 dark:border-gray-700 select-none"
                               : hasUsernameError
                                 ? "border border-red-300 dark:border-red-500/50 bg-red-50/50 dark:bg-red-900/10 focus:ring-red-500"
                                 : "border border-gray-200 dark:border-gray-700 focus:ring-indigo-500"
-                          } pr-4`}
+                          } ${canChangeUsername ? "pr-4" : ""}`}
                         />
                         {canChangeUsername && usernameStatus === "checking" && (
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -738,16 +737,20 @@ export default function ProfilePage() {
                             <AlertCircle size={18} />
                           </span>
                         )}
+                        {!canChangeUsername && nextUsernameChangeDate && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-xl bg-white/30 dark:bg-gray-900/30 backdrop-blur-[1px]">
+                            <span className="text-center text-xs font-normal text-red-700 dark:text-red-300 [text-shadow:0_0_10px_rgba(255,255,255,0.9),0_1px_1px_rgba(255,255,255,0.75)] dark:[text-shadow:0_0_8px_rgba(0,0,0,0.8),0_1px_1px_rgba(0,0,0,0.85)]">
+                              ניתן לשנות שוב ב־
+                              {nextUsernameChangeDate.toLocaleDateString(
+                                "he-IL",
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       {canChangeUsername && usernameError && (
                         <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
                           <AlertCircle size={12} /> {usernameError}
-                        </p>
-                      )}
-                      {!canChangeUsername && nextUsernameChangeDate && (
-                        <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                          ניתן לשנות שוב ב־
-                          {nextUsernameChangeDate.toLocaleDateString("he-IL")}
                         </p>
                       )}
                     </div>
@@ -761,7 +764,7 @@ export default function ProfilePage() {
                         onChange={(e) =>
                           handleInputChange("bio", e.target.value)
                         }
-                        placeholder="ספר קצת על עצמך..."
+                        placeholder="שתף את על עצמך"
                         rows={3}
                         className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-900 dark:text-white transition-all"
                       />
@@ -851,8 +854,8 @@ export default function ProfilePage() {
                               onChange={(e) =>
                                 handleInputChange("website", e.target.value)
                               }
-                              placeholder="קישור לפלייליסט או אתר"
-                              className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white text-left"
+                              placeholder="קישור לפלייליסט"
+                              className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white text-left [&::placeholder]:text-right [&::placeholder]:[direction:rtl] [&::placeholder]:[unicode-bidi:plaintext]"
                               dir="ltr"
                             />
                           ) : (

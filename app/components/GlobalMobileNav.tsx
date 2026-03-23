@@ -36,7 +36,7 @@ export function GlobalMobileNav() {
           router.push("/?modal=login");
           scrollToTopAfterMobileNav();
         }}
-        headerExtra={<SimpleThemeToggle size="sm" className="shrink-0" />}
+        headerExtra={<SimpleThemeToggle size="md" className="shrink-0" />}
       />
 
       <MobileNavbar onMenuClick={() => setIsMobileDrawerOpen(true)} />

@@ -1453,7 +1453,7 @@ export default function QuestionDetailPage() {
                           <UserAvatar
                             avatarUrl={question.author.avatar_url}
                             username={question.author.username}
-                            size="md"
+                            size="sm2"
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
                           <div>
@@ -1470,7 +1470,7 @@ export default function QuestionDetailPage() {
                           <UserAvatar
                             avatarUrl={question.author.avatar_url}
                             username={question.author.username}
-                            size="md"
+                            size="sm2"
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
                           <div>
@@ -1804,7 +1804,7 @@ export default function QuestionDetailPage() {
                                       <UserAvatar
                                         avatarUrl={node.author.avatar_url}
                                         username={node.author.username}
-                                        size={compact ? "sm" : "sm2"}
+                                        size="sm"
                                         isOnline={isOnline(
                                           node.author.lastSeenAt,
                                         )}
@@ -1826,7 +1826,7 @@ export default function QuestionDetailPage() {
                                       <UserAvatar
                                         avatarUrl={node.author.avatar_url}
                                         username={node.author.username}
-                                        size={compact ? "sm" : "sm2"}
+                                        size="sm"
                                         isOnline={isOnline(
                                           node.author.lastSeenAt,
                                         )}

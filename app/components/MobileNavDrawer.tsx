@@ -157,15 +157,12 @@ export function MobileNavDrawer({
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 flex flex-col">
           {/* X and theme on same row as PFP */}
           <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="flex items-center justify-center w-12 shrink-0 -translate-y-[31px]">
+            <div className="flex min-h-[2.75rem] min-w-[2.75rem] shrink-0 items-center justify-center -translate-y-[31px]">
               {headerExtra ? (
                 headerExtra
               ) : (
-                <div className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 dark:border-slate-600">
-                  <Moon
-                    size={20}
-                    className="text-gray-600 dark:text-slate-400"
-                  />
+                <div className="flex h-[2.75rem] w-[2.75rem] items-center justify-center text-gray-600 dark:text-slate-400">
+                  <Moon size={22} aria-hidden />
                 </div>
               )}
             </div>
