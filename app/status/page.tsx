@@ -119,6 +119,34 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString("he-IL");
 }
 
+/** Status card author: question-detail pfp style (no border, gradient + initial); 40px (w-10 h-10). */
+function StatusCardAuthorAvatar({
+  avatarUrl,
+  username,
+}: {
+  avatarUrl: string | null | undefined;
+  username: string;
+}) {
+  const initial = username?.charAt(0).toUpperCase() ?? "";
+  const inner = avatarUrl ? (
+    <Image
+      src={avatarUrl}
+      alt={username || ""}
+      width={40}
+      height={40}
+      className="size-10 shrink-0 rounded-full object-cover"
+    />
+  ) : (
+    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50">
+      <span className="text-base font-bold leading-none text-indigo-600 dark:text-indigo-400">
+        {initial}
+      </span>
+    </div>
+  );
+
+  return <span className="inline-flex shrink-0">{inner}</span>;
+}
+
 /** Lock UI: minutes + seconds (mobile tooltip, desktop button). */
 function formatCooldownLockMessage(nextPostAt: string): string {
   const remaining = Math.max(0, new Date(nextPostAt).getTime() - Date.now());
@@ -807,19 +835,10 @@ export default function StatusPage() {
               }
               className="flex items-center gap-3 hover:opacity-90 transition-opacity"
             >
-              {item.author.avatar_url ? (
-                <Image
-                  src={item.author.avatar_url}
-                  alt=""
-                  width={40}
-                  height={40}
-                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <User size={16} className="text-white" />
-                </div>
-              )}
+              <StatusCardAuthorAvatar
+                avatarUrl={item.author.avatar_url}
+                username={item.author.username}
+              />
               <div>
                 <span className="font-medium text-gray-700 dark:text-gray-200">
                   {item.author.fullName || item.author.username}
@@ -831,19 +850,10 @@ export default function StatusPage() {
             </Link>
           ) : (
             <>
-              {item.author.avatar_url ? (
-                <Image
-                  src={item.author.avatar_url}
-                  alt=""
-                  width={40}
-                  height={40}
-                  className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <User size={16} className="text-white" />
-                </div>
-              )}
+              <StatusCardAuthorAvatar
+                avatarUrl={item.author.avatar_url}
+                username={item.author.username || ""}
+              />
               <div>
                 <span className="font-medium text-gray-700 dark:text-gray-200">
                   {item.author.fullName || item.author.username}

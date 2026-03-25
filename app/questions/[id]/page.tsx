@@ -46,7 +46,6 @@ import RegisterModal from "../../components/RegisterModal";
 import Drawer from "../../components/Drawer";
 import NavHeader from "../../components/NavHeader";
 import BubbleButton from "../../components/BubbleButton";
-import { UserAvatar } from "../../components/UserAvatar";
 import { isOnline } from "@/lib/utils";
 import { normalizeTagName } from "@/lib/tag-matching";
 import { usePresenceTick } from "../../hooks/usePresenceTick";
@@ -253,6 +252,46 @@ function buildAnswerThreads(flat: Answer[]): AnswerThread[] {
   return roots.map(
     (root) => threadsByRootId.get(root.id) ?? { root, replies: [] },
   );
+}
+
+/** Question & answer author pfp: composer-style (no border, gradient + initial); 26px. */
+function AnswerCardAuthorAvatar({
+  avatarUrl,
+  username,
+  isOnline,
+}: {
+  avatarUrl: string | null;
+  username: string | null | undefined;
+  isOnline: boolean;
+}) {
+  const initial = username?.charAt(0).toUpperCase() ?? "";
+  const inner = avatarUrl ? (
+    <Image
+      src={avatarUrl}
+      alt={username ?? ""}
+      width={26}
+      height={26}
+      className="size-[26px] shrink-0 rounded-full object-cover"
+    />
+  ) : (
+    <div className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50">
+      <span className="text-xs font-bold leading-none text-indigo-600 dark:text-indigo-400">
+        {initial}
+      </span>
+    </div>
+  );
+
+  if (isOnline) {
+    return (
+      <span className="inline-flex size-[26px] shrink-0 rounded-full avatar-aura-online">
+        <span className="block size-[26px] overflow-hidden rounded-full">
+          {inner}
+        </span>
+      </span>
+    );
+  }
+
+  return <span className="inline-flex shrink-0">{inner}</span>;
 }
 
 export default function QuestionDetailPage() {
@@ -1484,10 +1523,11 @@ export default function QuestionDetailPage() {
                           }
                           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
                         >
-                          <UserAvatar
+                          <AnswerCardAuthorAvatar
                             avatarUrl={question.author.avatar_url}
-                            username={question.author.username}
-                            size="sm2"
+                            username={
+                              question.author.username || profile?.username
+                            }
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
                           <div>
@@ -1501,10 +1541,9 @@ export default function QuestionDetailPage() {
                         </Link>
                       ) : (
                         <>
-                          <UserAvatar
+                          <AnswerCardAuthorAvatar
                             avatarUrl={question.author.avatar_url}
                             username={question.author.username}
-                            size="sm2"
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
                           <div>
@@ -1835,10 +1874,9 @@ export default function QuestionDetailPage() {
                                       }
                                       className="flex items-center gap-2 hover:opacity-90 transition-opacity"
                                     >
-                                      <UserAvatar
+                                      <AnswerCardAuthorAvatar
                                         avatarUrl={node.author.avatar_url}
                                         username={node.author.username}
-                                        size="sm"
                                         isOnline={isOnline(
                                           node.author.lastSeenAt,
                                         )}
@@ -1857,10 +1895,9 @@ export default function QuestionDetailPage() {
                                     </Link>
                                   ) : (
                                     <div className="flex items-center gap-2">
-                                      <UserAvatar
+                                      <AnswerCardAuthorAvatar
                                         avatarUrl={node.author.avatar_url}
                                         username={node.author.username}
-                                        size="sm"
                                         isOnline={isOnline(
                                           node.author.lastSeenAt,
                                         )}

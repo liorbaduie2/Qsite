@@ -23,13 +23,13 @@ import LoginModal from "./components/LoginModal";
 import RegisterModal from "./components/RegisterModal";
 import Drawer from "./components/Drawer";
 import NavHeader from "./components/NavHeader";
-import { UserAvatar } from "./components/UserAvatar";
 import { isOnline } from "@/lib/utils";
 import { usePresenceTick } from "./hooks/usePresenceTick";
 import AuthStatusDisplay from "./components/AuthStatusDisplay";
 import { SimpleThemeToggle } from "./components/SimpleThemeToggle";
 import BubbleButton from "./components/BubbleButton";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Development-only ProfileTestComponent
@@ -87,6 +87,46 @@ function timeAgo(dateStr: string): string {
   if (diffHours < 24) return `לפני ${diffHours} שעות`;
   if (diffDays < 30) return `לפני ${diffDays} ימים`;
   return date.toLocaleDateString("he-IL");
+}
+
+/** Homepage top-question cards: detail-style pfp (no border, gradient + initial); 32px = former UserAvatar lgCard. */
+function TopQuestionCardAuthorAvatar({
+  avatarUrl,
+  username,
+  isOnline: authorIsOnline,
+}: {
+  avatarUrl: string | null;
+  username: string;
+  isOnline: boolean;
+}) {
+  const initial = username?.charAt(0).toUpperCase() ?? "";
+  const inner = avatarUrl ? (
+    <Image
+      src={avatarUrl}
+      alt={username || ""}
+      width={32}
+      height={32}
+      className="size-8 shrink-0 rounded-full object-cover"
+    />
+  ) : (
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50">
+      <span className="text-sm font-bold leading-none text-indigo-600 dark:text-indigo-400">
+        {initial}
+      </span>
+    </div>
+  );
+
+  if (authorIsOnline) {
+    return (
+      <span className="inline-flex size-8 shrink-0 rounded-full avatar-aura-online">
+        <span className="block size-8 overflow-hidden rounded-full">
+          {inner}
+        </span>
+      </span>
+    );
+  }
+
+  return <span className="inline-flex shrink-0">{inner}</span>;
 }
 
 function ForumHomepage() {
@@ -496,20 +536,22 @@ function ForumHomepage() {
                               onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
                             >
-                              <UserAvatar
+                              <TopQuestionCardAuthorAvatar
                                 avatarUrl={question.author.avatar_url}
                                 username={question.author.username}
-                                size="lgCard"
-                                isOnline={isOnline(question.author.lastSeenAt)}
+                                isOnline={isOnline(
+                                  question.author.lastSeenAt,
+                                )}
                               />
                             </Link>
                           ) : (
                             <>
-                              <UserAvatar
+                              <TopQuestionCardAuthorAvatar
                                 avatarUrl={question.author.avatar_url}
-                                username={question.author.username}
-                                size="lgCard"
-                                isOnline={isOnline(question.author.lastSeenAt)}
+                                username={question.author.username || ""}
+                                isOnline={isOnline(
+                                  question.author.lastSeenAt,
+                                )}
                               />
                             </>
                           )}
