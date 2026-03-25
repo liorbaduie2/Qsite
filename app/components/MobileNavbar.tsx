@@ -66,6 +66,9 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
   const [statusHistoryOpen, setStatusHistoryOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [questionsSearchOpen, setQuestionsSearchOpen] = useState(false);
+  /** Mobile answer-reply bottom sheet on question detail — hide bottom nav while open */
+  const [questionDetailReplySheetOpen, setQuestionDetailReplySheetOpen] =
+    useState(false);
   const [statusPostLock, setStatusPostLock] = useState<{
     locked: boolean;
     message: string;
@@ -212,6 +215,27 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
       window.removeEventListener("status:post-lock-state", onPostLockState);
   }, []);
 
+  useEffect(() => {
+    const onReplySheet = (e: Event) => {
+      const ce = e as CustomEvent<{ open?: boolean }>;
+      if (typeof ce.detail?.open === "boolean") {
+        setQuestionDetailReplySheetOpen(ce.detail.open);
+      }
+    };
+    window.addEventListener("question-detail:reply-sheet-state", onReplySheet);
+    return () =>
+      window.removeEventListener(
+        "question-detail:reply-sheet-state",
+        onReplySheet,
+      );
+  }, []);
+
+  useEffect(() => {
+    if (!/^\/questions\/[^/]+/.test(pathname)) {
+      setQuestionDetailReplySheetOpen(false);
+    }
+  }, [pathname]);
+
   // Determine active tab based on current path
   let activeTab = "home";
   if (pathname.startsWith("/chat")) activeTab = "messages";
@@ -225,8 +249,16 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
   const isOnQuestionsListPage = pathname === "/questions";
   /** Single-question view: /questions/[id] (not /questions list) */
   const isOnQuestionDetailPage = /^\/questions\/[^/]+/.test(pathname);
+  /** Public user profile: /profile/[username] (not /profile alone) */
+  const isOnPublicProfilePage = /^\/profile\/[^/]+$/.test(pathname);
+  /** Private user profile: /profile */
+  const isOnPrivateProfilePage = pathname === "/profile";
   const useBackInsteadOfMenu =
-    isOnChatPage || isOnNotificationsPage || isOnQuestionDetailPage;
+    isOnChatPage ||
+    isOnNotificationsPage ||
+    isOnQuestionDetailPage ||
+    isOnPublicProfilePage ||
+    isOnPrivateProfilePage;
   /** Avoid leaving /notifications in history when using bottom nav (e.g. notif → chat → back). */
   const navigateFromMobileNav = (path: string) => {
     if (path === "/chat" && pathname === "/chat") {
@@ -279,7 +311,9 @@ export function MobileNavbar({ onMenuClick }: MobileNavbarProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 overflow-visible px-4 pb-[max(0px,env(safe-area-inset-bottom))] pt-2 md:hidden pointer-events-none">
+    <nav
+      className={`fixed bottom-0 left-0 right-0 z-50 overflow-visible px-4 pb-[max(0px,env(safe-area-inset-bottom))] pt-2 md:hidden pointer-events-none${questionDetailReplySheetOpen ? " max-md:hidden" : ""}`}
+    >
       <style>{`
         @keyframes status-nav-lock-shake {
           0%, 100% { transform: translateX(0) rotate(0deg); }

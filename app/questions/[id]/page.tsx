@@ -10,6 +10,7 @@ import React, {
 import { createPortal } from "react-dom";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   MessageSquare,
   Users,
@@ -27,7 +28,7 @@ import {
   ChevronRight,
   ChevronDown,
   Shield,
-  Send,
+  ChevronUp,
   CheckCircle,
   Pencil,
   X,
@@ -269,6 +270,8 @@ export default function QuestionDetailPage() {
   const [isAnswerPanelOpen, setIsAnswerPanelOpen] = useState(false);
 
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const replyingToIdRef = useRef<string | null>(null);
+  replyingToIdRef.current = replyingToId;
   const [replyContent, setReplyContent] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
@@ -924,6 +927,22 @@ export default function QuestionDetailPage() {
     }
   };
 
+  /** Only one of create-answer vs reply composer may be active; latest action wins. */
+  const openCreateAnswerComposer = useCallback(() => {
+    setReplyingToId(null);
+    setReplyContent("");
+    setReplyError(null);
+    setIsAnswerPanelOpen(true);
+  }, []);
+
+  const openReplyToAnswer = useCallback((answerId: string) => {
+    if (replyingToIdRef.current !== answerId) setReplyContent("");
+    setIsAnswerPanelOpen(false);
+    setAnswerError(null);
+    setReplyError(null);
+    setReplyingToId(answerId);
+  }, []);
+
   const openAnswerPanelForMobileNav = useCallback(() => {
     if (!question) return;
     if (!user) {
@@ -931,8 +950,8 @@ export default function QuestionDetailPage() {
       setIsLoginModalOpen(true);
       return;
     }
-    setIsAnswerPanelOpen(true);
-  }, [question, user]);
+    openCreateAnswerComposer();
+  }, [question, user, openCreateAnswerComposer]);
 
   useEffect(() => {
     const onOpenAnswer = () => {
@@ -942,6 +961,24 @@ export default function QuestionDetailPage() {
     return () =>
       window.removeEventListener("question-detail:open-answer", onOpenAnswer);
   }, [openAnswerPanelForMobileNav]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("question-detail:reply-sheet-state", {
+        detail: { open: Boolean(replyingToId) || isAnswerPanelOpen },
+      }),
+    );
+  }, [replyingToId, isAnswerPanelOpen]);
+
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("question-detail:reply-sheet-state", {
+          detail: { open: false },
+        }),
+      );
+    };
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -1114,43 +1151,40 @@ export default function QuestionDetailPage() {
     >
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_40%_40%,rgba(236,72,153,0.05)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
 
-      <NavHeader
-        title="שאלות ותשובות"
-        wide
-        onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        rightContent={
-          !user ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleAuthAction("login")}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 dark:hover:border-indigo-700"
-              >
-                <LogIn size={16} />
-                התחברות
-              </button>
-              <button
-                onClick={() => handleAuthAction("register")}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-              >
-                <User size={16} />
-                הרשמה
-              </button>
-            </div>
-          ) : question && !isAnswerPanelOpen ? (
-            <div className="hidden md:block">
-              <BubbleButton
-                onClick={() => setIsAnswerPanelOpen(true)}
-                size="sm"
-              >
+      <div className="hidden md:block">
+        <NavHeader
+          title="שאלות ותשובות"
+          wide
+          onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+          rightContent={
+            !user ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleAuthAction("login")}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 dark:hover:border-indigo-700"
+                >
+                  <LogIn size={16} />
+                  התחברות
+                </button>
+                <button
+                  onClick={() => handleAuthAction("register")}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  <User size={16} />
+                  הרשמה
+                </button>
+              </div>
+            ) : question && !isAnswerPanelOpen ? (
+              <BubbleButton onClick={openCreateAnswerComposer} size="sm">
                 <span className="flex items-center gap-1">
                   <Plus size={18} />
                   כתוב תשובה
                 </span>
               </BubbleButton>
-            </div>
-          ) : undefined
-        }
-      />
+            ) : undefined
+          }
+        />
+      </div>
 
       <Drawer
         isDrawerOpen={isDrawerOpen}
@@ -1166,7 +1200,7 @@ export default function QuestionDetailPage() {
       />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-5 pt-4 pb-8 relative">
+      <main className="max-w-4xl mx-auto px-5 relative max-md:pt-[max(1rem,env(safe-area-inset-top))] md:pt-4 max-md:pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-8">
         {/* Back Button */}
         <Link
           href="/questions"
@@ -1861,8 +1895,7 @@ export default function QuestionDetailPage() {
                                       handleAuthAction("login");
                                       return;
                                     }
-                                    setReplyingToId(node.id);
-                                    setReplyError(null);
+                                    openReplyToAnswer(node.id);
                                   }}
                                   className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-20px]"
                                 >
@@ -1887,7 +1920,6 @@ export default function QuestionDetailPage() {
                                     className="w-full min-h-[80px] p-3 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                                     autoFocus
                                     required
-                                    minLength={10}
                                   />
                                   {replyError && (
                                     <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300 text-sm">
@@ -1898,8 +1930,7 @@ export default function QuestionDetailPage() {
                                     <button
                                       type="submit"
                                       disabled={
-                                        replyContent.trim().length < 10 ||
-                                        submittingReply
+                                        !replyContent.trim() || submittingReply
                                       }
                                       className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
@@ -1910,7 +1941,7 @@ export default function QuestionDetailPage() {
                                         </>
                                       ) : (
                                         <>
-                                          <Send size={14} />
+                                          <ChevronUp size={14} />
                                           שלח תגובה
                                         </>
                                       )}
@@ -2010,54 +2041,77 @@ export default function QuestionDetailPage() {
 
       {/* Mobile reply textfield island */}
       {replyingToId && (
-        <div className="md:hidden fixed inset-x-0 bottom-0 z-50 p-4 pb-[env(safe-area-inset-bottom)] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        <div className="md:hidden fixed inset-x-0 bottom-0 z-50 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
           <form
             onSubmit={(e) => handleSubmitReply(e, replyingToId)}
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-4"
           >
-            <textarea
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              placeholder={`מגיב ל-${answers.find((a) => a.id === replyingToId)?.author?.username || "משתמש"}`}
-              className="w-full min-h-[80px] p-3 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
-              autoFocus
-              required
-              minLength={10}
-            />
-            {replyError && (
-              <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
-                {replyError}
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={replyContent.trim().length < 10 || submittingReply}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submittingReply ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    שולח...
-                  </>
+            <div className="flex flex-col gap-1.5">
+              <textarea
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                placeholder={`מגיב ל-${answers.find((a) => a.id === replyingToId)?.author?.username || "משתמש"}`}
+                className="w-full min-h-[80px] px-3 pt-3 pb-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
+                autoFocus
+                required
+              />
+              {replyError && (
+                <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                  {replyError}
+                </div>
+              )}
+            </div>
+            <div className="flex w-full min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 max-w-[min(100%,12rem)] items-center gap-2">
+                {profile?.avatar_url ? (
+                  <Image
+                    src={profile.avatar_url}
+                    alt={profile?.username ?? ""}
+                    width={36}
+                    height={36}
+                    className="h-9 w-9 shrink-0 rounded-full object-cover"
+                  />
                 ) : (
-                  <>
-                    <Send size={16} />
-                    שלח תגובה
-                  </>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50">
+                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                      {profile?.username?.charAt(0).toUpperCase() ?? ""}
+                    </span>
+                  </div>
                 )}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setReplyingToId(null);
-                  setReplyContent("");
-                  setReplyError(null);
-                }}
-                className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-xl text-sm font-medium"
-              >
-                ביטול
-              </button>
+                <span className="truncate text-xs font-semibold text-gray-800 dark:text-gray-100">
+                  {profile?.username ?? "משתמש"}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={!replyContent.trim() || submittingReply}
+                  className="inline-flex shrink-0 items-center justify-center gap-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingReply ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      שולח...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp size={14} strokeWidth={2.25} />
+                      הגב
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyingToId(null);
+                    setReplyContent("");
+                    setReplyError(null);
+                  }}
+                  className="shrink-0 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-xs font-medium"
+                >
+                  ביטול
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -2427,65 +2481,137 @@ export default function QuestionDetailPage() {
 
       {/* Answer Modal (matches create status popout) */}
       {isAnswerPanelOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          dir="rtl"
-        >
+        <>
+          {/* Desktop modal */}
           <div
-            className="absolute inset-0 bg-black/40 dark:bg-black/60"
-            onClick={() => setIsAnswerPanelOpen(false)}
-          />
-          <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl bg-white text-gray-900 dark:bg-slate-900 dark:text-gray-100">
-            <form
-              onSubmit={handleSubmitAnswer}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <div className="relative flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-800">
+            className="hidden md:flex fixed inset-0 z-50 items-center justify-center p-4"
+            dir="rtl"
+          >
+            <div
+              className="absolute inset-0 bg-black/40 dark:bg-black/60"
+              onClick={() => setIsAnswerPanelOpen(false)}
+            />
+            <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl bg-white text-gray-900 dark:bg-slate-900 dark:text-gray-100">
+              <form
+                onSubmit={handleSubmitAnswer}
+                className="flex-1 flex flex-col min-h-0"
+              >
+                <div className="relative flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-slate-800">
+                  <textarea
+                    value={answerContent}
+                    onChange={(e) => setAnswerContent(e.target.value)}
+                    placeholder="תשובתך..."
+                    className="w-full flex-1 px-6 pt-6 pb-8 bg-transparent text-gray-900 placeholder-gray-500 dark:text-gray-100 dark:placeholder-gray-400 border-none outline-none resize-none min-h-[320px]"
+                    autoFocus
+                    required
+                  />
+                  <span className="absolute bottom-2 left-6 text-xs text-gray-500 dark:text-slate-400 pointer-events-none">
+                    {answerContent.length} תווים
+                  </span>
+                </div>
+
+                {answerError && (
+                  <div className="mx-6 mb-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-red-700 text-sm dark:bg-red-900/40 dark:border-red-700 dark:text-red-100">
+                    {answerError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50 dark:border-slate-700/80 dark:bg-slate-900/90">
+                  <button
+                    type="button"
+                    onClick={() => setIsAnswerPanelOpen(false)}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!answerContent.trim() || submittingAnswer}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submittingAnswer ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        שולח...
+                      </>
+                    ) : (
+                      "פרסום תשובה"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Mobile bottom sheet */}
+          <div className="md:hidden fixed inset-x-0 bottom-0 z-50 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+            <form onSubmit={handleSubmitAnswer} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
                 <textarea
                   value={answerContent}
                   onChange={(e) => setAnswerContent(e.target.value)}
                   placeholder="תשובתך..."
-                  className="w-full flex-1 px-6 pt-6 pb-8 bg-transparent text-gray-900 placeholder-gray-500 dark:text-gray-100 dark:placeholder-gray-400 border-none outline-none resize-none min-h-[320px]"
+                  className="w-full min-h-[80px] px-3 pt-3 pb-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                   autoFocus
                   required
                 />
-                <span className="absolute bottom-2 left-6 text-xs text-gray-500 dark:text-slate-400 pointer-events-none">
-                  {answerContent.length} תווים
-                </span>
+                {answerError && (
+                  <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                    {answerError}
+                  </div>
+                )}
               </div>
-
-              {answerError && (
-                <div className="mx-6 mb-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-red-700 text-sm dark:bg-red-900/40 dark:border-red-700 dark:text-red-100">
-                  {answerError}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50 dark:border-slate-700/80 dark:bg-slate-900/90">
-                <button
-                  type="button"
-                  onClick={() => setIsAnswerPanelOpen(false)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-slate-300 dark:hover:text-white"
-                >
-                  ביטול
-                </button>
-                <button
-                  type="submit"
-                  disabled={!answerContent.trim() || submittingAnswer}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submittingAnswer ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      שולח...
-                    </>
+              <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 max-w-[min(100%,12rem)] items-center gap-2">
+                  {profile?.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt={profile?.username ?? ""}
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 shrink-0 rounded-full object-cover"
+                    />
                   ) : (
-                    "פרסום תשובה"
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50">
+                      <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                        {profile?.username?.charAt(0).toUpperCase() ?? ""}
+                      </span>
+                    </div>
                   )}
-                </button>
+                  <span className="truncate text-xs font-semibold text-gray-800 dark:text-gray-100">
+                    {profile?.username ?? "משתמש"}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={!answerContent.trim() || submittingAnswer}
+                    className="inline-flex shrink-0 items-center justify-center gap-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submittingAnswer ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        שולח...
+                      </>
+                    ) : (
+                      <>
+                        <ChevronUp size={14} strokeWidth={2.25} />
+                        שלח
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAnswerPanelOpen(false)}
+                    className="shrink-0 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-xs font-medium"
+                  >
+                    ביטול
+                  </button>
+                </div>
               </div>
             </form>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

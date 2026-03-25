@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   ChevronRight,
   MapPin,
   Calendar,
@@ -598,16 +597,6 @@ export default function ProfilePage() {
             </Link>
 
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden relative">
-              {/* Mobile back on banner */}
-              <button
-                type="button"
-                onClick={() => router.push("/")}
-                className="absolute top-4 right-4 z-10 flex md:hidden items-center justify-center w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 text-white backdrop-blur-sm transition-colors"
-                title="חזור לעמוד הבית"
-              >
-                <ArrowRight size={20} />
-              </button>
-
               {/* Cover Photo */}
               <div className="h-32 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-600 dark:via-purple-600 dark:to-pink-600">
                 {isSkeleton && (

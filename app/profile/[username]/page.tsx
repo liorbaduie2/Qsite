@@ -5,7 +5,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowRight,
   ChevronRight,
   MapPin,
   Globe,
@@ -254,15 +253,6 @@ export default function PublicProfilePage() {
             </Link>
 
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden relative">
-              {/* Mobile back on banner */}
-              <Link
-                href="/"
-                className="absolute top-4 right-4 z-10 flex md:hidden items-center justify-center w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 text-white backdrop-blur-sm transition-colors"
-                title="חזור לעמוד הבית"
-              >
-                <ArrowRight size={20} />
-              </Link>
-
               {/* Cover Photo */}
               <div className="h-32 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-600 dark:via-purple-600 dark:to-pink-600">
                 {isSkeleton && (
