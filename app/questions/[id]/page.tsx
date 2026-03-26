@@ -254,28 +254,38 @@ function buildAnswerThreads(flat: Answer[]): AnswerThread[] {
   );
 }
 
-/** Question & answer author pfp: composer-style (no border, gradient + initial); 26px. */
+/** Question & answer author pfp: composer-style (no border, gradient + initial). */
 function AnswerCardAuthorAvatar({
   avatarUrl,
   username,
   isOnline,
+  variant = "answer",
 }: {
   avatarUrl: string | null;
   username: string | null | undefined;
   isOnline: boolean;
+  /** Question OP row uses a larger circle than answer/reply cards. */
+  variant?: "answer" | "question";
 }) {
+  const px = variant === "question" ? 36 : 26;
   const initial = username?.charAt(0).toUpperCase() ?? "";
   const inner = avatarUrl ? (
     <Image
       src={avatarUrl}
       alt={username ?? ""}
-      width={26}
-      height={26}
-      className="size-[26px] shrink-0 rounded-full object-cover"
+      width={px}
+      height={px}
+      className="shrink-0 rounded-full object-cover"
+      style={{ width: px, height: px }}
     />
   ) : (
-    <div className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50">
-      <span className="text-xs font-bold leading-none text-indigo-600 dark:text-indigo-400">
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50"
+      style={{ width: px, height: px }}
+    >
+      <span
+        className={`font-bold leading-none text-indigo-600 dark:text-indigo-400 ${variant === "question" ? "text-sm" : "text-xs"}`}
+      >
         {initial}
       </span>
     </div>
@@ -283,8 +293,14 @@ function AnswerCardAuthorAvatar({
 
   if (isOnline) {
     return (
-      <span className="inline-flex size-[26px] shrink-0 rounded-full avatar-aura-online">
-        <span className="block size-[26px] overflow-hidden rounded-full">
+      <span
+        className="inline-flex shrink-0 rounded-full avatar-aura-online"
+        style={{ width: px, height: px }}
+      >
+        <span
+          className="block overflow-hidden rounded-full"
+          style={{ width: px, height: px }}
+        >
           {inner}
         </span>
       </span>
@@ -1320,7 +1336,9 @@ export default function QuestionDetailPage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 pt-1.5 pl-6 pr-3 pb-4">
+                <div
+                  className={`flex-1 pt-1.5 pr-3 pb-4 ${isEditMode ? "pl-3 sm:pl-3" : "pl-6"}`}
+                >
                   {/* Status badges */}
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     {question.isAnswered && (
@@ -1340,37 +1358,18 @@ export default function QuestionDetailPage() {
                     )}
                   </div>
 
-                  {/* Title row: title + three-dots menu aligned */}
+                  {/* Title row: view mode includes three-dots menu; edit mode has title only */}
                   {isEditMode ? (
                     <form onSubmit={handleSaveEdit} className="mb-3 space-y-3">
-                      <div className="flex items-center gap-3 mb-1.5">
+                      <div className="mb-1.5">
                         <input
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
-                          className="flex-1 min-w-0 text-[1.2rem] md:text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
+                          className="w-full min-w-0 text-[1.2rem] md:text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
                           placeholder="כותרת (לפחות 5 תווים)"
                           minLength={5}
                           required
                         />
-                        {(canEdit ||
-                          canRemove ||
-                          canRequestRemoval ||
-                          canViewVotes) && (
-                          <div
-                            className="relative flex-shrink-0"
-                            ref={questionMenuRef}
-                            style={{ transform: "translateX(-5px)" }}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => setQuestionMenuOpen((o) => !o)}
-                              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                              aria-label="תפריט שאלה"
-                            >
-                              <MoreVertical size={20} />
-                            </button>
-                          </div>
-                        )}
                       </div>
                       <textarea
                         value={editContent}
@@ -1381,10 +1380,10 @@ export default function QuestionDetailPage() {
                       />
                       {/* Tag editing - catalog only */}
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          תגיות
-                        </label>
-                        <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg">
+                        <div
+                          className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg"
+                          aria-label="תגיות"
+                        >
                           {editTags.map((tag) => (
                             <span
                               key={tag}
@@ -1524,6 +1523,7 @@ export default function QuestionDetailPage() {
                           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
                         >
                           <AnswerCardAuthorAvatar
+                            variant="question"
                             avatarUrl={question.author.avatar_url}
                             username={
                               question.author.username || profile?.username
@@ -1542,6 +1542,7 @@ export default function QuestionDetailPage() {
                       ) : (
                         <>
                           <AnswerCardAuthorAvatar
+                            variant="question"
                             avatarUrl={question.author.avatar_url}
                             username={question.author.username}
                             isOnline={isOnline(question.author.lastSeenAt)}
@@ -1872,7 +1873,7 @@ export default function QuestionDetailPage() {
                                           ? "/profile"
                                           : `/profile/${encodeURIComponent(node.author.username)}`
                                       }
-                                      className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+                                      className="flex items-center gap-2 hover:opacity-90 transition-opacity translate-y-0.5"
                                     >
                                       <AnswerCardAuthorAvatar
                                         avatarUrl={node.author.avatar_url}
@@ -1894,7 +1895,7 @@ export default function QuestionDetailPage() {
                                       </div>
                                     </Link>
                                   ) : (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 translate-y-0.5">
                                       <AnswerCardAuthorAvatar
                                         avatarUrl={node.author.avatar_url}
                                         username={node.author.username}
@@ -1914,7 +1915,7 @@ export default function QuestionDetailPage() {
                                     </div>
                                   )}
                                   {isOP && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700 translate-y-0.5">
                                       השואל
                                     </span>
                                   )}
@@ -1934,7 +1935,7 @@ export default function QuestionDetailPage() {
                                     }
                                     openReplyToAnswer(node.id);
                                   }}
-                                  className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-20px]"
+                                  className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-20px] -translate-y-0.5"
                                 >
                                   <MessageSquare size={compact ? 12 : 14} />
                                   הגב
