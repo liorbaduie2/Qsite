@@ -149,9 +149,7 @@ function useTimestampDividerLeft(measureDep: string, gapPx: number) {
     if (!row || !ts) return;
     const pr = row.getBoundingClientRect();
     const tr = ts.getBoundingClientRect();
-    setDividerLeftPx(
-      Math.max(0, Math.round(tr.right - pr.left + gapPx)),
-    );
+    setDividerLeftPx(Math.max(0, Math.round(tr.right - pr.left + gapPx)));
   }, [gapPx]);
 
   useLayoutEffect(() => {
@@ -195,7 +193,7 @@ function TopQuestionCardMetaBar({
   return (
     <div
       ref={metaRowRef}
-      className="relative flex flex-wrap items-center gap-2 pt-2 mt-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]"
+      className="relative mt-1 flex flex-wrap items-center gap-2 pt-2 pb-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]"
     >
       <div
         className="absolute top-0 right-0 h-px bg-gray-100 dark:bg-gray-700"
@@ -589,9 +587,9 @@ function ForumHomepage() {
                           }
                         : undefined
                     }
-                    className={`block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 group ${
+                    className={`block overflow-x-hidden overflow-y-visible rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/70 shadow-md backdrop-blur-sm transition-all duration-300 hover:shadow-lg group dark:bg-gray-800/70 ${
                       isInteractive
-                        ? "hover:scale-[1.01] cursor-pointer"
+                        ? "cursor-pointer hover:scale-[1.01]"
                         : "cursor-default"
                     }`}
                   >
@@ -652,7 +650,7 @@ function ForumHomepage() {
 
                       {/* Main content area */}
                       <div
-                        className="flex-1 min-w-0 flex flex-col gap-2 px-3 pt-2 pb-0 overflow-hidden sm:px-4 sm:pt-3 sm:pb-2 sm:pr-6 text-right"
+                        className="flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-visible px-3 pt-2 pb-3 sm:px-4 sm:pt-3 sm:pb-3 sm:pr-6 text-right"
                         style={{ direction: "rtl" }}
                       >
                         <div className="flex flex-col gap-2">
@@ -668,7 +666,7 @@ function ForumHomepage() {
                               </span>
                             )}
                           </div>
-                          <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 line-clamp-2 transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
+                          <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 break-words transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
                             {question.title}
                           </h3>
                         </div>
@@ -681,7 +679,7 @@ function ForumHomepage() {
                         />
                         {/* Tags (when expanded) - below meta bar like Question page */}
                         {expandedTagsQuestionId === question.id && (
-                          <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[12px] sm:-translate-y-[7px]">
+                          <div className="mt-2 flex flex-wrap gap-1.5">
                             {question.tags.length > 0 ? (
                               question.tags.map((tag) => (
                                 <Link
@@ -732,13 +730,6 @@ function ForumHomepage() {
 
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Heebo:wght@400;500;700&display=swap");
-
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
       `}</style>
     </div>
   );

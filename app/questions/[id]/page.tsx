@@ -296,12 +296,15 @@ function AnswerCardAuthorAvatar({
   username,
   isOnline,
   variant = "answer",
+  isQuestionAsker = false,
 }: {
   avatarUrl: string | null;
   username: string | null | undefined;
   isOnline: boolean;
   /** Question OP row uses a larger circle than answer/reply cards. */
   variant?: "answer" | "question";
+  /** Small ? badge on the avatar (answer/reply from the question author). */
+  isQuestionAsker?: boolean;
 }) {
   const px = variant === "question" ? 36 : 26;
   const initial = username?.charAt(0).toUpperCase() ?? "";
@@ -327,23 +330,40 @@ function AnswerCardAuthorAvatar({
     </div>
   );
 
-  if (isOnline) {
-    return (
+  const core = isOnline ? (
+    <span
+      className="inline-flex shrink-0 rounded-full avatar-aura-online"
+      style={{ width: px, height: px }}
+    >
       <span
-        className="inline-flex shrink-0 rounded-full avatar-aura-online"
+        className="block overflow-hidden rounded-full"
         style={{ width: px, height: px }}
       >
-        <span
-          className="block overflow-hidden rounded-full"
-          style={{ width: px, height: px }}
-        >
-          {inner}
-        </span>
+        {inner}
       </span>
-    );
+    </span>
+  ) : (
+    <span className="inline-flex shrink-0">{inner}</span>
+  );
+
+  if (!isQuestionAsker) {
+    return core;
   }
 
-  return <span className="inline-flex shrink-0">{inner}</span>;
+  return (
+    <span
+      className="relative inline-flex shrink-0"
+      title="שואל השאלה"
+    >
+      {core}
+      <span
+        className="pointer-events-none absolute -bottom-0.5 -end-0.5 z-10 flex h-[15px] w-[15px] -translate-x-1 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-[10px] font-bold leading-none text-white shadow-sm dark:border-gray-800 dark:bg-blue-500"
+        aria-hidden
+      >
+        ?
+      </span>
+    </span>
+  );
 }
 
 function AnswerCardMetaFooter({
@@ -380,7 +400,7 @@ function AnswerCardMetaFooter({
       />
       <div
         ref={timestampRef}
-        className="absolute left-[-30px] -top-[9px] px-1 bg-white/90 dark:bg-gray-800/90 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"
+        className="absolute left-[-22px] -top-[9px] px-1 bg-white/90 dark:bg-gray-800/90 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"
       >
         <Clock size={12} />
         <span>{timeAgo(node.createdAt)}</span>
@@ -399,6 +419,7 @@ function AnswerCardMetaFooter({
               avatarUrl={node.author.avatar_url}
               username={node.author.username}
               isOnline={isOnline(node.author.lastSeenAt)}
+              isQuestionAsker={isOP}
             />
             <div className="flex items-center gap-2">
               <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
@@ -416,6 +437,7 @@ function AnswerCardMetaFooter({
               avatarUrl={node.author.avatar_url}
               username={node.author.username}
               isOnline={isOnline(node.author.lastSeenAt)}
+              isQuestionAsker={isOP}
             />
             <div className="flex items-center gap-2">
               <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
@@ -427,11 +449,6 @@ function AnswerCardMetaFooter({
               </span>
             </div>
           </div>
-        )}
-        {isOP && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700 translate-y-0.5">
-            השואל
-          </span>
         )}
         {node.isEdited && (
           <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
@@ -449,7 +466,7 @@ function AnswerCardMetaFooter({
           }
           openReplyToAnswer(node.id);
         }}
-        className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-20px] -translate-y-0.5"
+        className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-12px] -translate-y-0.5"
       >
         <MessageSquare size={compact ? 12 : 14} />
         הגב
@@ -1408,7 +1425,7 @@ export default function QuestionDetailPage() {
       />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-5 relative max-md:pt-[max(1rem,env(safe-area-inset-top))] md:pt-4 max-md:pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-8">
+      <main className="mx-auto w-full min-w-0 max-w-4xl px-5 relative max-md:pt-[max(1rem,env(safe-area-inset-top))] md:pt-4 max-md:pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-8">
         {/* Back Button */}
         <Link
           href="/questions"
@@ -1437,10 +1454,10 @@ export default function QuestionDetailPage() {
         ) : question ? (
           <div className="space-y-4">
             {/* Question Card */}
-            <div className="bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-              <div className="flex">
+            <div className="bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-md border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+              <div className="flex min-w-0">
                 {/* Vote sidebar */}
-                <div className="flex flex-col items-center justify-center gap-0.5 pl-1.5 pr-2 py-1.5 sm:pl-2 sm:pr-3 sm:py-2 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
+                <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 pl-1.5 pr-2 py-1.5 sm:pl-2 sm:pr-3 sm:py-2 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
                   <button
                     type="button"
                     onClick={() => void handleQuestionVote(1)}
@@ -1490,7 +1507,7 @@ export default function QuestionDetailPage() {
 
                 {/* Content */}
                 <div
-                  className={`flex-1 pt-1.5 pr-3 pb-4 ${isEditMode ? "pl-3 sm:pl-3" : "pl-6"}`}
+                  className={`min-w-0 flex-1 pt-1.5 pr-3 pb-4 ${isEditMode ? "pl-3 sm:pl-3" : "pl-6 max-md:pl-3"}`}
                 >
                   {/* Status badges */}
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -1620,8 +1637,8 @@ export default function QuestionDetailPage() {
                       </div>
                     </form>
                   ) : (
-                    <div className="flex items-center gap-3 mb-1">
-                      <h1 className="flex-1 min-w-0 text-[1.2rem] md:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug">
+                    <div className="flex min-w-0 items-center gap-0 mb-1">
+                      <h1 className="min-w-0 flex-1 -ml-2 text-[1.2rem] md:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug break-words md:-ml-2.5">
                         {question.title}
                       </h1>
                       {(canEdit ||
@@ -1629,13 +1646,13 @@ export default function QuestionDetailPage() {
                         canRequestRemoval ||
                         canViewVotes) && (
                         <div
-                          className="relative flex-shrink-0 -translate-x-[20px]"
+                          className="relative shrink-0 self-start -mr-1 md:-mr-1.5 -translate-x-2 md:-translate-x-[26px]"
                           ref={questionMenuRef}
                         >
                           <button
                             type="button"
                             onClick={() => setQuestionMenuOpen((o) => !o)}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                            className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                             aria-label="תפריט שאלה"
                           >
                             <MoreVertical size={20} />
@@ -1647,7 +1664,7 @@ export default function QuestionDetailPage() {
 
                   {/* Content body (only when not editing) */}
                   {!isEditMode && (
-                    <div className="prose prose-gray max-w-none mb-2 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    <div className="prose prose-gray max-w-none mb-2 min-w-0 break-words text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                       {question.content}
                     </div>
                   )}
@@ -1655,7 +1672,7 @@ export default function QuestionDetailPage() {
                   {/* Meta bar */}
                   <div
                     ref={questionMetaDivider.metaRowRef}
-                    className="relative flex items-center justify-between pt-3 mt-1"
+                    className="relative flex min-w-0 items-center justify-between gap-2 pt-3 mt-1"
                   >
                     <div
                       className="absolute top-0 right-0 h-px bg-gray-100 dark:bg-gray-700"
@@ -1670,7 +1687,7 @@ export default function QuestionDetailPage() {
                       <span>{timeAgo(question.createdAt)}</span>
                     </div>
                     {/* Author */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       {question.author.username ||
                       user?.id === question.author.id ? (
                         <Link
@@ -1679,7 +1696,7 @@ export default function QuestionDetailPage() {
                               ? "/profile"
                               : `/profile/${encodeURIComponent(question.author.username)}`
                           }
-                          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+                          className="flex min-w-0 max-w-full items-center gap-3 hover:opacity-90 transition-opacity"
                         >
                           <AnswerCardAuthorAvatar
                             variant="question"
@@ -1689,8 +1706,8 @@ export default function QuestionDetailPage() {
                             }
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
-                          <div>
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">
+                          <div className="min-w-0">
+                            <span className="block truncate font-semibold text-gray-800 dark:text-gray-100">
                               {question.author.username || profile?.username}
                             </span>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -1706,8 +1723,8 @@ export default function QuestionDetailPage() {
                             username={question.author.username}
                             isOnline={isOnline(question.author.lastSeenAt)}
                           />
-                          <div>
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">
+                          <div className="min-w-0">
+                            <span className="block truncate font-semibold text-gray-800 dark:text-gray-100">
                               {question.author.username}
                             </span>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -1718,15 +1735,21 @@ export default function QuestionDetailPage() {
                       )}
                     </div>
 
-                    {/* Stats + הצג תגיות; md+ only: extra nudge left for icons + button */}
-                    <div className="flex flex-col items-end gap-0 text-sm text-gray-500 dark:text-gray-400 ml-2.5 translate-y-[3px] max-sm:-translate-x-3 sm:-translate-x-[-12px]">
+                    {/* Stats + הצג תגיות; md+ only: extra nudge for icons + button (avoid mobile horizontal clip) */}
+                    <div className="flex shrink-0 flex-col items-end gap-0 text-sm text-gray-500 dark:text-gray-400 ms-2.5 max-md:ms-0 translate-x-1.5 translate-y-[3px] sm:translate-x-[18px]">
                       <div className="flex flex-col items-end gap-0 md:-translate-x-3">
                         <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1" title="תגובות">
+                          <div
+                            className="flex items-center gap-1"
+                            title="תגובות"
+                          >
                             <MessageCircle size={15} />
                             <span>{question.replies}</span>
                           </div>
-                          <div className="flex items-center gap-1" title="צפיות">
+                          <div
+                            className="flex items-center gap-1"
+                            title="צפיות"
+                          >
                             <Eye size={15} />
                             <span>{question.views}</span>
                           </div>
@@ -1734,7 +1757,7 @@ export default function QuestionDetailPage() {
                         <button
                           type="button"
                           onClick={() => setShowTagsExpanded((v) => !v)}
-                          className="inline-flex items-center gap-1.5 px-2 py-0.5 -mt-0.5 relative left-px max-sm:-translate-x-2 sm:-translate-x-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          className="inline-flex max-w-full items-center gap-1.5 px-2 py-0.5 -mt-0.5 -translate-x-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                           aria-expanded={showTagsExpanded}
                           title={showTagsExpanded ? "הסתר תגיות" : "הצג תגיות"}
                         >
@@ -1978,7 +2001,7 @@ export default function QuestionDetailPage() {
                               )}
                             </div>
                             <div
-                              className={`flex-1 min-w-0 ${compact ? "pl-7 sm:pl-8" : "pl-8"}`}
+                              className={`flex-1 min-w-0 ${compact ? "pl-5 sm:pl-6" : "pl-6"}`}
                             >
                               <div
                                 className="absolute left-2 top-2"
@@ -2002,7 +2025,7 @@ export default function QuestionDetailPage() {
                                 </button>
                               </div>
                               <div
-                                className={`text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap ${compact ? "mb-1.5 sm:mb-2" : "mb-2"}`}
+                                className={`min-w-0 text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words ${compact ? "mb-1.5 sm:mb-2 -ml-1.5 sm:-ml-2" : "mb-2 -ml-2 md:-ml-2.5"}`}
                               >
                                 {replyTargetUsername && (
                                   <span
@@ -2208,7 +2231,7 @@ export default function QuestionDetailPage() {
                 <button
                   type="submit"
                   disabled={!replyContent.trim() || submittingReply}
-                  className="inline-flex shrink-0 items-center justify-center gap-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex shrink-0 translate-x-1.5 items-center justify-center gap-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submittingReply ? (
                     <>

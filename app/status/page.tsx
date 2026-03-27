@@ -866,8 +866,8 @@ export default function StatusPage() {
       key={item.id}
       className={`relative rounded-2xl border p-4 transition-all ${
         highlighted
-          ? "bg-amber-50/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50 shadow-lg ring-2 ring-amber-200/50 dark:ring-amber-700/30"
-          : "bg-white/80 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50"
+          ? "bg-amber-50/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50 shadow-md ring-2 ring-amber-200/50 dark:ring-amber-700/30"
+          : "bg-white/80 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50 shadow-md"
       }`}
     >
       <div

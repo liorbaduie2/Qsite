@@ -198,7 +198,7 @@ function QuestionListCardMetaBar({
   return (
     <div
       ref={metaRowRef}
-      className="relative flex flex-wrap items-center gap-2 pt-2 mt-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]"
+      className="relative mt-1 flex flex-wrap items-center gap-2 pt-2 pb-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]"
     >
       <div
         className="absolute top-0 right-0 h-px bg-gray-100 dark:bg-gray-700"
@@ -776,7 +776,7 @@ const QuestionsPage = () => {
                     router.push(`/questions/${question.id}`);
                   }
                 }}
-                className="block bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] group cursor-pointer"
+                className="block overflow-x-hidden overflow-y-visible rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/70 shadow-md backdrop-blur-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.01] group cursor-pointer dark:bg-gray-800/70"
               >
                 {question.isTopOfWeek && (
                   <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-300 px-4 pt-2 pb-0.5">
@@ -828,7 +828,7 @@ const QuestionsPage = () => {
 
                   {/* Main content area */}
                   <div
-                    className="flex-1 min-w-0 flex flex-col gap-2 px-3 pt-2 pb-0 overflow-hidden sm:px-4 sm:pt-3 sm:pb-2 sm:pr-6 text-right"
+                    className="flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-visible px-3 pt-2 pb-3 sm:px-4 sm:pt-3 sm:pb-3 sm:pr-6 text-right"
                     style={{ direction: "rtl" }}
                   >
                     <div className="flex flex-col gap-2">
@@ -844,7 +844,7 @@ const QuestionsPage = () => {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 line-clamp-2 transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
+                      <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 break-words transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
                         {question.title}
                       </h3>
                     </div>
@@ -857,7 +857,7 @@ const QuestionsPage = () => {
                     />
                     {/* Tags (when expanded) - below meta bar like Question Details */}
                     {expandedTagsQuestionId === question.id && (
-                      <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[12px] sm:-translate-y-[7px]">
+                      <div className="mt-2 flex flex-wrap gap-1.5">
                         {question.tags.length > 0 ? (
                           question.tags.map((tag) => (
                             <Link

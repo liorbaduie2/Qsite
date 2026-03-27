@@ -166,3 +166,22 @@ input.otp-code-digit {
     font-size: 1.25rem !important;
   }
 }
+
+/* Remove default interaction highlights and hover effects on mobile */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  
+  a, button, [role="button"], [tabindex] {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    outline: none !important;
+  }
+
+  /* Explicitly remove underline effects on active/focus for interactive elements */
+  a:active, a:focus, button:active, button:focus {
+    text-decoration: none !important;
+  }
+}
