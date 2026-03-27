@@ -133,9 +133,7 @@ function useTimestampDividerLeft(measureDep: string, gapPx: number) {
     if (!row || !ts) return;
     const pr = row.getBoundingClientRect();
     const tr = ts.getBoundingClientRect();
-    setDividerLeftPx(
-      Math.max(0, Math.round(tr.right - pr.left + gapPx)),
-    );
+    setDividerLeftPx(Math.max(0, Math.round(tr.right - pr.left + gapPx)));
   }, [gapPx]);
 
   useLayoutEffect(() => {
@@ -176,7 +174,7 @@ function StatusCardFeedMetaRow({
   return (
     <div
       ref={metaRowRef}
-      className="relative flex items-center justify-between flex-wrap gap-1.5 pt-2 mt-0"
+      className="relative mt-0 flex w-full min-w-0 flex-wrap items-center justify-between gap-1.5 pt-2 pb-1"
     >
       <div
         className={`absolute top-0 right-2 h-px ${
@@ -864,14 +862,14 @@ export default function StatusPage() {
   ) => (
     <div
       key={item.id}
-      className={`relative rounded-2xl border p-4 transition-all ${
+      className={`relative min-w-0 overflow-x-hidden overflow-y-visible rounded-2xl border px-4 pt-4 pb-5 transition-all ${
         highlighted
           ? "bg-amber-50/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50 shadow-md ring-2 ring-amber-200/50 dark:ring-amber-700/30"
           : "bg-white/80 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50 shadow-md"
       }`}
     >
       <div
-        className="absolute left-2 top-2"
+        className="absolute left-2 top-2 z-10"
         ref={openStatusMenuId === item.id ? statusMenuRef : undefined}
       >
         <button
@@ -885,11 +883,11 @@ export default function StatusPage() {
           <MoreVertical size={18} />
         </button>
       </div>
-      <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap mb-2">
+      <p className="mb-3 min-w-0 max-w-full -translate-x-2 whitespace-pre-wrap break-words pl-6 text-gray-800 [overflow-wrap:anywhere] dark:text-gray-100">
         {item.content}
       </p>
       <StatusCardFeedMetaRow item={item} highlighted={highlighted}>
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 max-w-full items-center gap-3">
           {item.author.username ? (
             <Link
               href={
@@ -899,14 +897,14 @@ export default function StatusPage() {
                   ? "/profile"
                   : `/profile/${encodeURIComponent(item.author.username)}`
               }
-              className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+              className="flex min-w-0 max-w-full items-center gap-3 transition-opacity hover:opacity-90"
             >
               <StatusCardAuthorAvatar
                 avatarUrl={item.author.avatar_url}
                 username={item.author.username}
               />
-              <div>
-                <span className="font-medium text-gray-700 dark:text-gray-200">
+              <div className="min-w-0">
+                <span className="block truncate font-medium text-gray-700 dark:text-gray-200">
                   {item.author.fullName || item.author.username}
                 </span>
                 <div className="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">
@@ -920,8 +918,8 @@ export default function StatusPage() {
                 avatarUrl={item.author.avatar_url}
                 username={item.author.username || ""}
               />
-              <div>
-                <span className="font-medium text-gray-700 dark:text-gray-200">
+              <div className="min-w-0">
+                <span className="block truncate font-medium text-gray-700 dark:text-gray-200">
                   {item.author.fullName || item.author.username}
                 </span>
                 <div className="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">
@@ -1001,7 +999,9 @@ export default function StatusPage() {
                 } ${starClickAnim[item.id] ? "motion-safe:animate-star-wiggle" : ""}`}
               />
             </span>
-            <span className="relative z-10 tabular-nums">{item.starsCount}</span>
+            <span className="relative z-10 tabular-nums">
+              {item.starsCount}
+            </span>
           </button>
         </div>
       </StatusCardFeedMetaRow>
