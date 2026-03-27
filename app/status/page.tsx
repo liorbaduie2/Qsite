@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useLayoutEffect,
   useRef,
+  type ReactNode,
 } from "react";
 import {
   Users,
@@ -117,6 +118,89 @@ function timeAgo(dateStr: string): string {
   if (diffHours < 24) return `לפני ${diffHours} שעות`;
   if (diffDays < 30) return `לפני ${diffDays} ימים`;
   return date.toLocaleDateString("he-IL");
+}
+
+const STATUS_CARD_TIMESTAMP_DIVIDER_GAP_PX = 8;
+
+function useTimestampDividerLeft(measureDep: string, gapPx: number) {
+  const metaRowRef = useRef<HTMLDivElement>(null);
+  const timestampRef = useRef<HTMLDivElement>(null);
+  const [dividerLeftPx, setDividerLeftPx] = useState<number | null>(null);
+
+  const update = useCallback(() => {
+    const row = metaRowRef.current;
+    const ts = timestampRef.current;
+    if (!row || !ts) return;
+    const pr = row.getBoundingClientRect();
+    const tr = ts.getBoundingClientRect();
+    setDividerLeftPx(
+      Math.max(0, Math.round(tr.right - pr.left + gapPx)),
+    );
+  }, [gapPx]);
+
+  useLayoutEffect(() => {
+    update();
+    const ts = timestampRef.current;
+    if (!ts) return;
+    const ro = new ResizeObserver(() => update());
+    ro.observe(ts);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [update, measureDep]);
+
+  return {
+    metaRowRef,
+    timestampRef,
+    dividerLeftPx: dividerLeftPx ?? 72,
+  };
+}
+
+/** Feed status card meta: divider starts after timestamp width + gap (like questions list). */
+function StatusCardFeedMetaRow({
+  item,
+  highlighted,
+  children,
+}: {
+  item: FeedItem;
+  highlighted: boolean;
+  children: ReactNode;
+}) {
+  const { metaRowRef, timestampRef, dividerLeftPx } = useTimestampDividerLeft(
+    `${item.id}:${item.createdAt}`,
+    STATUS_CARD_TIMESTAMP_DIVIDER_GAP_PX,
+  );
+
+  return (
+    <div
+      ref={metaRowRef}
+      className="relative flex items-center justify-between flex-wrap gap-1.5 pt-2 mt-0"
+    >
+      <div
+        className={`absolute top-0 right-2 h-px ${
+          highlighted
+            ? "bg-amber-200 dark:bg-amber-700/60"
+            : "bg-gray-100 dark:bg-gray-700"
+        }`}
+        style={{ left: dividerLeftPx }}
+        aria-hidden
+      />
+      <div
+        ref={timestampRef}
+        className={`absolute left-0 -top-[8px] px-1 text-xs flex items-center gap-0.5 ${
+          highlighted
+            ? "bg-amber-50/90 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+            : "bg-white/80 dark:bg-gray-800/80 text-gray-400 dark:text-gray-500"
+        }`}
+      >
+        <Clock size={12} />
+        <span>{timeAgo(item.createdAt)}</span>
+      </div>
+      {children}
+    </div>
+  );
 }
 
 /** Status card author: question-detail pfp style (no border, gradient + initial); 40px (w-10 h-10). */
@@ -804,25 +888,7 @@ export default function StatusPage() {
       <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap mb-2">
         {item.content}
       </p>
-      <div className="relative flex items-center justify-between flex-wrap gap-1.5 pt-2 mt-0">
-        <div
-          className={`absolute top-0 right-2 left-[6.5rem] h-px ${
-            highlighted
-              ? "bg-amber-200 dark:bg-amber-700/60"
-              : "bg-gray-100 dark:bg-gray-700"
-          }`}
-          aria-hidden
-        />
-        <div
-          className={`absolute left-0 -top-[8px] px-2 text-xs flex items-center gap-1 ${
-            highlighted
-              ? "bg-amber-50/90 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
-              : "bg-white/80 dark:bg-gray-800/80 text-gray-400 dark:text-gray-500"
-          }`}
-        >
-          <Clock size={12} />
-          <span>{timeAgo(item.createdAt)}</span>
-        </div>
+      <StatusCardFeedMetaRow item={item} highlighted={highlighted}>
         <div className="flex items-center gap-3">
           {item.author.username ? (
             <Link
@@ -938,7 +1004,7 @@ export default function StatusPage() {
             <span className="relative z-10 tabular-nums">{item.starsCount}</span>
           </button>
         </div>
-      </div>
+      </StatusCardFeedMetaRow>
     </div>
   );
 

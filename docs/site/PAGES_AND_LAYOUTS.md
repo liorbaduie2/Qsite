@@ -74,7 +74,7 @@
 - Runtime: client
 - Description: Homepage that anchors question discovery and acts as the main landing surface.
 - Exports: `Page`
-- Named functions: `ForumHomepage`, `ProfileTestComponent`, `closeLoginModal`, `closeRegisterModal`, `handleLogin`, `handleRegister`, `handleSignOut`, `handleVote`, `loadTopQuestions`, `timeAgo`
+- Named functions: `ForumHomepage`, `ProfileTestComponent`, `TopQuestionCardAuthorAvatar`, `closeLoginModal`, `closeRegisterModal`, `handleLogin`, `handleRegister`, `handleSignOut`, `handleVote`, `loadTopQuestions`, `timeAgo`
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -110,7 +110,7 @@
 - Runtime: client
 - Description: Question detail page with answers, votes, reports, and moderation actions.
 - Exports: `QuestionDetailPage`
-- Named functions: `buildAnswerThreads`, `fetchAnswers`, `fetchEditTagMatches`, `fetchQuestion`, `handleAnswerVote`, `handleAuthAction`, `handleCancelEdit`, `handleClickOutside`, `handleConfirmRemove`, `handleEditTagAdd`, `handleEditTagRemove`, `handleOpenAnswerReport`, `handleOpenAnswerVoteDetails`, `handleOpenRequestRemoval`, `handleOpenVoteDetails`, `handleQuestionVote`, `handleSaveEdit`, `handleSignOut`, `handleStartEdit`, `handleSubmitAnswer`, `handleSubmitAnswerReport`, `handleSubmitReply`, `handleSubmitRequestRemoval`, `onClick`, `onOpenAnswer`, `openAnswerPanelForMobileNav`, `renderAnswerCard`, `renderReplyItem`, `renderTopLevelAnswer`, `resolveRootId`, `setVoteLoading`, `timeAgo`
+- Named functions: `AnswerCardAuthorAvatar`, `AnswerCardMetaFooter`, `buildAnswerThreads`, `fetchAnswers`, `fetchEditTagMatches`, `fetchQuestion`, `handleAnswerVote`, `handleAuthAction`, `handleCancelEdit`, `handleClickOutside`, `handleConfirmRemove`, `handleEditTagAdd`, `handleEditTagRemove`, `handleOpenAnswerReport`, `handleOpenAnswerVoteDetails`, `handleOpenRequestRemoval`, `handleOpenVoteDetails`, `handleQuestionVote`, `handleSaveEdit`, `handleSignOut`, `handleStartEdit`, `handleSubmitAnswer`, `handleSubmitAnswerReport`, `handleSubmitReply`, `handleSubmitRequestRemoval`, `onClick`, `onOpenAnswer`, `openAnswerPanelForMobileNav`, `openCreateAnswerComposer`, `openReplyToAnswer`, `renderAnswerCard`, `renderReplyItem`, `renderTopLevelAnswer`, `resolveRootId`, `setVoteLoading`, `timeAgo`, `update`, `useTimestampDividerLeft`
 - Fetch calls: `/api/report/content`
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -122,7 +122,7 @@
 - Runtime: client
 - Description: Question index with search, sort, filters, and question-creation entry points.
 - Exports: `QuestionsPage`
-- Named functions: `QuestionsPage`, `fetchQuestions`, `handleNewQuestion`, `handleSignOut`, `handleVote`, `onClick`, `onKeyDown`, `onOpenCreate`, `onToggleSearch`, `timeAgo`
+- Named functions: `QuestionListCardAuthorAvatar`, `QuestionListCardMetaBar`, `QuestionsPage`, `fetchQuestions`, `handleNewQuestion`, `handleSignOut`, `handleVote`, `onClick`, `onKeyDown`, `onOpenCreate`, `onToggleSearch`, `timeAgo`, `updateDividerLeft`
 - Fetch calls: None
 - Supabase tables/views: None
 - Supabase RPCs: None
@@ -134,7 +134,7 @@
 - Runtime: client
 - Description: Status feed for short-form posting, starring, sharing, and replies.
 - Exports: `StatusPage`
-- Named functions: `buildMessage`, `emit`, `fetchFeed`, `fetchMe`, `formatCooldownLockMessage`, `handleNewStatus`, `handleOpenStatusReport`, `handlePost`, `handleSignOut`, `handleSubmitStatusReport`, `onClick`, `onOpenCreate`, `onToggleHistory`, `openAdminStars`, `timeAgo`, `toggleHistoryFromNavbar`, `toggleShare`, `toggleStar`
+- Named functions: `StatusCardAuthorAvatar`, `StatusCardFeedMetaRow`, `buildMessage`, `emit`, `fetchFeed`, `fetchMe`, `formatCooldownLockMessage`, `handleNewStatus`, `handleOpenStatusReport`, `handlePost`, `handleSignOut`, `handleSubmitStatusReport`, `onClick`, `onOpenCreate`, `onToggleHistory`, `openAdminStars`, `timeAgo`, `toggleHistoryFromNavbar`, `toggleShare`, `toggleStar`, `update`, `useTimestampDividerLeft`
 - Fetch calls: `/api/report/content`, `/api/status`, `/api/status/me`
 - Supabase tables/views: None
 - Supabase RPCs: None

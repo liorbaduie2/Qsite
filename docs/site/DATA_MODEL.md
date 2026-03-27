@@ -424,3 +424,15 @@ The migration directory is the current source of truth for database structure an
 - Views added or changed in file: None
 - SQL functions added or changed in file: None
 - Triggers added or changed in file: None
+
+### `supabase/migrations/20260324194501_drop_answers_content_length_constraint.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: None
+- Triggers added or changed in file: None
+
+### `supabase/migrations/20260324195000_drop_answers_content_length_constraint.sql`
+- Tables added or changed in file: None
+- Views added or changed in file: None
+- SQL functions added or changed in file: None
+- Triggers added or changed in file: None

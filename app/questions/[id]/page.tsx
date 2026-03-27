@@ -183,6 +183,42 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString("he-IL");
 }
 
+const QUESTION_DETAIL_TIMESTAMP_DIVIDER_GAP_PX = 8;
+
+function useTimestampDividerLeft(measureDep: string, gapPx: number) {
+  const metaRowRef = useRef<HTMLDivElement>(null);
+  const timestampRef = useRef<HTMLDivElement>(null);
+  const [dividerLeftPx, setDividerLeftPx] = useState<number | null>(null);
+
+  const update = useCallback(() => {
+    const row = metaRowRef.current;
+    const ts = timestampRef.current;
+    if (!row || !ts) return;
+    const pr = row.getBoundingClientRect();
+    const tr = ts.getBoundingClientRect();
+    setDividerLeftPx(Math.max(0, Math.round(tr.right - pr.left + gapPx)));
+  }, [gapPx]);
+
+  useLayoutEffect(() => {
+    update();
+    const ts = timestampRef.current;
+    if (!ts) return;
+    const ro = new ResizeObserver(() => update());
+    ro.observe(ts);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [update, measureDep]);
+
+  return {
+    metaRowRef,
+    timestampRef,
+    dividerLeftPx: dividerLeftPx ?? 72,
+  };
+}
+
 function sortByCreatedAt<T extends { createdAt: string }>(items: T[]): T[] {
   return items.sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -310,6 +346,118 @@ function AnswerCardAuthorAvatar({
   return <span className="inline-flex shrink-0">{inner}</span>;
 }
 
+function AnswerCardMetaFooter({
+  node,
+  compact,
+  isOP,
+  user,
+  profile,
+  handleAuthAction,
+  openReplyToAnswer,
+}: {
+  node: Answer;
+  compact: boolean;
+  isOP: boolean;
+  user: { id: string } | null;
+  profile: { username?: string | null } | null;
+  handleAuthAction: (mode: "login" | "register") => void;
+  openReplyToAnswer: (answerId: string) => void;
+}) {
+  const { metaRowRef, timestampRef, dividerLeftPx } = useTimestampDividerLeft(
+    `${node.id}:${node.createdAt}`,
+    QUESTION_DETAIL_TIMESTAMP_DIVIDER_GAP_PX,
+  );
+
+  return (
+    <div
+      ref={metaRowRef}
+      className="relative flex items-center justify-between flex-wrap gap-1.5 mt-1 pt-2"
+    >
+      <div
+        className="absolute top-0 right-0 h-px bg-gray-100 dark:bg-gray-700"
+        style={{ left: dividerLeftPx }}
+        aria-hidden
+      />
+      <div
+        ref={timestampRef}
+        className="absolute left-[-30px] -top-[9px] px-1 bg-white/90 dark:bg-gray-800/90 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"
+      >
+        <Clock size={12} />
+        <span>{timeAgo(node.createdAt)}</span>
+      </div>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {node.author.username || user?.id === node.author.id ? (
+          <Link
+            href={
+              user?.id === node.author.id
+                ? "/profile"
+                : `/profile/${encodeURIComponent(node.author.username)}`
+            }
+            className="flex items-center gap-2 hover:opacity-90 transition-opacity translate-y-0.5"
+          >
+            <AnswerCardAuthorAvatar
+              avatarUrl={node.author.avatar_url}
+              username={node.author.username}
+              isOnline={isOnline(node.author.lastSeenAt)}
+            />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+                {node.author.username ||
+                  (user?.id === node.author.id ? profile?.username : null)}
+              </span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {node.author.reputation} מוניטין
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2 translate-y-0.5">
+            <AnswerCardAuthorAvatar
+              avatarUrl={node.author.avatar_url}
+              username={node.author.username}
+              isOnline={isOnline(node.author.lastSeenAt)}
+            />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+                {node.author.username}
+              </span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                <Shield size={10} />
+                {node.author.reputation} מוניטין
+              </span>
+            </div>
+          </div>
+        )}
+        {isOP && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700 translate-y-0.5">
+            השואל
+          </span>
+        )}
+        {node.isEdited && (
+          <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
+            <Pencil size={10} />
+            נערך
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          if (!user) {
+            handleAuthAction("login");
+            return;
+          }
+          openReplyToAnswer(node.id);
+        }}
+        className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-20px] -translate-y-0.5"
+      >
+        <MessageSquare size={compact ? 12 : 14} />
+        הגב
+      </button>
+    </div>
+  );
+}
+
 export default function QuestionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
@@ -414,6 +562,11 @@ export default function QuestionDetailPage() {
   const userId = user?.id ?? null;
   const isGuest = !user;
   usePresenceTick(); // re-evaluate isOnline() every 30s so indicators update when users go offline
+
+  const questionMetaDivider = useTimestampDividerLeft(
+    question?.createdAt ?? "",
+    QUESTION_DETAIL_TIMESTAMP_DIVIDER_GAP_PX,
+  );
 
   useEffect(() => {
     if (isLoginModalOpen || isRegisterModalOpen) {
@@ -1476,9 +1629,8 @@ export default function QuestionDetailPage() {
                         canRequestRemoval ||
                         canViewVotes) && (
                         <div
-                          className="relative flex-shrink-0"
+                          className="relative flex-shrink-0 -translate-x-[20px]"
                           ref={questionMenuRef}
-                          style={{ transform: "translateX(-10px)" }}
                         >
                           <button
                             type="button"
@@ -1501,12 +1653,19 @@ export default function QuestionDetailPage() {
                   )}
 
                   {/* Meta bar */}
-                  <div className="relative flex items-center justify-between pt-3 mt-1">
+                  <div
+                    ref={questionMetaDivider.metaRowRef}
+                    className="relative flex items-center justify-between pt-3 mt-1"
+                  >
                     <div
-                      className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
+                      className="absolute top-0 right-0 h-px bg-gray-100 dark:bg-gray-700"
+                      style={{ left: questionMetaDivider.dividerLeftPx }}
                       aria-hidden
                     />
-                    <div className="absolute -left-[2px] -top-[10px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                    <div
+                      ref={questionMetaDivider.timestampRef}
+                      className="absolute -left-2 sm:left-2 -top-[8px] px-1 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"
+                    >
                       <Clock size={12} />
                       <span>{timeAgo(question.createdAt)}</span>
                     </div>
@@ -1559,31 +1718,33 @@ export default function QuestionDetailPage() {
                       )}
                     </div>
 
-                    {/* Stats + Show Tags */}
-                    <div className="flex flex-col items-end gap-0 text-sm text-gray-500 dark:text-gray-400 ml-2.5 translate-y-[3px]">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1" title="תגובות">
-                          <MessageCircle size={15} />
-                          <span>{question.replies}</span>
+                    {/* Stats + הצג תגיות; md+ only: extra nudge left for icons + button */}
+                    <div className="flex flex-col items-end gap-0 text-sm text-gray-500 dark:text-gray-400 ml-2.5 translate-y-[3px] max-sm:-translate-x-3 sm:-translate-x-[-12px]">
+                      <div className="flex flex-col items-end gap-0 md:-translate-x-3">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1" title="תגובות">
+                            <MessageCircle size={15} />
+                            <span>{question.replies}</span>
+                          </div>
+                          <div className="flex items-center gap-1" title="צפיות">
+                            <Eye size={15} />
+                            <span>{question.views}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1" title="צפיות">
-                          <Eye size={15} />
-                          <span>{question.views}</span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowTagsExpanded((v) => !v)}
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 -mt-0.5 relative left-px max-sm:-translate-x-2 sm:-translate-x-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          aria-expanded={showTagsExpanded}
+                          title={showTagsExpanded ? "הסתר תגיות" : "הצג תגיות"}
+                        >
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${showTagsExpanded ? "rotate-180" : ""}`}
+                          />
+                          הצג תגיות
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowTagsExpanded((v) => !v)}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 -mt-0.5 translate-x-[-10px] md:translate-x-[-10px] text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        aria-expanded={showTagsExpanded}
-                        title={showTagsExpanded ? "הסתר תגיות" : "הצג תגיות"}
-                      >
-                        <ChevronDown
-                          size={14}
-                          className={`transition-transform ${showTagsExpanded ? "rotate-180" : ""}`}
-                        />
-                        הצג תגיות
-                      </button>
                     </div>
                   </div>
                   {/* Tags (shown when הצג תגיות is expanded) */}
@@ -1762,10 +1923,10 @@ export default function QuestionDetailPage() {
                           }`}
                         >
                           <div
-                            className={`flex items-start ${compact ? "gap-1.5 sm:gap-2" : "gap-2"}`}
+                            className={`flex items-start ${compact ? "gap-1 sm:gap-1.5" : "gap-1"}`}
                           >
                             <div
-                              className={`flex flex-col items-center gap-0.5 flex-shrink-0 ${compact ? "min-w-[27px] sm:min-w-[29px]" : "min-w-[33px]"}`}
+                              className={`flex flex-col items-center gap-0.5 flex-shrink-0 -ms-2 ${compact ? "min-w-[27px] sm:min-w-[29px]" : "min-w-[33px]"}`}
                             >
                               <button
                                 type="button"
@@ -1817,7 +1978,7 @@ export default function QuestionDetailPage() {
                               )}
                             </div>
                             <div
-                              className={`flex-1 min-w-0 ${compact ? "pl-8 sm:pl-9" : "pl-9"}`}
+                              className={`flex-1 min-w-0 ${compact ? "pl-7 sm:pl-8" : "pl-8"}`}
                             >
                               <div
                                 className="absolute left-2 top-2"
@@ -1855,92 +2016,15 @@ export default function QuestionDetailPage() {
                                 {node.content}
                               </div>
 
-                              <div className="relative flex items-center justify-between flex-wrap gap-1.5 mt-1 pt-2">
-                                <div
-                                  className="absolute top-0 right-0 left-[70px] h-px bg-gray-100 dark:bg-gray-700"
-                                  aria-hidden
-                                />
-                                <div className="absolute left-[-30px] -top-[10px] px-2 bg-white/90 dark:bg-gray-800/90 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                                  <Clock size={12} />
-                                  <span>{timeAgo(node.createdAt)}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  {node.author.username ||
-                                  user?.id === node.author.id ? (
-                                    <Link
-                                      href={
-                                        user?.id === node.author.id
-                                          ? "/profile"
-                                          : `/profile/${encodeURIComponent(node.author.username)}`
-                                      }
-                                      className="flex items-center gap-2 hover:opacity-90 transition-opacity translate-y-0.5"
-                                    >
-                                      <AnswerCardAuthorAvatar
-                                        avatarUrl={node.author.avatar_url}
-                                        username={node.author.username}
-                                        isOnline={isOnline(
-                                          node.author.lastSeenAt,
-                                        )}
-                                      />
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
-                                          {node.author.username ||
-                                            (user?.id === node.author.id
-                                              ? profile?.username
-                                              : null)}
-                                        </span>
-                                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                                          {node.author.reputation} מוניטין
-                                        </span>
-                                      </div>
-                                    </Link>
-                                  ) : (
-                                    <div className="flex items-center gap-2 translate-y-0.5">
-                                      <AnswerCardAuthorAvatar
-                                        avatarUrl={node.author.avatar_url}
-                                        username={node.author.username}
-                                        isOnline={isOnline(
-                                          node.author.lastSeenAt,
-                                        )}
-                                      />
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
-                                          {node.author.username}
-                                        </span>
-                                        <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                                          <Shield size={10} />
-                                          {node.author.reputation} מוניטין
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {isOP && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700 translate-y-0.5">
-                                      השואל
-                                    </span>
-                                  )}
-                                  {node.isEdited && (
-                                    <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
-                                      <Pencil size={10} />
-                                      נערך
-                                    </span>
-                                  )}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!user) {
-                                      handleAuthAction("login");
-                                      return;
-                                    }
-                                    openReplyToAnswer(node.id);
-                                  }}
-                                  className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex-shrink-0 ms-auto mt-3 ml-[-20px] -translate-y-0.5"
-                                >
-                                  <MessageSquare size={compact ? 12 : 14} />
-                                  הגב
-                                </button>
-                              </div>
+                              <AnswerCardMetaFooter
+                                node={node}
+                                compact={compact}
+                                isOP={isOP}
+                                user={user}
+                                profile={profile}
+                                handleAuthAction={handleAuthAction}
+                                openReplyToAnswer={openReplyToAnswer}
+                              />
 
                               {replyingToId === node.id && (
                                 <form

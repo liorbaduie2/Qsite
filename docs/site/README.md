@@ -2,7 +2,7 @@
 
 This documentation set is auto-generated from the codebase and organized to make the app easy to audit by route, feature, and supporting module.
 
-Generated: 2026-03-23T18:44:47.751Z
+Generated: 2026-03-27T13:47:20.477Z
 
 ## Navigation
 
@@ -34,7 +34,7 @@ Generated: 2026-03-23T18:44:47.751Z
 | Shared or starter components | 24 |
 | Library files | 21 |
 | Script files | 4 |
-| Migrations | 51 |
+| Migrations | 53 |
 | Tables discovered in migrations | 42 |
 | SQL functions discovered in migrations | 40 |
 

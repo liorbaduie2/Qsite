@@ -1,7 +1,14 @@
 //app/page.tsx
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  Suspense,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import {
   MessageSquare,
   Users,
@@ -127,6 +134,157 @@ function TopQuestionCardAuthorAvatar({
   }
 
   return <span className="inline-flex shrink-0">{inner}</span>;
+}
+
+const TOP_QUESTION_TIMESTAMP_DIVIDER_GAP_PX = 8;
+
+function useTimestampDividerLeft(measureDep: string, gapPx: number) {
+  const metaRowRef = useRef<HTMLDivElement>(null);
+  const timestampRef = useRef<HTMLDivElement>(null);
+  const [dividerLeftPx, setDividerLeftPx] = useState<number | null>(null);
+
+  const update = useCallback(() => {
+    const row = metaRowRef.current;
+    const ts = timestampRef.current;
+    if (!row || !ts) return;
+    const pr = row.getBoundingClientRect();
+    const tr = ts.getBoundingClientRect();
+    setDividerLeftPx(
+      Math.max(0, Math.round(tr.right - pr.left + gapPx)),
+    );
+  }, [gapPx]);
+
+  useLayoutEffect(() => {
+    update();
+    const ts = timestampRef.current;
+    if (!ts) return;
+    const ro = new ResizeObserver(() => update());
+    ro.observe(ts);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [update, measureDep]);
+
+  return {
+    metaRowRef,
+    timestampRef,
+    dividerLeftPx: dividerLeftPx ?? 72,
+  };
+}
+
+function TopQuestionCardMetaBar({
+  question,
+  profile,
+  expandedTagsQuestionId,
+  setExpandedTagsQuestionId,
+}: {
+  question: TopQuestion;
+  profile: { username?: string | null } | null;
+  expandedTagsQuestionId: string | null;
+  setExpandedTagsQuestionId: React.Dispatch<
+    React.SetStateAction<string | null>
+  >;
+}) {
+  const { metaRowRef, timestampRef, dividerLeftPx } = useTimestampDividerLeft(
+    `${question.id}:${question.createdAt}`,
+    TOP_QUESTION_TIMESTAMP_DIVIDER_GAP_PX,
+  );
+
+  return (
+    <div
+      ref={metaRowRef}
+      className="relative flex flex-wrap items-center gap-2 pt-2 mt-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]"
+    >
+      <div
+        className="absolute top-0 right-0 h-px bg-gray-100 dark:bg-gray-700"
+        style={{ left: dividerLeftPx }}
+        aria-hidden
+      />
+      <div
+        ref={timestampRef}
+        className="absolute -left-2 sm:left-2 -top-[8px] px-1 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"
+      >
+        <Clock size={12} />
+        <span>{timeAgo(question.createdAt)}</span>
+      </div>
+      {question.author.username ? (
+        <Link
+          href={
+            profile?.username &&
+            question.author.username &&
+            profile.username === question.author.username
+              ? "/profile"
+              : `/profile/${encodeURIComponent(question.author.username)}`
+          }
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
+        >
+          <TopQuestionCardAuthorAvatar
+            avatarUrl={question.author.avatar_url}
+            username={question.author.username}
+            isOnline={isOnline(question.author.lastSeenAt)}
+          />
+        </Link>
+      ) : (
+        <>
+          <TopQuestionCardAuthorAvatar
+            avatarUrl={question.author.avatar_url}
+            username={question.author.username || ""}
+            isOnline={isOnline(question.author.lastSeenAt)}
+          />
+        </>
+      )}
+      <span className="text-[0.9075rem] font-semibold text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
+        {question.author.username ? (
+          <Link
+            href={
+              profile?.username &&
+              question.author.username &&
+              profile.username === question.author.username
+                ? "/profile"
+                : `/profile/${encodeURIComponent(question.author.username)}`
+            }
+            onClick={(e) => e.stopPropagation()}
+            className="hover:underline font-inherit"
+          >
+            {question.author.username}
+          </Link>
+        ) : (
+          "אנונימי"
+        )}
+      </span>
+      <div className="flex items-center gap-0.5" title="תגובות">
+        <MessageCircle size={15} />
+        <span>{question.replies}</span>
+      </div>
+      <div className="flex items-center gap-0.5" title="צפיות">
+        <Eye size={15} />
+        <span>{question.views}</span>
+      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpandedTagsQuestionId((id) =>
+            id === question.id ? null : question.id,
+          );
+        }}
+        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ms-auto relative left-px -translate-x-3 sm:-translate-x-[-12px]"
+        aria-expanded={expandedTagsQuestionId === question.id}
+        title={
+          expandedTagsQuestionId === question.id ? "הסתר תגיות" : "הצג תגיות"
+        }
+      >
+        <ChevronDown
+          size={12}
+          className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
+        />
+        הצג תגיות
+      </button>
+    </div>
+  );
 }
 
 function ForumHomepage() {
@@ -515,104 +673,12 @@ function ForumHomepage() {
                           </h3>
                         </div>
 
-                        <div className="relative flex flex-wrap items-center gap-2 pt-2 mt-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]">
-                          <div
-                            className="absolute top-0 right-0 left-[110px] h-px bg-gray-100 dark:bg-gray-700"
-                            aria-hidden
-                          />
-                          <div className="absolute left-2 -top-[8px] px-2 bg-white dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                            <Clock size={12} />
-                            <span>{timeAgo(question.createdAt)}</span>
-                          </div>
-                          {question.author.username ? (
-                            <Link
-                              href={
-                                profile?.username &&
-                                question.author.username &&
-                                profile.username === question.author.username
-                                  ? "/profile"
-                                  : `/profile/${encodeURIComponent(question.author.username)}`
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
-                            >
-                              <TopQuestionCardAuthorAvatar
-                                avatarUrl={question.author.avatar_url}
-                                username={question.author.username}
-                                isOnline={isOnline(
-                                  question.author.lastSeenAt,
-                                )}
-                              />
-                            </Link>
-                          ) : (
-                            <>
-                              <TopQuestionCardAuthorAvatar
-                                avatarUrl={question.author.avatar_url}
-                                username={question.author.username || ""}
-                                isOnline={isOnline(
-                                  question.author.lastSeenAt,
-                                )}
-                              />
-                            </>
-                          )}
-                          <span className="text-[0.9075rem] font-semibold text-gray-600 dark:text-gray-300 sm:text-[1.059rem]">
-                            {question.author.username ? (
-                              <Link
-                                href={
-                                  profile?.username &&
-                                  question.author.username &&
-                                  profile.username === question.author.username
-                                    ? "/profile"
-                                    : `/profile/${encodeURIComponent(question.author.username)}`
-                                }
-                                onClick={(e) => e.stopPropagation()}
-                                className="hover:underline font-inherit"
-                              >
-                                {question.author.username}
-                              </Link>
-                            ) : (
-                              "אנונימי"
-                            )}
-                          </span>
-                          <div
-                            className="flex items-center gap-2"
-                            title="תגובות"
-                          >
-                            <MessageCircle size={15} />
-                            <span>{question.replies}</span>
-                          </div>
-                          <div
-                            className="flex items-center gap-2"
-                            title="צפיות"
-                          >
-                            <Eye size={15} />
-                            <span>{question.views}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExpandedTagsQuestionId((id) =>
-                                id === question.id ? null : question.id,
-                              );
-                            }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ms-auto -translate-x-[-12px]"
-                            aria-expanded={
-                              expandedTagsQuestionId === question.id
-                            }
-                            title={
-                              expandedTagsQuestionId === question.id
-                                ? "הסתר תגיות"
-                                : "הצג תגיות"
-                            }
-                          >
-                            <ChevronDown
-                              size={12}
-                              className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
-                            />
-                            הצג תגיות
-                          </button>
-                        </div>
+                        <TopQuestionCardMetaBar
+                          question={question}
+                          profile={profile}
+                          expandedTagsQuestionId={expandedTagsQuestionId}
+                          setExpandedTagsQuestionId={setExpandedTagsQuestionId}
+                        />
                         {/* Tags (when expanded) - below meta bar like Question page */}
                         {expandedTagsQuestionId === question.id && (
                           <div className="flex gap-1.5 flex-wrap mt-3 -translate-y-[12px] sm:-translate-y-[7px]">

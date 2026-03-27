@@ -66,9 +66,33 @@ Use one of these on the root wrapper of every page.
 
 The app also defines CSS variables in `:root` and `.dark` for `--background`, `--foreground`, `--card`, `--border`, etc. Components like the shared `Card` use `bg-card` and `text-card-foreground`, so they follow the theme automatically. Prefer semantic tokens when using those components; for ad-hoc layout use the Tailwind patterns above with explicit `dark:` variants.
 
+## Meta row: relative time + horizontal divider (card footers)
+
+Several cards show a **Clock + relative time** chip sitting on a **thin horizontal rule** above the author/actions row. The time string length varies (`הרגע`, `לפני N דקות`, full dates, etc.). **Do not** rely on a fixed `left-[…]` for the divider start: it will either collide with short labels or leave a huge gap for long ones.
+
+### Pattern to follow
+
+1. **Refs** on (a) the **meta row** container (`position: relative`) and (b) the **timestamp** chip.
+2. **`useTimestampDividerLeft(measureDep, gapPx)`** (same logic in multiple files today): `useLayoutEffect` + **`ResizeObserver`** on the timestamp node + **`resize`** listener; compute `left = timestampRect.right - metaRowRect.left + gapPx` (pixels), clamp at ≥ 0; store in state; render the divider with **`style={{ left: dividerLeftPx }}`** and **`right: 0`** (or `right-2` if the design needs inset from the card edge, e.g. status feed).
+3. **Gap** between chip and line: use a small constant (typically **8px**), e.g. `*_TIMESTAMP_DIVIDER_GAP_PX = 8`, so spacing stays consistent across pages.
+4. **Fallback** before first measure: e.g. `dividerLeftPx ?? 72` to avoid a flash from `0`.
+5. **Timestamp chip**: compact padding **`px-1`**, icon/text **`gap-0.5`**; **opaque background** (`bg-white` / `dark:bg-gray-800` or card-tinted variants) so the line appears to break under the chip.
+6. **Divider**: `absolute top-0` + full width via **`right-0`** (and optional `right-2`); **`h-px`** + muted border colors (`bg-gray-100 dark:bg-gray-700`, or amber on highlighted cards).
+
+### Implementations (keep in sync when changing the pattern)
+
+| Location | Notes |
+| --- | --- |
+| `app/questions/page.tsx` | `QuestionListCardMetaBar`, `QUESTION_LIST_TIMESTAMP_DIVIDER_GAP_PX` |
+| `app/questions/[id]/page.tsx` | `useTimestampDividerLeft`, question meta bar + `AnswerCardMetaFooter` |
+| `app/status/page.tsx` | `StatusCardFeedMetaRow`, `STATUS_CARD_TIMESTAMP_DIVIDER_GAP_PX`; divider uses `right-2` |
+
+If a fourth surface needs the same behavior, consider extracting the hook to **`hooks/useTimestampDividerLeft.ts`** and importing it to avoid drift.
+
 ## Checklist for new pages
 
 1. Add a root wrapper with a page background class (see Page background).
 2. Use the card/surface and text patterns for all containers and copy.
 3. Add `dark:` variants to every `bg-*`, `text-*`, and `border-*` used for layout and content.
 4. Test with theme toggle (Settings or system preference) to ensure no light-only or dark-only elements.
+5. If the page includes a **timestamp + top rule** on a card footer, follow **Meta row: relative time + horizontal divider** above instead of a fixed `left-[…]` on the divider.

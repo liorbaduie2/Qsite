@@ -107,7 +107,7 @@
 - Runtime: client
 - Description: Fixed bottom bar (menu, search/history, create, notifications, chat); uses scroll-to-top helper after push/replace navigations.
 - Exports: `MobileNavbar`
-- Named functions: `MobileNavCreateQuestionIcon`, `MobileNavWriteAnswerIcon`, `fetchChatUnreadCount`, `navigateFromMobileNav`, `onComposerState`, `onDrawerState`, `onHistoryState`, `onPostLockState`, `onQuestionsSearchState`
+- Named functions: `MobileNavCreateQuestionIcon`, `MobileNavWriteAnswerIcon`, `fetchChatUnreadCount`, `navigateFromMobileNav`, `onComposerState`, `onDrawerState`, `onHistoryState`, `onPostLockState`, `onQuestionsSearchState`, `onReplySheet`
 - Fetch calls: `/api/chat/unread-count`
 - Supabase tables/views: None
 - Supabase RPCs: None
