@@ -679,7 +679,7 @@ function ForumHomepage() {
                         />
                         {/* Tags (when expanded) - below meta bar like Question page */}
                         {expandedTagsQuestionId === question.id && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
+                          <div className="mt-[-5px] flex flex-wrap gap-1.5">
                             {question.tags.length > 0 ? (
                               question.tags.map((tag) => (
                                 <Link
