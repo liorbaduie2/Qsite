@@ -19,8 +19,6 @@ import {
   User,
   Eye,
   MessageCircle,
-  ArrowUp,
-  ArrowDown,
   Star,
   Clock,
   ChevronDown,
@@ -67,7 +65,6 @@ interface TopQuestion {
   id: string;
   title: string;
   content: string;
-  votes: number;
   replies: number;
   views: number;
   createdAt: string;
@@ -253,34 +250,38 @@ function TopQuestionCardMetaBar({
           "אנונימי"
         )}
       </span>
-      <div className="flex items-center gap-0.5" title="תגובות">
-        <MessageCircle size={15} />
-        <span>{question.replies}</span>
+      <div className="ms-auto flex flex-col items-end gap-0.5 relative translate-x-2 sm:translate-x-4">
+        <div className="flex translate-x-[2px] translate-y-1 items-center gap-2">
+          <div className="flex items-center gap-0.5" title="תגובות">
+            <MessageCircle size={15} />
+            <span>{question.replies}</span>
+          </div>
+          <div className="flex items-center gap-0.5" title="צפיות">
+            <Eye size={15} />
+            <span>{question.views}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpandedTagsQuestionId((id) =>
+              id === question.id ? null : question.id,
+            );
+          }}
+          className="inline-flex -translate-x-[6px] sm:-translate-x-[4px] items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          aria-expanded={expandedTagsQuestionId === question.id}
+          title={
+            expandedTagsQuestionId === question.id ? "הסתר תגיות" : "הצג תגיות"
+          }
+        >
+          <ChevronDown
+            size={12}
+            className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
+          />
+          הצג תגיות
+        </button>
       </div>
-      <div className="flex items-center gap-0.5" title="צפיות">
-        <Eye size={15} />
-        <span>{question.views}</span>
-      </div>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setExpandedTagsQuestionId((id) =>
-            id === question.id ? null : question.id,
-          );
-        }}
-        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ms-auto relative left-px -translate-x-3 sm:-translate-x-[-12px]"
-        aria-expanded={expandedTagsQuestionId === question.id}
-        title={
-          expandedTagsQuestionId === question.id ? "הסתר תגיות" : "הצג תגיות"
-        }
-      >
-        <ChevronDown
-          size={12}
-          className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
-        />
-        הצג תגיות
-      </button>
     </div>
   );
 }
@@ -299,15 +300,9 @@ function ForumHomepage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   usePresenceTick(); // re-evaluate isOnline every 30s
-  const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
-  const [updatingVoteIds, setUpdatingVoteIds] = useState<
-    Record<string, boolean>
-  >({});
   const [expandedTagsQuestionId, setExpandedTagsQuestionId] = useState<
     string | null
   >(null);
-  const voteRequestsRef = useRef(new Set<string>());
-  const isGuest = !user;
 
   useEffect(() => {
     if (isRegisterModalOpen || isLoginModalOpen) {
@@ -343,9 +338,6 @@ function ForumHomepage() {
           sort: "votes",
           limit: "5",
         });
-        if (user?.id) {
-          params.set("includeUserVotes", "1");
-        }
 
         const res = await fetch(`/api/questions?${params.toString()}`);
         const data = await res.json();
@@ -356,7 +348,6 @@ function ForumHomepage() {
         }
 
         setTopQuestions(data.questions || []);
-        setUserVotes(user?.id ? data.userVotes || {} : {});
       } catch {
         setTopQuestionsError("שגיאה בטעינת השאלות המובילות");
       } finally {
@@ -370,85 +361,6 @@ function ForumHomepage() {
   const handleLogin = () => setIsLoginModalOpen(true);
   const handleRegister = () => setIsRegisterModalOpen(true);
 
-  const handleVote = async (
-    event: React.MouseEvent,
-    questionId: string,
-    voteType: 1 | -1,
-  ) => {
-    event.stopPropagation();
-    if (!user) {
-      handleLogin();
-      return;
-    }
-    if (voteRequestsRef.current.has(questionId)) return;
-
-    const currentQuestion = topQuestions.find(
-      (question) => question.id === questionId,
-    );
-    if (!currentQuestion) return;
-
-    const previousVote = userVotes[questionId] ?? 0;
-    const optimisticVote = previousVote === voteType ? 0 : voteType;
-    const previousVotesCount = currentQuestion.votes;
-    const optimisticVotesCount =
-      previousVotesCount + (optimisticVote - previousVote);
-
-    voteRequestsRef.current.add(questionId);
-    setUpdatingVoteIds((prev) => ({ ...prev, [questionId]: true }));
-    setTopQuestions((prev) =>
-      prev.map((question) =>
-        question.id === questionId
-          ? { ...question, votes: optimisticVotesCount }
-          : question,
-      ),
-    );
-    setUserVotes((prev) => ({ ...prev, [questionId]: optimisticVote }));
-    try {
-      const res = await fetch(`/api/questions/${questionId}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voteType }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setTopQuestions((prev) =>
-          prev.map((question) =>
-            question.id === questionId
-              ? { ...question, votes: previousVotesCount }
-              : question,
-          ),
-        );
-        setUserVotes((prev) => ({ ...prev, [questionId]: previousVote }));
-        return;
-      }
-      const resolvedVote =
-        data.userVote === 1 || data.userVote === -1 ? data.userVote : 0;
-      setTopQuestions((prev) =>
-        prev.map((question) =>
-          question.id === questionId
-            ? { ...question, votes: data.votes ?? question.votes }
-            : question,
-        ),
-      );
-      setUserVotes((prev) => ({ ...prev, [questionId]: resolvedVote }));
-    } catch {
-      setTopQuestions((prev) =>
-        prev.map((question) =>
-          question.id === questionId
-            ? { ...question, votes: previousVotesCount }
-            : question,
-        ),
-      );
-      setUserVotes((prev) => ({ ...prev, [questionId]: previousVote }));
-    } finally {
-      voteRequestsRef.current.delete(questionId);
-      setUpdatingVoteIds((prev) => {
-        const next = { ...prev };
-        delete next[questionId];
-        return next;
-      });
-    }
-  };
   const closeLoginModal = () => setIsLoginModalOpen(false);
   const closeRegisterModal = () => setIsRegisterModalOpen(false);
 
@@ -593,112 +505,55 @@ function ForumHomepage() {
                         : "cursor-default"
                     }`}
                   >
-                    {/* Card row: voting (left) | content (right) — same layout as questions page (mobile + desktop) */}
-                    <div className="flex flex-row" style={{ direction: "ltr" }}>
-                      {/* Vote column */}
-                      <div className="flex flex-col items-center justify-center gap-0.5 w-10 min-w-[40px] sm:min-w-[48px] sm:w-12 px-1 sm:px-2 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0 self-stretch">
-                        <button
-                          type="button"
-                          onClick={
-                            user
-                              ? (e) => handleVote(e, question.id, 1)
-                              : undefined
-                          }
-                          disabled={isGuest || !!updatingVoteIds[question.id]}
-                          className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] ${
-                            isGuest
-                              ? "cursor-not-allowed opacity-60"
-                              : "hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
-                          }`}
-                        >
-                          <ArrowUp
-                            size={25}
-                            className={
-                              userVotes[question.id] === 1
-                                ? "text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-400 dark:text-gray-500"
-                            }
-                          />
-                        </button>
-                        <span className="font-bold text-base text-gray-800 dark:text-gray-100 py-0.5 select-none">
-                          {question.votes}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={
-                            user
-                              ? (e) => handleVote(e, question.id, -1)
-                              : undefined
-                          }
-                          disabled={isGuest || !!updatingVoteIds[question.id]}
-                          className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation] ${
-                            isGuest
-                              ? "cursor-not-allowed opacity-60"
-                              : "hover:bg-indigo-100 active:bg-indigo-200 dark:hover:bg-indigo-900/50 dark:active:bg-indigo-800/50"
-                          }`}
-                        >
-                          <ArrowDown
-                            size={25}
-                            className={
-                              userVotes[question.id] === -1
-                                ? "text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-400 dark:text-gray-500"
-                            }
-                          />
-                        </button>
-                      </div>
-
-                      {/* Main content area */}
-                      <div
-                        className="flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-visible px-3 pt-2 pb-3 sm:px-4 sm:pt-3 sm:pb-3 sm:pr-6 text-right"
-                        style={{ direction: "rtl" }}
-                      >
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {question.isAnswered && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
-                                <Star
-                                  size={12}
-                                  className="ml-1"
-                                  fill="currentColor"
-                                />
-                                נענתה
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 break-words transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
-                            {question.title}
-                          </h3>
+                    <div
+                      className="flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-visible px-3 pt-2 pb-3 sm:px-4 sm:pt-3 sm:pb-3 sm:pr-6 text-right"
+                      dir="rtl"
+                    >
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {question.isAnswered && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
+                              <Star
+                                size={12}
+                                className="ml-1"
+                                fill="currentColor"
+                              />
+                              נענתה
+                            </span>
+                          )}
                         </div>
-
-                        <TopQuestionCardMetaBar
-                          question={question}
-                          profile={profile}
-                          expandedTagsQuestionId={expandedTagsQuestionId}
-                          setExpandedTagsQuestionId={setExpandedTagsQuestionId}
-                        />
-                        {/* Tags (when expanded) - below meta bar like Question page */}
-                        {expandedTagsQuestionId === question.id && (
-                          <div className="mt-[-5px] flex flex-wrap gap-1.5">
-                            {question.tags.length > 0 ? (
-                              question.tags.map((tag) => (
-                                <Link
-                                  key={tag}
-                                  href={`/questions?tag=${encodeURIComponent(tag)}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
-                                >
-                                  {tag}
-                                </Link>
-                              ))
-                            ) : (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                אין תגיות
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 break-words transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
+                          {question.title}
+                        </h3>
                       </div>
+
+                      <TopQuestionCardMetaBar
+                        question={question}
+                        profile={profile}
+                        expandedTagsQuestionId={expandedTagsQuestionId}
+                        setExpandedTagsQuestionId={setExpandedTagsQuestionId}
+                      />
+                      {/* Tags (when expanded) - below meta bar like Question page */}
+                      {expandedTagsQuestionId === question.id && (
+                        <div className="mt-[-5px] flex flex-wrap gap-1.5">
+                          {question.tags.length > 0 ? (
+                            question.tags.map((tag) => (
+                              <Link
+                                key={tag}
+                                href={`/questions?tag=${encodeURIComponent(tag)}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
+                              >
+                                {tag}
+                              </Link>
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              אין תגיות
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

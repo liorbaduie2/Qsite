@@ -121,17 +121,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const tag = searchParams.get("tag") || "";
     const sortBy = searchParams.get("sort") || "newest";
-    const includeUserVotes = searchParams.get("includeUserVotes") === "1";
     const limitParam = searchParams.get("limit");
     const limit = limitParam ? parseInt(limitParam, 10) : undefined;
-    let currentUserId: string | null = null;
-
-    if (includeUserVotes) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      currentUserId = user?.id ?? null;
-    }
 
     let weekStartIso: string | null = null;
 
@@ -267,43 +258,8 @@ export async function GET(request: NextRequest) {
           formatted.filter((q: any) => q.tags.includes(tag))
         : formatted;
 
-    let userVotes: Record<string, 1 | -1> = {};
-    if (includeUserVotes && currentUserId && visibleQuestions.length > 0) {
-      const questionIds = visibleQuestions.map((question) => question.id);
-      const { data: voteRows, error: votesError } = await supabase
-        .from("votes")
-        .select("question_id, vote_type")
-        .eq("user_id", currentUserId)
-        .in("question_id", questionIds);
-
-      if (votesError) {
-        console.error(
-          "Error fetching current user question votes:",
-          votesError,
-        );
-        return NextResponse.json(
-          { error: "שגיאה בטעינת ההצבעות" },
-          { status: 500 },
-        );
-      }
-
-      userVotes = Object.fromEntries(
-        (voteRows ?? [])
-          .filter(
-            (vote) =>
-              vote.question_id &&
-              (vote.vote_type === 1 || vote.vote_type === -1),
-          )
-          .map((vote) => [
-            vote.question_id as string,
-            vote.vote_type as 1 | -1,
-          ]),
-      );
-    }
-
     return NextResponse.json({
       questions: visibleQuestions,
-      ...(includeUserVotes ? { userVotes } : {}),
     });
   } catch (error) {
     console.error("Questions GET error:", error);

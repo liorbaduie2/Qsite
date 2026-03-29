@@ -17,8 +17,6 @@ import {
   Search,
   Eye,
   MessageCircle,
-  ArrowUp,
-  ArrowDown,
   Star,
   Crown,
   User,
@@ -51,7 +49,6 @@ interface Question {
     lastSeenAt?: string | null;
   };
   replies: number;
-  votes: number;
   views: number;
   createdAt: string;
   tags: string[];
@@ -70,7 +67,6 @@ const MOCK_QUESTIONS: Question[] = [
       avatar_url: null,
     },
     replies: 3,
-    votes: 12,
     views: 120,
     createdAt: new Date().toISOString(),
     tags: ["JavaScript", "React"],
@@ -87,7 +83,6 @@ const MOCK_QUESTIONS: Question[] = [
       avatar_url: null,
     },
     replies: 1,
-    votes: 5,
     views: 42,
     createdAt: new Date().toISOString(),
     tags: ["קריירה", "פיתוח"],
@@ -198,7 +193,7 @@ function QuestionListCardMetaBar({
   return (
     <div
       ref={metaRowRef}
-      className="relative mt-1 flex flex-wrap items-center gap-2 pt-2 pb-1 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]"
+      className="relative mt-1 flex flex-wrap items-center gap-2 pt-2 pb-0 text-[0.825rem] text-gray-500 dark:text-gray-400 sm:text-[0.9625rem]"
     >
       <div
         className="absolute top-0 right-0 h-px bg-gray-100 dark:bg-gray-700"
@@ -258,35 +253,96 @@ function QuestionListCardMetaBar({
           "אנונימי"
         )}
       </span>
-      <div className="flex items-center gap-1" title="תגובות">
-        <MessageCircle size={15} />
-        <span>{question.replies}</span>
+      <div className="ms-auto flex flex-col items-end gap-0.5 relative translate-x-2 sm:translate-x-4">
+        <div className="flex translate-x-[2px] translate-y-1 items-center gap-2">
+          <div className="flex items-center gap-1" title="תגובות">
+            <MessageCircle size={15} />
+            <span>{question.replies}</span>
+          </div>
+          <div className="flex items-center gap-1" title="צפיות">
+            <Eye size={15} />
+            <span>{question.views}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpandedTagsQuestionId((id) =>
+              id === question.id ? null : question.id,
+            );
+          }}
+          className="inline-flex -translate-x-[6px] sm:-translate-x-[4px] items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          aria-expanded={expandedTagsQuestionId === question.id}
+          title={
+            expandedTagsQuestionId === question.id ? "הסתר תגיות" : "הצג תגיות"
+          }
+        >
+          <ChevronDown
+            size={12}
+            className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
+          />
+          הצג תגיות
+        </button>
       </div>
-      <div className="flex items-center gap-1" title="צפיות">
-        <Eye size={15} />
-        <span>{question.views}</span>
-      </div>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setExpandedTagsQuestionId((id) =>
-            id === question.id ? null : question.id,
-          );
-        }}
-        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ms-auto relative left-px -translate-x-3 sm:-translate-x-[-12px]"
-        aria-expanded={expandedTagsQuestionId === question.id}
-        title={
-          expandedTagsQuestionId === question.id ? "הסתר תגיות" : "הצג תגיות"
-        }
-      >
-        <ChevronDown
-          size={12}
-          className={`transition-transform ${expandedTagsQuestionId === question.id ? "rotate-180" : ""}`}
-        />
-        הצג תגיות
-      </button>
     </div>
+  );
+}
+
+function SkeletonBox({ className }: { className: string }) {
+  return (
+    <div className={`relative shrink-0 overflow-hidden ${className}`}>
+      <div
+        className="absolute inset-0 rounded-[inherit] bg-gray-200 animate-pulse dark:bg-gray-700"
+        aria-hidden
+      />
+    </div>
+  );
+}
+
+/** Mirrors loaded question card DOM/classes for stable vertical rhythm while loading. */
+function QuestionListCardSkeleton() {
+  return (
+    <div className="block overflow-x-hidden overflow-y-visible rounded-2xl border border-gray-200/50 bg-white/70 shadow-md backdrop-blur-sm dark:border-gray-700/50 dark:bg-gray-800/70">
+      <div
+        className="flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-visible px-3 pb-[14px] pt-2 text-right sm:px-4 sm:pb-[18px] sm:pr-6 sm:pt-3"
+        dir="rtl"
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2" />
+          <SkeletonBox className="h-[1.375rem] w-full max-w-[92%] rounded sm:h-[1.5rem] sm:max-w-[88%]" />
+        </div>
+
+        <div className="relative mt-1 flex flex-wrap items-center gap-2 pb-0 pt-2 text-[0.825rem] sm:text-[0.9625rem]">
+          <div
+            className="absolute right-0 top-0 h-px bg-gray-100 dark:bg-gray-700"
+            style={{ left: 72 }}
+            aria-hidden
+          />
+          <div className="absolute -left-2 -top-[6px] px-1 sm:left-2">
+            <div className="bg-white dark:bg-gray-800">
+              <SkeletonBox className="h-5 w-16 rounded" />
+            </div>
+          </div>
+          <SkeletonBox className="size-8 shrink-0 translate-y-[4px] rounded-full sm:translate-y-[6px]" />
+          <SkeletonBox className="h-4 w-28 shrink-0 translate-y-[5px] rounded sm:h-5 sm:w-32 sm:translate-y-[7px]" />
+          <div className="ms-auto flex flex-col items-end gap-0.5 relative translate-x-2 sm:translate-x-4">
+            <SkeletonBox className="h-4 w-[4.5rem] shrink-0 -translate-x-[12px] translate-y-[8px] rounded sm:w-[5.25rem]" />
+            <SkeletonBox className="h-5 w-[4rem] shrink-0 -translate-x-[8px] translate-y-[8px] sm:-translate-x-[4px] rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuestionsListSkeletonCards() {
+  return (
+    <>
+      {Array.from({ length: 6 }, (_, i) => (
+        <QuestionListCardSkeleton key={i} />
+      ))}
+    </>
   );
 }
 
@@ -300,10 +356,6 @@ const QuestionsPage = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
-  const [updatingVoteIds, setUpdatingVoteIds] = useState<
-    Record<string, boolean>
-  >({});
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [expandedTagsQuestionId, setExpandedTagsQuestionId] = useState<
@@ -311,7 +363,6 @@ const QuestionsPage = () => {
   >(null);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
-  const voteRequestsRef = useRef(new Set<string>());
 
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const userId = user?.id ?? null;
@@ -358,7 +409,6 @@ const QuestionsPage = () => {
     if (!userId && !authLoading) {
       setFetchError(null);
       setQuestions(MOCK_QUESTIONS);
-      setUserVotes({});
       setLoadingQuestions(false);
       return;
     }
@@ -375,7 +425,6 @@ const QuestionsPage = () => {
       if (searchTerm) params.set("search", searchTerm);
       if (filterTag && filterTag !== "הכל") params.set("tag", filterTag);
       params.set("sort", sortBy);
-      params.set("includeUserVotes", "1");
 
       const res = await fetch(`/api/questions?${params.toString()}`);
       const data = await res.json();
@@ -386,7 +435,6 @@ const QuestionsPage = () => {
       }
 
       setQuestions(data.questions || []);
-      setUserVotes(data.userVotes || {});
     } catch {
       setFetchError("שגיאה בחיבור לשרת");
     } finally {
@@ -486,106 +534,101 @@ const QuestionsPage = () => {
     );
   }, [isSearchOpen]);
 
-  const handleVote = async (
-    event: React.MouseEvent,
-    questionId: string,
-    voteType: 1 | -1,
-  ) => {
-    event.stopPropagation();
-
-    if (!user) {
-      handleAuthAction("login");
-      return;
-    }
-
-    if (voteRequestsRef.current.has(questionId)) return;
-
-    const currentQuestion = questions.find(
-      (question) => question.id === questionId,
-    );
-    if (!currentQuestion) return;
-
-    const previousVote = userVotes[questionId] ?? 0;
-    const optimisticVote = previousVote === voteType ? 0 : voteType;
-    const previousVotesCount = currentQuestion.votes;
-    const optimisticVotesCount =
-      previousVotesCount + (optimisticVote - previousVote);
-
-    voteRequestsRef.current.add(questionId);
-    setUpdatingVoteIds((prev) => ({ ...prev, [questionId]: true }));
-    setQuestions((prev) =>
-      prev.map((question) =>
-        question.id === questionId
-          ? { ...question, votes: optimisticVotesCount }
-          : question,
-      ),
-    );
-    setUserVotes((prev) => ({
-      ...prev,
-      [questionId]: optimisticVote,
-    }));
-    try {
-      const res = await fetch(`/api/questions/${questionId}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voteType }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setQuestions((prev) =>
-          prev.map((question) =>
-            question.id === questionId
-              ? { ...question, votes: previousVotesCount }
-              : question,
-          ),
-        );
-        setUserVotes((prev) => ({
-          ...prev,
-          [questionId]: previousVote,
-        }));
-        return;
-      }
-
-      const resolvedVote =
-        data.userVote === 1 || data.userVote === -1 ? data.userVote : 0;
-
-      setQuestions((prev) =>
-        prev.map((q) =>
-          q.id === questionId ? { ...q, votes: data.votes ?? q.votes } : q,
-        ),
-      );
-
-      setUserVotes((prev) => ({
-        ...prev,
-        [questionId]: resolvedVote,
-      }));
-    } catch {
-      setQuestions((prev) =>
-        prev.map((question) =>
-          question.id === questionId
-            ? { ...question, votes: previousVotesCount }
-            : question,
-        ),
-      );
-      setUserVotes((prev) => ({
-        ...prev,
-        [questionId]: previousVote,
-      }));
-    } finally {
-      voteRequestsRef.current.delete(questionId);
-      setUpdatingVoteIds((prev) => {
-        const next = { ...prev };
-        delete next[questionId];
-        return next;
-      });
-    }
-  };
-
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+      <div
+        className="min-h-screen relative bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+        dir="rtl"
+        style={{ fontFamily: "Assistant, system-ui, sans-serif" }}
+      >
+        <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_40%_40%,rgba(236,72,153,0.05)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
+
+        <div className="hidden md:block">
+          <NavHeader
+            title="שאלות ותשובות"
+            wide
+            onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+            rightContent={
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSearchOpen((prev) => !prev)}
+                  className="flex items-center justify-center p-2.5 text-gray-700 dark:text-gray-200 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-300"
+                  aria-expanded={isSearchOpen}
+                  aria-label={isSearchOpen ? "סגור חיפוש" : "חפש שאלות"}
+                >
+                  <Search size={20} />
+                </button>
+                <BubbleButton onClick={handleNewQuestion} size="sm">
+                  <span className="flex items-center gap-1">
+                    <Plus size={18} />
+                    שאלה חדשה
+                  </span>
+                </BubbleButton>
+                <button
+                  type="button"
+                  onClick={() => handleAuthAction("login")}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-700/60 rounded-lg hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all duration-300 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 dark:hover:border-indigo-700"
+                >
+                  <LogIn size={16} /> התחברות
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAuthAction("register")}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  <User size={16} /> הרשמה
+                </button>
+              </div>
+            }
+          />
+        </div>
+
+        <Drawer
+          isDrawerOpen={isDrawerOpen}
+          setIsDrawerOpen={setIsDrawerOpen}
+          menuItems={menuItems}
+          user={user}
+          profile={profile}
+          onSignOut={handleSignOut}
+          onOpenLoginModal={() => {
+            setIsDrawerOpen(false);
+            setIsLoginModalOpen(true);
+          }}
+        />
+
+        <main className="mx-auto w-full max-w-6xl px-4 pt-4 pb-5 sm:px-5 sm:pt-6 sm:pb-6 md:py-8">
+          <div className="space-y-3" aria-busy="true" aria-label="טוען שאלות">
+            <QuestionsListSkeletonCards />
+          </div>
+        </main>
+
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={closeLogin}
+          onSwitchToRegister={() => {
+            closeLogin();
+            handleAuthAction("register");
+          }}
+          canClose={canClose}
+        />
+        <RegisterModal
+          isOpen={isRegisterModalOpen}
+          onClose={closeRegister}
+          onSwitchToLogin={() => {
+            closeRegister();
+            setIsLoginModalOpen(true);
+          }}
+          canClose={false}
+        />
+
+        {isNewQuestionModalOpen && (
+          <NewQuestionModal
+            isOpen={isNewQuestionModalOpen}
+            onClose={() => setIsNewQuestionModalOpen(false)}
+            onQuestionCreated={fetchQuestions}
+          />
+        )}
       </div>
     );
   }
@@ -743,11 +786,13 @@ const QuestionsPage = () => {
         )}
 
         {/* Questions List */}
-        <div className="space-y-3">
+        <div
+          className="space-y-3"
+          aria-busy={loadingQuestions || undefined}
+          aria-label={loadingQuestions ? "טוען שאלות" : undefined}
+        >
           {loadingQuestions ? (
-            <div className="flex justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
-            </div>
+            <QuestionsListSkeletonCards />
           ) : fetchError ? (
             <div className="text-center py-12">
               <div className="text-red-400 dark:text-red-500 mb-4">
@@ -787,96 +832,55 @@ const QuestionsPage = () => {
                     <span>שאלת השבוע</span>
                   </div>
                 )}
-                {/* Card row: voting (left) | content (right) — same layout as index */}
-                <div className="flex flex-row" style={{ direction: "ltr" }}>
-                  {/* Vote column */}
-                  <div className="flex flex-col items-center justify-center gap-0.5 w-10 min-w-[40px] sm:min-w-[48px] sm:w-12 px-1 sm:px-2 border-r border-gray-200/80 dark:border-gray-600/80 bg-gray-50/80 dark:bg-gray-900/50 shrink-0 self-stretch">
-                    <button
-                      type="button"
-                      onClick={(e) => handleVote(e, question.id, 1)}
-                      disabled={!!updatingVoteIds[question.id]}
-                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation]"
-                    >
-                      <ArrowUp
-                        size={25}
-                        className={
-                          userVotes[question.id] === 1
-                            ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-gray-400 dark:text-gray-500"
-                        }
-                      />
-                    </button>
-                    <span className="font-bold text-base text-gray-800 dark:text-gray-100 py-0.5 select-none">
-                      {question.votes}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => handleVote(e, question.id, -1)}
-                      disabled={!!updatingVoteIds[question.id]}
-                      className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md p-1.5 transition-colors [touch-action:manipulation]"
-                    >
-                      <ArrowDown
-                        size={25}
-                        className={
-                          userVotes[question.id] === -1
-                            ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-gray-400 dark:text-gray-500"
-                        }
-                      />
-                    </button>
-                  </div>
-
-                  {/* Main content area */}
-                  <div
-                    className="flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-visible px-3 pt-2 pb-3 sm:px-4 sm:pt-3 sm:pb-3 sm:pr-6 text-right"
-                    style={{ direction: "rtl" }}
-                  >
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {question.isAnswered && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
-                            <Star
-                              size={12}
-                              className="ml-1"
-                              fill="currentColor"
-                            />
-                            נענתה
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 break-words transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
-                        {question.title}
-                      </h3>
+                <div
+                  className="flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-visible px-3 pt-2 pb-2 sm:px-4 sm:pt-3 sm:pb-2 sm:pr-6 text-right"
+                  dir="rtl"
+                >
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {question.isAnswered && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
+                          <Star
+                            size={12}
+                            className="ml-1"
+                            fill="currentColor"
+                          />
+                          נענתה
+                        </span>
+                      )}
                     </div>
-
-                    <QuestionListCardMetaBar
-                      question={question}
-                      profile={profile}
-                      expandedTagsQuestionId={expandedTagsQuestionId}
-                      setExpandedTagsQuestionId={setExpandedTagsQuestionId}
-                    />
-                    {/* Tags (when expanded) - below meta bar like Question Details */}
-                    {expandedTagsQuestionId === question.id && (
-                      <div className="mt-[-5px] flex flex-wrap gap-1.5">
-                        {question.tags.length > 0 ? (
-                          question.tags.map((tag) => (
-                            <Link
-                              key={tag}
-                              href={`/questions?tag=${encodeURIComponent(tag)}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
-                            >
-                              {tag}
-                            </Link>
-                          ))
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            אין תגיות
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    <h3 className="text-[1.1rem] font-bold leading-snug text-gray-800 break-words transition-colors duration-300 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 sm:text-[1.2375rem]">
+                      {question.title}
+                    </h3>
                   </div>
+
+                  <QuestionListCardMetaBar
+                    question={question}
+                    profile={profile}
+                    expandedTagsQuestionId={expandedTagsQuestionId}
+                    setExpandedTagsQuestionId={setExpandedTagsQuestionId}
+                  />
+                  {/* Tags (when expanded) - below meta bar like Question Details */}
+                  {expandedTagsQuestionId === question.id && (
+                    <div className="mt-[-5px] flex flex-wrap gap-1.5">
+                      {question.tags.length > 0 ? (
+                        question.tags.map((tag) => (
+                          <Link
+                            key={tag}
+                            href={`/questions?tag=${encodeURIComponent(tag)}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors"
+                          >
+                            {tag}
+                          </Link>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          אין תגיות
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))

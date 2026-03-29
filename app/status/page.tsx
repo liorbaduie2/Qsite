@@ -174,7 +174,7 @@ function StatusCardFeedMetaRow({
   return (
     <div
       ref={metaRowRef}
-      className="relative mt-0 flex w-full min-w-0 flex-wrap items-center justify-between gap-1.5 pt-2 pb-1"
+      className="relative mt-0 flex w-full min-w-0 flex-wrap items-center justify-between gap-1.5 pt-2 pb-0"
     >
       <div
         className={`absolute top-0 right-2 h-px ${
@@ -862,7 +862,7 @@ export default function StatusPage() {
   ) => (
     <div
       key={item.id}
-      className={`relative min-w-0 overflow-x-hidden overflow-y-visible rounded-2xl border px-4 pt-4 pb-5 transition-all ${
+      className={`relative min-w-0 overflow-x-hidden overflow-y-visible rounded-2xl border px-4 pt-4 pb-3 transition-all ${
         highlighted
           ? "bg-amber-50/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700/50 shadow-md ring-2 ring-amber-200/50 dark:ring-amber-700/30"
           : "bg-white/80 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50 shadow-md"
@@ -950,10 +950,10 @@ export default function StatusPage() {
               void toggleStar(id);
             }}
             disabled={starringId === item.id}
-            className={`relative isolate flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 translate-y-[5px] overflow-visible active:scale-[0.96] motion-reduce:active:scale-100 motion-safe:transition-transform ${
+            className={`relative isolate flex items-center gap-1 rounded-md py-0.5 text-sm font-medium transition-colors duration-200 translate-y-[2px] overflow-visible active:scale-[0.96] motion-reduce:active:scale-100 motion-safe:transition-transform disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 dark:focus-visible:ring-amber-500/40 ${
               item.starredByMe
-                ? "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
-                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30"
+                ? "text-amber-700 dark:text-amber-300"
+                : "text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
             }`}
           >
             <span className="relative z-10 inline-flex size-4 shrink-0 items-center justify-center overflow-visible">

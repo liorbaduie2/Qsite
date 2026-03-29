@@ -54,7 +54,6 @@ interface QuestionDetail {
   id: string;
   title: string;
   content: string;
-  votes: number;
   replies: number;
   views: number;
   answers: number;
@@ -64,7 +63,6 @@ interface QuestionDetail {
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
-  userVote: 1 | -1 | 0;
   author: {
     id: string;
     username: string;
@@ -102,12 +100,24 @@ interface AnswerThread {
   replies: ThreadReply[];
 }
 
+function SkeletonBox({ className }: { className: string }) {
+  return (
+    <div
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden ${className}`}
+    >
+      <div
+        className="absolute inset-0 rounded-[inherit] bg-gray-200 dark:bg-gray-700 animate-pulse"
+        aria-hidden
+      />
+    </div>
+  );
+}
+
 const MOCK_QUESTION: QuestionDetail = {
   id: "mock-question",
   title: "שאלה לדוגמה – התחבר כדי לראות תוכן אמיתי",
   content:
     "לאחר ההתחברות תוכל לראות כאן את השאלה המלאה והתשובות האמיתיות מהקהילה.",
-  votes: 0,
   replies: 2,
   views: 0,
   answers: 2,
@@ -117,7 +127,6 @@ const MOCK_QUESTION: QuestionDetail = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   lastActivityAt: new Date().toISOString(),
-  userVote: 0,
   author: {
     id: "mock-author",
     username: "example_user",
@@ -351,10 +360,7 @@ function AnswerCardAuthorAvatar({
   }
 
   return (
-    <span
-      className="relative inline-flex shrink-0"
-      title="שואל השאלה"
-    >
+    <span className="relative inline-flex shrink-0" title="שואל השאלה">
       {core}
       <span
         className="pointer-events-none absolute -bottom-0.5 -end-0.5 z-10 flex h-[15px] w-[15px] -translate-x-1 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-[10px] font-bold leading-none text-white shadow-sm dark:border-gray-800 dark:bg-blue-500"
@@ -518,20 +524,12 @@ export default function QuestionDetailPage() {
   const [requestRemovalReason, setRequestRemovalReason] = useState("");
   const [submittingRemovalRequest, setSubmittingRemovalRequest] =
     useState(false);
+  const [deletingAnswerId, setDeletingAnswerId] = useState<string | null>(null);
+  const [deletingAnswer, setDeletingAnswer] = useState(false);
   const [reportingAnswer, setReportingAnswer] = useState<Answer | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportError, setReportError] = useState("");
-  const [showVoteDetailsModal, setShowVoteDetailsModal] = useState(false);
-  const [voteDetailsLoading, setVoteDetailsLoading] = useState(false);
-  const [voteDetailsError, setVoteDetailsError] = useState<string | null>(null);
-  const [voteDetails, setVoteDetails] = useState<{
-    upvotes: VoteUserEntry[];
-    downvotes: VoteUserEntry[];
-  }>({
-    upvotes: [],
-    downvotes: [],
-  });
   const [showAnswerVoteDetailsModal, setShowAnswerVoteDetailsModal] =
     useState(false);
   const [answerVoteDetailsAnswerId, setAnswerVoteDetailsAnswerId] = useState<
@@ -609,6 +607,9 @@ export default function QuestionDetailPage() {
   const canRemove =
     question &&
     user &&
+    (userPermissions?.role === "owner" || userPermissions?.role === "guardian");
+  const canDeleteAnswer =
+    !!user &&
     (userPermissions?.role === "owner" || userPermissions?.role === "guardian");
   const canRequestRemoval =
     question && user && userPermissions?.role === "admin";
@@ -786,84 +787,6 @@ export default function QuestionDetailPage() {
     });
   }, []);
 
-  const handleQuestionVote = async (voteType: 1 | -1) => {
-    if (!id) return;
-
-    if (!user) {
-      handleAuthAction("login");
-      return;
-    }
-
-    const currentQuestion = question;
-    if (!currentQuestion) return;
-
-    const previousVote = currentQuestion.userVote ?? 0;
-    const optimisticVote = previousVote === voteType ? 0 : voteType;
-    const previousVotesCount = currentQuestion.votes;
-    const optimisticVotesCount =
-      previousVotesCount + (optimisticVote - previousVote);
-    const voteKey = `question:${id}`;
-    if (voteRequestsRef.current.has(voteKey)) return;
-
-    voteRequestsRef.current.add(voteKey);
-    setVoteLoading(voteKey, true);
-    setQuestion((current) =>
-      current
-        ? {
-            ...current,
-            votes: optimisticVotesCount,
-            userVote: optimisticVote,
-          }
-        : current,
-    );
-    try {
-      const res = await fetch(`/api/questions/${id}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voteType }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setQuestion((current) =>
-          current
-            ? {
-                ...current,
-                votes: previousVotesCount,
-                userVote: previousVote,
-              }
-            : current,
-        );
-        return;
-      }
-
-      const resolvedVote =
-        data.userVote === 1 || data.userVote === -1 ? data.userVote : 0;
-      setQuestion((currentQuestion) =>
-        currentQuestion
-          ? {
-              ...currentQuestion,
-              votes: data.votes ?? currentQuestion.votes,
-              userVote: resolvedVote,
-            }
-          : currentQuestion,
-      );
-    } catch {
-      setQuestion((current) =>
-        current
-          ? {
-              ...current,
-              votes: previousVotesCount,
-              userVote: previousVote,
-            }
-          : current,
-      );
-    } finally {
-      voteRequestsRef.current.delete(voteKey);
-      setVoteLoading(voteKey, false);
-    }
-  };
-
   const handleAnswerVote = async (answerId: string, voteType: 1 | -1) => {
     if (!id) return;
 
@@ -993,34 +916,6 @@ export default function QuestionDetailPage() {
       setReportError("שגיאה בחיבור לשרת");
     } finally {
       setReportSubmitting(false);
-    }
-  };
-
-  const handleOpenVoteDetails = async () => {
-    if (!id) return;
-
-    setQuestionMenuOpen(false);
-    setShowVoteDetailsModal(true);
-    setVoteDetailsLoading(true);
-    setVoteDetailsError(null);
-    setVoteDetails({ upvotes: [], downvotes: [] });
-    try {
-      const res = await fetch(`/api/questions/${id}/votes`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        setVoteDetailsError(data.error || "שגיאה בטעינת פרטי ההצבעות");
-        return;
-      }
-
-      setVoteDetails({
-        upvotes: Array.isArray(data.upvotes) ? data.upvotes : [],
-        downvotes: Array.isArray(data.downvotes) ? data.downvotes : [],
-      });
-    } catch {
-      setVoteDetailsError("שגיאה בחיבור לשרת");
-    } finally {
-      setVoteDetailsLoading(false);
     }
   };
 
@@ -1321,6 +1216,28 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const handleConfirmDeleteAnswer = async () => {
+    if (!deletingAnswerId || !id) return;
+    setDeletingAnswer(true);
+    try {
+      const res = await fetch(
+        `/api/questions/${id}/answers/${deletingAnswerId}`,
+        { method: "DELETE" },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "שגיאה במחיקת התשובה");
+        return;
+      }
+      fetchAnswers();
+    } catch {
+      alert("שגיאה בחיבור לשרת");
+    } finally {
+      setDeletingAnswer(false);
+      setDeletingAnswerId(null);
+    }
+  };
+
   const handleOpenRequestRemoval = () => {
     setRequestRemovalReason("");
     setShowRequestRemovalModal(true);
@@ -1362,8 +1279,169 @@ export default function QuestionDetailPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+      <div
+        className="min-h-screen relative bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+        dir="rtl"
+        style={{ fontFamily: "Assistant, system-ui, sans-serif" }}
+      >
+        <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_40%_40%,rgba(236,72,153,0.05)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.08)_0%,transparent_50%)]" />
+
+        <div className="hidden md:block">
+          <NavHeader
+            title="שאלות ותשובות"
+            wide
+            onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
+          />
+        </div>
+
+        <main className="mx-auto w-full min-w-0 max-w-4xl px-5 relative max-md:pt-[max(1rem,env(safe-area-inset-top))] md:pt-4 max-md:pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-8">
+          <div className="space-y-4">
+            {/* Question card skeleton */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200/50 bg-white/80 shadow-md backdrop-blur-sm dark:border-gray-700/50 dark:bg-gray-800/70">
+                <div className="min-w-0 flex-1 pb-4 pl-6 pr-3 pt-1.5 max-md:pl-3">
+                  {/* Title row */}
+                  <div className="mb-1 flex min-w-0 items-center gap-0">
+                    <SkeletonBox className="-ml-2 h-6 w-3/4 rounded-lg md:-ml-2.5 md:h-8" />
+                  </div>
+
+                  {/* Content body */}
+                  <div className="mb-2 mt-4">
+                    <SkeletonBox className="h-4 w-full rounded" />
+                  </div>
+
+                  {/* Meta bar */}
+                  <div className="relative mt-4 flex min-w-0 items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                    <div className="absolute -left-2 -top-[8px] px-1 sm:left-2">
+                      <div className="bg-white dark:bg-gray-800">
+                        <SkeletonBox className="h-3 w-16 rounded" />
+                      </div>
+                    </div>
+                    {/* Author */}
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <SkeletonBox className="h-10 w-10 rounded-full" />
+                      <div className="min-w-0 space-y-2">
+                        <SkeletonBox className="h-4 w-24 rounded" />
+                        <SkeletonBox className="h-3 w-16 rounded" />
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="ms-2.5 flex max-md:ms-0 translate-x-1.5 shrink-0 flex-col items-end gap-1 sm:translate-x-[18px]">
+                      <div className="flex items-center gap-4 md:-translate-x-3">
+                        <SkeletonBox className="h-4 w-8 rounded" />
+                        <SkeletonBox className="h-4 w-8 rounded" />
+                      </div>
+                      <SkeletonBox className="mt-1 h-3 w-16 rounded md:-translate-x-3" />
+                    </div>
+                  </div>
+                </div>
+            </div>
+
+            {/* Answer count header skeleton */}
+            <div className="flex items-center border-b border-gray-200 pb-2 pt-2 dark:border-gray-700">
+              <SkeletonBox className="h-6 w-24 rounded" />
+            </div>
+
+            {/* Answer card skeleton */}
+            <div className="mb-4 overflow-hidden rounded-xl border border-gray-200/50 bg-white/60 shadow-sm backdrop-blur-sm dark:border-gray-700/50 dark:bg-gray-800/40">
+              <div className="flex min-w-0">
+                <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 bg-gray-50/50 py-1.5 pl-1.5 pr-2 dark:bg-gray-700/30 sm:py-2 sm:pl-2 sm:pr-3">
+                  <div className="p-1">
+                    <SkeletonBox className="h-[18px] w-[18px] rounded-md" />
+                  </div>
+                  <SkeletonBox className="my-0.5 h-5 w-3 rounded-md" />
+                  <div className="p-1">
+                    <SkeletonBox className="h-[18px] w-[18px] rounded-md" />
+                  </div>
+                </div>
+
+                <div className="min-w-0 flex-1 pb-3 pl-4 pr-1.5 pt-3">
+                  <div className="mb-4">
+                    <SkeletonBox className="h-4 w-full rounded" />
+                  </div>
+
+                  <div className="relative mt-2 flex min-w-0 items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                    <div className="absolute -left-2 -top-[8px] bg-white/60 px-1 dark:bg-gray-800/40 sm:left-2">
+                      <SkeletonBox className="h-3 w-16 rounded" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <SkeletonBox className="h-[26px] w-[26px] rounded-full" />
+                      <div className="min-w-0">
+                        <SkeletonBox className="h-3.5 w-20 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Answer card skeleton */}
+            <div className="mb-4 overflow-hidden rounded-xl border border-gray-200/50 bg-white/60 shadow-sm backdrop-blur-sm dark:border-gray-700/50 dark:bg-gray-800/40">
+              <div className="flex min-w-0">
+                <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 bg-gray-50/50 py-1.5 pl-1.5 pr-2 dark:bg-gray-700/30 sm:py-2 sm:pl-2 sm:pr-3">
+                  <div className="p-1">
+                    <SkeletonBox className="h-[18px] w-[18px] rounded-md" />
+                  </div>
+                  <SkeletonBox className="my-0.5 h-5 w-3 rounded-md" />
+                  <div className="p-1">
+                    <SkeletonBox className="h-[18px] w-[18px] rounded-md" />
+                  </div>
+                </div>
+
+                <div className="min-w-0 flex-1 pb-3 pl-4 pr-1.5 pt-3">
+                  <div className="mb-4">
+                    <SkeletonBox className="h-4 w-full rounded" />
+                  </div>
+
+                  <div className="relative mt-2 flex min-w-0 items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                    <div className="absolute -left-2 -top-[8px] bg-white/60 px-1 dark:bg-gray-800/40 sm:left-2">
+                      <SkeletonBox className="h-3 w-16 rounded" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <SkeletonBox className="h-[26px] w-[26px] rounded-full" />
+                      <div className="min-w-0">
+                        <SkeletonBox className="h-3.5 w-20 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Answer card skeleton */}
+            <div className="mb-4 overflow-hidden rounded-xl border border-gray-200/50 bg-white/60 shadow-sm backdrop-blur-sm dark:border-gray-700/50 dark:bg-gray-800/40">
+              <div className="flex min-w-0">
+                <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 bg-gray-50/50 py-1.5 pl-1.5 pr-2 dark:bg-gray-700/30 sm:py-2 sm:pl-2 sm:pr-3">
+                  <div className="p-1">
+                    <SkeletonBox className="h-[18px] w-[18px] rounded-md" />
+                  </div>
+                  <SkeletonBox className="my-0.5 h-5 w-3 rounded-md" />
+                  <div className="p-1">
+                    <SkeletonBox className="h-[18px] w-[18px] rounded-md" />
+                  </div>
+                </div>
+
+                <div className="min-w-0 flex-1 pb-3 pl-4 pr-1.5 pt-3">
+                  <div className="mb-4">
+                    <SkeletonBox className="h-4 w-full rounded" />
+                  </div>
+
+                  <div className="relative mt-2 flex min-w-0 items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                    <div className="absolute -left-2 -top-[8px] bg-white/60 px-1 dark:bg-gray-800/40 sm:left-2">
+                      <SkeletonBox className="h-3 w-16 rounded" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <SkeletonBox className="h-[26px] w-[26px] rounded-full" />
+                      <div className="min-w-0">
+                        <SkeletonBox className="h-3.5 w-20 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -1455,57 +1533,6 @@ export default function QuestionDetailPage() {
           <div className="space-y-4">
             {/* Question Card */}
             <div className="bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl shadow-md border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-              <div className="flex min-w-0">
-                {/* Vote sidebar */}
-                <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 pl-1.5 pr-2 py-1.5 sm:pl-2 sm:pr-3 sm:py-2 bg-gray-50/80 dark:bg-gray-700/50 border-l border-gray-200/50 dark:border-gray-600/50">
-                  <button
-                    type="button"
-                    onClick={() => void handleQuestionVote(1)}
-                    disabled={!!updatingVoteIds[`question:${question.id}`]}
-                    className="p-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    <ArrowUp
-                      size={18}
-                      className={
-                        question.userVote === 1
-                          ? "text-indigo-600 dark:text-indigo-400"
-                          : "text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-                      }
-                    />
-                  </button>
-                  <span className="font-bold text-base text-gray-800 dark:text-gray-100">
-                    {question.votes}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void handleQuestionVote(-1)}
-                    disabled={!!updatingVoteIds[`question:${question.id}`]}
-                    className="p-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    <ArrowDown
-                      size={18}
-                      className={
-                        question.userVote === -1
-                          ? "text-indigo-600 dark:text-indigo-400"
-                          : "text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-                      }
-                    />
-                  </button>
-                  {question.isAnswered && (
-                    <div
-                      className="mt-1.5 p-1 bg-green-100 dark:bg-green-900/50 rounded-full"
-                      title="נענתה"
-                    >
-                      <Star
-                        size={14}
-                        className="text-green-600 dark:text-green-400"
-                        fill="currentColor"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
                 <div
                   className={`min-w-0 flex-1 pt-1.5 pr-3 pb-4 ${isEditMode ? "pl-3 sm:pl-3" : "pl-6 max-md:pl-3"}`}
                 >
@@ -1643,10 +1670,9 @@ export default function QuestionDetailPage() {
                       </h1>
                       {(canEdit ||
                         canRemove ||
-                        canRequestRemoval ||
-                        canViewVotes) && (
+                        canRequestRemoval) && (
                         <div
-                          className="relative shrink-0 self-start -mr-1 md:-mr-1.5 -translate-x-2 md:-translate-x-[26px]"
+                          className="relative shrink-0 self-start -mr-1 md:-mr-1.5 -translate-x-2 md:-translate-x-[17px]"
                           ref={questionMenuRef}
                         >
                           <button
@@ -1791,7 +1817,6 @@ export default function QuestionDetailPage() {
                     </div>
                   )}
                 </div>
-              </div>
             </div>
 
             {questionMenuOpen &&
@@ -1839,16 +1864,6 @@ export default function QuestionDetailPage() {
                       בקשת הסרה
                     </button>
                   )}
-                  {canViewVotes && (
-                    <button
-                      type="button"
-                      onClick={handleOpenVoteDetails}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      <Eye size={16} />
-                      צפה בהצבעות
-                    </button>
-                  )}
                 </div>,
                 document.body,
               )}
@@ -1889,6 +1904,19 @@ export default function QuestionDetailPage() {
                       <Flag size={14} />
                       דווח
                     </button>
+                    {canDeleteAnswer && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeletingAnswerId(selectedAnswer.id);
+                          setOpenAnswerMenuId(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 size={14} />
+                        מחק
+                      </button>
+                    )}
                   </div>,
                   document.body,
                 );
@@ -2314,6 +2342,45 @@ export default function QuestionDetailPage() {
         </div>
       )}
 
+      {/* Delete answer confirmation */}
+      {deletingAnswerId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
+            onClick={() => !deletingAnswer && setDeletingAnswerId(null)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-sm w-full border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+              מחיקת תשובה
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              האם אתה בטוח שברצונך למחוק את התשובה? פעולה זו אינה ניתנת לביטול.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => !deletingAnswer && setDeletingAnswerId(null)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteAnswer}
+                disabled={deletingAnswer}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {deletingAnswer ? "מוחק..." : "מחק"}
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Request removal modal (שומר סף) */}
       {showRequestRemovalModal && (
         <div
@@ -2362,88 +2429,6 @@ export default function QuestionDetailPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {showVoteDetailsModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          dir="rtl"
-        >
-          <div
-            className="absolute inset-0 bg-black/40 dark:bg-black/60"
-            onClick={() => setShowVoteDetailsModal(false)}
-          />
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-lg w-full border border-gray-200 dark:border-gray-700 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                פרטי הצבעות
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowVoteDetailsModal(false)}
-                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {voteDetailsLoading ? (
-              <div className="flex justify-center py-10">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400" />
-              </div>
-            ) : voteDetailsError ? (
-              <div className="text-sm text-red-600 dark:text-red-400">
-                {voteDetailsError}
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <section>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    הצבעות בעד ({voteDetails.upvotes.length})
-                  </h4>
-                  <div className="space-y-2">
-                    {voteDetails.upvotes.length > 0 ? (
-                      voteDetails.upvotes.map((entry) => (
-                        <div
-                          key={`upvote-${entry.userId}`}
-                          className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
-                        >
-                          {entry.username}
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        אין הצבעות בעד עדיין.
-                      </p>
-                    )}
-                  </div>
-                </section>
-
-                <section>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    הצבעות נגד ({voteDetails.downvotes.length})
-                  </h4>
-                  <div className="space-y-2">
-                    {voteDetails.downvotes.length > 0 ? (
-                      voteDetails.downvotes.map((entry) => (
-                        <div
-                          key={`downvote-${entry.userId}`}
-                          className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
-                        >
-                          {entry.username}
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        אין הצבעות נגד עדיין.
-                      </p>
-                    )}
-                  </div>
-                </section>
-              </div>
-            )}
           </div>
         </div>
       )}
